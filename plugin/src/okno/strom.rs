@@ -478,7 +478,7 @@ impl Okno {
             });
     }
 
-    fn menu_stylu_bodu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, st: &crate::styly::StylBodu, u: &Uzel) {
+    pub(super) fn menu_stylu_bodu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, st: &crate::styly::StylBodu, u: &Uzel) {
         if ui.button(tr("Upravit styl")).clicked() {
             self.vyber_uzel(u.clone());
         }
@@ -497,7 +497,7 @@ impl Okno {
         }
     }
 
-    fn menu_stylu_povrchu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, st: &crate::styly::StylPovrchu, u: &Uzel) {
+    pub(super) fn menu_stylu_povrchu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, st: &crate::styly::StylPovrchu, u: &Uzel) {
         if ui.button(tr("Upravit styl")).clicked() {
             self.vyber_uzel(u.clone());
         }

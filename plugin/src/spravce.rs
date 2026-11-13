@@ -279,6 +279,8 @@ pub enum Akce {
     BodyPanel(Vec<Handle>, Option<String>, Option<f64>, Option<String>, Option<String>),
     /// Jen zpráva do příkazového řádku.
     Hlaseni(String),
+    /// Spustí příkaz Terénu ve výkrese (např. TER_BOD = Nový bod).
+    Prikaz(String),
     /// Hromadně: výška (hodnota, přičíst), kód.
     BodyHromadne(Vec<Handle>, Option<(f64, bool)>, Option<String>),
     BodyPrecislovat(Vec<Handle>, u64, u64),
@@ -976,6 +978,12 @@ impl Pracovnik {
                 k.chyba(&t);
                 return;
             }
+            Akce::Prikaz(p) => {
+                if !k.prikaz(&p) {
+                    k.chyba(&trf!("Terén: příkaz {} se nepodařilo spustit – použijte tlačítko na pásu karet.", p));
+                }
+                return;
+            }
             a => self.akce_hlavni(k, a),
         }
     }
@@ -1230,7 +1238,7 @@ impl Pracovnik {
                 k.hotovo();
                 Ok(Some(trf!("Upraveno bodů: {}", n)))
             }
-            Akce::Uchopy(_) | Akce::Hlaseni(_) => Ok(None),
+            Akce::Uchopy(_) | Akce::Hlaseni(_) | Akce::Prikaz(_) => Ok(None),
             Akce::Ukazat(stred, r, handly) => {
                 let r = (r * 1.4).max(15.0);
                 let _ = k.prikaz(&format!(

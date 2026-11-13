@@ -1429,3 +1429,19 @@ Export a nový povrch	Export and new surface
 Vytvořit povrch	Create surface
 výška {}	elevation {}
 Pravidla	Rules
+Nový bod ⏷	New point ⏷
+Ruční bod (klik nebo x,y,z)	Manual point (click or x,y,z)
+Bod na povrchu	Point on surface
+Nový bod se zadává ve výkrese (klik nebo souřadnice)	A new point is entered in the drawing (click or coordinates)
+body nemají kódy	the points have no codes
+jen body s výškou v tomto rozsahu (m)	only points with elevation in this range (m)
+od	from
+šipky · Ctrl+A · Delete · Esc · F2	arrows · Ctrl+A · Delete · Esc · F2
+šipky = pohyb · Ctrl+A vše · Delete smazat · Esc zrušit výběr · F2 / dvojklik upravit buňku · Enter ukázat ve výkrese	arrows = move · Ctrl+A all · Delete delete · Esc clear selection · F2 / double-click edit cell · Enter show in drawing
+Terén: příkaz {} se nepodařilo spustit – použijte tlačítko na pásu karet.	Terén: command {} could not be started – use the ribbon button.
+Uložit do šablony	Save to template
+Načíst ze šablony	Load from template
+styly výkresu uloží do šablony ve vašem profilu	saves the drawing styles to the template in your profile
+načte styly ze šablony do tohoto výkresu	loads the styles from the template into this drawing
+{} · používá se {}	{} · {} in use
+{} · kód {}	{} · code {}

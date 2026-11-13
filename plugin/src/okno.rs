@@ -1289,8 +1289,11 @@ impl Okno {
             Uzel::Nastaveni => {
                 egui::ScrollArea::vertical().id_salt("nast_s").auto_shrink([false, false]).show(ui, |ui| self.detail_nastaveni(ui, stav));
             }
-            Uzel::StylyBodu | Uzel::StylyPovrchu => {
-                egui::ScrollArea::vertical().id_salt("styly_s").auto_shrink([false, false]).show(ui, |ui| self.detail_styly(ui, stav));
+            Uzel::StylyBodu => {
+                egui::ScrollArea::vertical().id_salt("styly_b").auto_shrink([false, false]).show(ui, |ui| self.detail_styly_bodu(ui, stav));
+            }
+            Uzel::StylyPovrchu => {
+                egui::ScrollArea::vertical().id_salt("styly_p").auto_shrink([false, false]).show(ui, |ui| self.detail_styly_povrchu(ui, stav));
             }
             Uzel::StylBodu(id) => {
                 egui::ScrollArea::both().id_salt("styl_b").auto_shrink([false, false]).show(ui, |ui| self.detail_styl_bodu(ui, stav, &id));
@@ -1497,6 +1500,30 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
             if karta::tlacitko(ui, Some(strom::ik!("ter_body_import")), tr("Import bodů…"), true).clicked() {
                 self.nahled_importu = Some(import_nahled::NahledImportu::novy(""));
             }
+            ui.menu_button(tr("Nový bod ⏷"), |ui| {
+                if ui
+                    .add(egui::Button::image_and_text(
+                        egui::Image::new(strom::ik!("ter_bod_novy")).fit_to_exact_size(egui::vec2(16.0, 16.0)),
+                        tr("Ruční bod (klik nebo x,y,z)"),
+                    ))
+                    .clicked()
+                {
+                    spravce::posli(Akce::Prikaz("TER_BOD".into()));
+                    ui.close();
+                }
+                if ui
+                    .add(egui::Button::image_and_text(
+                        egui::Image::new(strom::ik!("ter_bod_na_povrchu")).fit_to_exact_size(egui::vec2(16.0, 16.0)),
+                        tr("Bod na povrchu"),
+                    ))
+                    .clicked()
+                {
+                    spravce::posli(Akce::Prikaz("TER_BOD_POVRCH".into()));
+                    ui.close();
+                }
+            })
+            .response
+            .on_hover_text(tr("Nový bod se zadává ve výkrese (klik nebo souřadnice)"));
             if karta::tlacitko(ui, Some(strom::ik!("ter_styl_bodu")), tr("Překreslit body"), false)
                 .on_hover_text(tr("znovu vykreslí značky a popisy všech bodů podle stylů a měřítka"))
                 .clicked()
@@ -1561,7 +1588,20 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
                 self.hledat.clear();
             }
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                ui.label(RichText::new(tr("šipky = pohyb · Ctrl+A vše · Delete smazat · Esc zrušit výběr · F2 / dvojklik upravit buňku")).small().color(SEDA));
+                ui.menu_button(tr("Sloupce ⏷"), |ui| {
+                    for s in SKRYVATELNE_SLOUPCE {
+                        let mut vid = !self.skryte_sloupce.contains(s);
+                        if ui.checkbox(&mut vid, tr(s)).changed() {
+                            if vid {
+                                self.skryte_sloupce.remove(s);
+                            } else {
+                                self.skryte_sloupce.insert(s);
+                            }
+                        }
+                    }
+                });
+                ui.label(RichText::new(tr("šipky · Ctrl+A · Delete · Esc · F2")).small().color(SEDA))
+                    .on_hover_text(tr("šipky = pohyb · Ctrl+A vše · Delete smazat · Esc zrušit výběr · F2 / dvojklik upravit buňku · Enter ukázat ve výkrese"));
             });
         });
 
@@ -1605,9 +1645,13 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
             }
             kody.sort_by(|a, b| b.1.cmp(&a.1).then(a.0.cmp(&b.0)));
             let ukazat = 8;
+            if kody.is_empty() {
+                ui.label(RichText::new(tr("body nemají kódy")).small().color(SEDA));
+            }
             for (k, n) in kody.iter().take(ukazat) {
                 let zap = self.filtr_kody.contains(k);
-                if ui.selectable_label(zap, k).on_hover_text(trf!("{} bodů", n)).clicked() {
+                let stitek = egui::Button::new(RichText::new(k).size(12.0)).selected(zap).corner_radius(10.0);
+                if ui.add(stitek).on_hover_text(trf!("{} bodů", n)).clicked() {
                     if zap {
                         self.filtr_kody.remove(k);
                     } else {
@@ -1632,36 +1676,10 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
                 });
             }
             ui.add_space(8.0);
-            let vyska = if self.filtr_z.0.trim().is_empty() && self.filtr_z.1.trim().is_empty() {
-                tr("Výška ⏷").to_string()
-            } else {
-                trf!("Výška {} – {} ⏷", self.filtr_z.0.trim(), self.filtr_z.1.trim())
-            };
-            ui.menu_button(vyska, |ui| {
-                ui.label(RichText::new(tr("Jen body s výškou")).color(SEDA));
-                ui.horizontal(|ui| {
-                    ui.label(tr("od"));
-                    ui.add(egui::TextEdit::singleline(&mut self.filtr_z.0).desired_width(70.0).hint_text("312.0"));
-                    ui.label(tr("do"));
-                    ui.add(egui::TextEdit::singleline(&mut self.filtr_z.1).desired_width(70.0).hint_text("315.5"));
-                    ui.label("m");
-                });
-                if ui.small_button(tr("zrušit")).clicked() {
-                    self.filtr_z = Default::default();
-                }
-            });
-            ui.menu_button(tr("Sloupce ⏷"), |ui| {
-                for s in SKRYVATELNE_SLOUPCE {
-                    let mut vid = !self.skryte_sloupce.contains(s);
-                    if ui.checkbox(&mut vid, tr(s)).changed() {
-                        if vid {
-                            self.skryte_sloupce.remove(s);
-                        } else {
-                            self.skryte_sloupce.insert(s);
-                        }
-                    }
-                }
-            });
+            ui.label(RichText::new(tr("Výška")).color(SEDA)).on_hover_text(tr("jen body s výškou v tomto rozsahu (m)"));
+            ui.add(egui::TextEdit::singleline(&mut self.filtr_z.0).desired_width(56.0).hint_text(tr("od")));
+            ui.label("–");
+            ui.add(egui::TextEdit::singleline(&mut self.filtr_z.1).desired_width(56.0).hint_text(tr("do")));
         });
     }
 
@@ -3566,120 +3584,99 @@ fn mm(ui: &mut egui::Ui, v: &mut f64, rozsah: std::ops::RangeInclusive<f64>) -> 
 }
 
 impl Okno {
-    fn detail_styly(&mut self, ui: &mut egui::Ui, stav: &StavSpravce) {
-        karta::nadpis_karty(ui, &strom::Ikona::Svg(strom::ik!("ter_styl")), tr("Styly"), |ui| {
-            karta::pilulka(ui, &trf!("{} bodů · {} povrchů", stav.styly_bodu.len(), stav.styly_povrchu.len()), SEDA);
+    /// Tlačítka šablony stylů (uložit / načíst) a vysvětlivka.
+    fn sablona_stylu(&mut self, ui: &mut egui::Ui) {
+        if ui.button(tr("Uložit do šablony")).on_hover_text(tr("styly výkresu uloží do šablony ve vašem profilu")).clicked() {
+            spravce::posli(Akce::SablonaUloz);
+        }
+        if ui.button(tr("Načíst ze šablony")).on_hover_text(tr("načte styly ze šablony do tohoto výkresu")).clicked() {
+            spravce::posli(Akce::SablonaNacti);
+        }
+        info(
+            ui,
+            tr("Styl bodu určuje značku a popis bodu, styl povrchu vrstevnice, barvy, popisy a šipky spádu. \
+             Velikosti jsou v mm na papíře a mění se s měřítkem výkresu. Vestavěné styly jde upravit \
+             (úprava se uloží do výkresu) a kdykoli vrátit k původnímu nastavení."),
+        );
+    }
+
+    fn detail_styly_bodu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce) {
+        let pocty = pocty_stylu(stav);
+        let pouzito = stav.styly_bodu.iter().filter(|st| pocty.get(&st.id).copied().unwrap_or(0) > 0).count();
+        karta::nadpis_karty(ui, &strom::Ikona::Svg(strom::ik!("ter_styl_bodu")), tr("Styly bodů"), |ui| {
+            karta::pilulka(ui, &trf!("{} · používá se {}", stav.styly_bodu.len(), pouzito), SEDA);
         });
         ui.add_space(4.0);
         ui.horizontal_wrapped(|ui| {
-            info(
-                ui,
-                tr("Styl bodu určuje značku a popis bodu, styl povrchu vrstevnice, barvy, popisy a šipky spádu. \
-                 Velikosti jsou v mm na papíře a mění se s měřítkem výkresu. Vestavěné styly jde upravit \
-                 (úprava se uloží do výkresu) a kdykoli vrátit k původnímu nastavení."),
-            );
             if karta::tlacitko(ui, Some(strom::ik!("ter_styl_bodu")), tr("+ Nový styl bodů"), true).clicked() {
                 let mut st = StylBodu::vestavene().remove(0);
                 st.id = String::new();
                 st.jmeno = tr("Nový styl bodů").into();
                 spravce::posli(Akce::UlozStylBodu(st));
             }
-            if ui.button(tr("+ Nový styl povrchu")).clicked() {
-                spravce::posli(Akce::UlozStylPovrchu(StylPovrchu::vlastni("", tr("Nový styl povrchu"))));
-            }
+            self.sablona_stylu(ui);
         });
-        ui.add_space(6.0);
-        ui.label(RichText::new(tr("Šablona stylů")).strong());
-        ui.label(
-            RichText::new(tr("Styly výkresu jde uložit do šablony ve vašem profilu a načíst do jiného výkresu.")).color(SEDA),
-        );
-        ui.horizontal(|ui| {
-            if ui.button(tr("Uložit styly do šablony")).clicked() {
-                spravce::posli(Akce::SablonaUloz);
-            }
-            if ui.button(tr("Načíst styly ze šablony")).clicked() {
-                spravce::posli(Akce::SablonaNacti);
-            }
-        });
-        ui.separator();
-        let pocty = pocty_stylu(stav);
-        let pouzito = stav.styly_bodu.iter().filter(|st| pocty.get(&st.id).copied().unwrap_or(0) > 0).count();
-        ui.horizontal(|ui| {
-            ui.label(RichText::new(tr("Styly bodů")).strong());
-            ui.label(RichText::new(trf!("{} · používá se {}", stav.styly_bodu.len(), pouzito)).color(SEDA).small());
-        });
-        let popisy: Vec<&StylBodu> = stav.styly_bodu.iter().filter(|s| !s.znacka.je_symbol()).collect();
-        let symboly: Vec<&StylBodu> = stav.styly_bodu.iter().filter(|s| s.znacka.je_symbol()).collect();
+        ui.add_space(8.0);
         let mut klik = None;
-        let mut sloupec = |ui: &mut egui::Ui, nazev: &str, seznam: &[&StylBodu]| {
-            ui.label(RichText::new(nazev.to_uppercase()).small().strong().color(SEDA));
-            for st in seznam {
-                let n = pocty.get(&st.id).copied().unwrap_or(0);
-                let upraveny = stav.ulozene_styly.contains(&st.id);
-                ui.horizontal(|ui| {
-                    if ikona_stylu(ui, st, 28.0).on_hover_text(tr("upravit styl")).clicked() {
+        for (nadpis, symboly) in [(tr("Popisy"), false), (tr("Symboly"), true)] {
+            ui.label(RichText::new(nadpis.to_uppercase()).small().color(SEDA));
+            ui.horizontal_wrapped(|ui| {
+                ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+                for st in stav.styly_bodu.iter().filter(|s| s.znacka.je_symbol() == symboly) {
+                    let n = pocty.get(&st.id).copied().unwrap_or(0);
+                    let mut popis = if n == 0 { tr("nepoužito").to_string() } else { trf!("{} bodů", czi(n)) };
+                    if !st.kody.is_empty() {
+                        popis = trf!("{} · kód {}", popis, st.kody.join(", "));
+                    }
+                    if stav.ulozene_styly.contains(&st.id) {
+                        popis.push_str(if st.je_vestaveny() { tr(" · upravený") } else { tr(" · vlastní") });
+                    }
+                    let r = karta::dlazdice_stylu(ui, |ui| ikona_stylu(ui, st, 28.0), &st.jmeno, &popis, n == 0);
+                    if r.clicked() {
                         klik = Some(st.id.clone());
                     }
-                    ui.vertical(|ui| {
-                        if ui.link(&st.jmeno).clicked() {
-                            klik = Some(st.id.clone());
-                        }
-                        let mut pod = if st.kody.is_empty() {
-                            format!("{}, {}", st.znacka.nazev(), st.popisek.nazev())
-                        } else {
-                            trf!("kód {}", st.kody.join(", "))
-                        };
-                        if upraveny {
-                            pod.push_str(if st.je_vestaveny() { tr(" · upravený") } else { tr(" · vlastní") });
-                        }
-                        ui.label(RichText::new(pod).small().color(if st.kody.is_empty() { SEDA } else { ZELENA }));
-                    });
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                        ui.label(RichText::new(if n == 0 { tr("nepoužito").to_string() } else { trf!("{} bodů", n) }).small().color(SEDA));
-                    });
-                });
-            }
-        };
-        if ui.available_width() > 620.0 {
-            ui.columns(2, |c| {
-                sloupec(&mut c[0], tr("Popisy"), &popisy);
-                sloupec(&mut c[1], tr("Symboly"), &symboly);
+                    let u = Uzel::StylBodu(st.id.clone());
+                    r.context_menu(|ui| self.menu_stylu_bodu(ui, stav, st, &u));
+                }
             });
-        } else {
-            sloupec(ui, tr("Popisy"), &popisy);
-            ui.add_space(6.0);
-            sloupec(ui, tr("Symboly"), &symboly);
+            ui.add_space(8.0);
         }
         if let Some(id) = klik {
             self.vyber_uzel(Uzel::StylBodu(id));
         }
-        ui.separator();
-        ui.add_space(4.0);
-        ui.horizontal(|ui| {
-            ui.label(RichText::new(tr("Styly povrchů")).strong());
-            let pouzito = stav.styly_povrchu.iter().filter(|st| stav.povrchy.iter().any(|p| p.styl.eq_ignore_ascii_case(&st.id))).count();
-            ui.label(RichText::new(trf!("{} · používá se {}", stav.styly_povrchu.len(), pouzito)).color(SEDA).small());
+    }
+
+    fn detail_styly_povrchu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce) {
+        let pouzito = stav.styly_povrchu.iter().filter(|st| stav.povrchy.iter().any(|p| p.styl.eq_ignore_ascii_case(&st.id))).count();
+        karta::nadpis_karty(ui, &strom::Ikona::Svg(strom::ik!("ter_styl")), tr("Styly povrchů"), |ui| {
+            karta::pilulka(ui, &trf!("{} · používá se {}", stav.styly_povrchu.len(), pouzito), SEDA);
         });
+        ui.add_space(4.0);
+        ui.horizontal_wrapped(|ui| {
+            if karta::tlacitko(ui, Some(strom::ik!("ter_styl")), tr("+ Nový styl povrchu"), true).clicked() {
+                spravce::posli(Akce::UlozStylPovrchu(StylPovrchu::vlastni("", tr("Nový styl povrchu"))));
+            }
+            self.sablona_stylu(ui);
+        });
+        ui.add_space(8.0);
         let mut klik = None;
-        for st in &stav.styly_povrchu {
-            let pouziva: Vec<&str> =
-                stav.povrchy.iter().filter(|p| p.styl.eq_ignore_ascii_case(&st.id)).map(|p| p.jmeno.as_str()).collect();
-            ui.horizontal(|ui| {
-                if ikona_stylu_povrchu(ui, st, 28.0).on_hover_text(tr("upravit styl")).clicked() {
+        ui.horizontal_wrapped(|ui| {
+            ui.spacing_mut().item_spacing = egui::vec2(8.0, 8.0);
+            for st in &stav.styly_povrchu {
+                let pouziva: Vec<&str> =
+                    stav.povrchy.iter().filter(|p| p.styl.eq_ignore_ascii_case(&st.id)).map(|p| p.jmeno.as_str()).collect();
+                let mut popis = if pouziva.is_empty() { tr("nepoužito").to_string() } else { pouziva.join(", ") };
+                if stav.ulozene_styly.contains(&st.id) {
+                    popis.push_str(if st.je_vestaveny() { tr(" · upravený") } else { tr(" · vlastní") });
+                }
+                let r = karta::dlazdice_stylu(ui, |ui| ikona_stylu_povrchu(ui, st, 28.0), &st.jmeno, &popis, pouziva.is_empty());
+                if r.clicked() {
                     klik = Some(st.id.clone());
                 }
-                ui.vertical(|ui| {
-                    if ui.link(&st.jmeno).clicked() {
-                        klik = Some(st.id.clone());
-                    }
-                    let mut pod = if pouziva.is_empty() { tr("nepoužito").to_string() } else { trf!("používá {}", pouziva.join(", ")) };
-                    if stav.ulozene_styly.contains(&st.id) {
-                        pod.push_str(if st.je_vestaveny() { tr(" · upravený") } else { tr(" · vlastní") });
-                    }
-                    ui.label(RichText::new(pod).small().color(SEDA));
-                });
-            });
-        }
+                let u = Uzel::StylPovrchu(st.id.clone());
+                r.context_menu(|ui| self.menu_stylu_povrchu(ui, stav, st, &u));
+            }
+        });
         if let Some(id) = klik {
             self.vyber_uzel(Uzel::StylPovrchu(id));
         }
