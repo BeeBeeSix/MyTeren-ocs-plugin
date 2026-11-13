@@ -9,7 +9,7 @@ use egui::collapsing_header::CollapsingState;
 use teren::skupiny::VSECHNY;
 
 use super::{
-    bod_odpovida, ikona_stylu, ikona_stylu_povrchu, import_nahled, pocty_stylu, pruvodce, shoda, Cast, Okno, Uzel, CERVENA,
+    bod_odpovida, import_nahled, pocty_stylu, pruvodce, shoda, Cast, Okno, Uzel, CERVENA,
     MODRA, ORANZOVA, SEDA, ZELENA,
 };
 use crate::povrchy::DruhPolozky;
@@ -302,80 +302,19 @@ impl Okno {
 
         // ── vzhled ──
         sekce(ui, tr("Vzhled"));
-        CollapsingState::load_with_default_open(ui.ctx(), egui::Id::new("u_styly_bodu"), false)
-            .show_header(ui, |ui| {
-                let r = polozka(
-                    ui,
-                    self.uzel == Uzel::StylyBodu,
-                    &Ikona::Svg(ik!("ter_styl_bodu")),
-                    RichText::new(tr("Styly bodů")),
-                    &[Vpravo::Pocet(stav.styly_bodu.len().to_string())],
-                    false,
-                );
-                if r.clicked() {
-                    self.vyber_uzel(Uzel::StylyBodu);
-                }
-            })
-            .body(|ui| {
-                let pocty = pocty_stylu(stav);
-                for (nadpis_skupiny, symboly) in [(tr("popisy"), false), (tr("symboly"), true)] {
-                    ui.label(RichText::new(nadpis_skupiny).small().color(SEDA));
-                    for st in stav.styly_bodu.iter().filter(|s| s.znacka.je_symbol() == symboly) {
-                        let u = Uzel::StylBodu(st.id.clone());
-                        let n = pocty.get(&st.id).copied().unwrap_or(0);
-                        ui.horizontal(|ui| {
-                            ikona_stylu(ui, st, 16.0);
-                            let r = polozka(
-                                ui,
-                                self.uzel == u,
-                                &Ikona::Znak("", SEDA),
-                                RichText::new(&st.jmeno),
-                                &[Vpravo::Pocet(if n > 0 { cislo(n) } else { String::new() })],
-                                n == 0,
-                            );
-                            if r.clicked() {
-                                self.vyber_uzel(u.clone());
-                            }
-                            r.context_menu(|ui| self.menu_stylu_bodu(ui, stav, st, &u));
-                        });
-                    }
-                }
-            });
-        CollapsingState::load_with_default_open(ui.ctx(), egui::Id::new("u_styly_povrchu"), false)
-            .show_header(ui, |ui| {
-                let r = polozka(
-                    ui,
-                    self.uzel == Uzel::StylyPovrchu,
-                    &Ikona::Svg(ik!("ter_styl")),
-                    RichText::new(tr("Styly povrchů")),
-                    &[Vpravo::Pocet(stav.styly_povrchu.len().to_string())],
-                    false,
-                );
-                if r.clicked() {
-                    self.vyber_uzel(Uzel::StylyPovrchu);
-                }
-            })
-            .body(|ui| {
-                for st in &stav.styly_povrchu {
-                    let u = Uzel::StylPovrchu(st.id.clone());
-                    let n = stav.povrchy.iter().filter(|p| p.styl.eq_ignore_ascii_case(&st.id)).count();
-                    ui.horizontal(|ui| {
-                        ikona_stylu_povrchu(ui, st, 16.0);
-                        let r = polozka(
-                            ui,
-                            self.uzel == u,
-                            &Ikona::Znak("", SEDA),
-                            RichText::new(&st.jmeno),
-                            &[Vpravo::Pocet(if n > 0 { n.to_string() } else { String::new() })],
-                            n == 0,
-                        );
-                        if r.clicked() {
-                            self.vyber_uzel(u.clone());
-                        }
-                        r.context_menu(|ui| self.menu_stylu_povrchu(ui, stav, st, &u));
-                    });
-                }
-            });
+        let pocty = pocty_stylu(stav);
+        let pouzito_b = stav.styly_bodu.iter().filter(|st| pocty.get(&st.id).copied().unwrap_or(0) > 0).count();
+        let on_b = matches!(self.uzel, Uzel::StylyBodu | Uzel::StylBodu(_));
+        let r = list(ui, on_b, &Ikona::Svg(ik!("ter_styl_bodu")), RichText::new(tr("Styly bodů")), &[Vpravo::Pocet(stav.styly_bodu.len().to_string())], false)
+            .on_hover_text(trf!("{} stylů, používá se {}", stav.styly_bodu.len(), pouzito_b));
+        if r.clicked() {
+            self.vyber_uzel(Uzel::StylyBodu);
+        }
+        let on_p = matches!(self.uzel, Uzel::StylyPovrchu | Uzel::StylPovrchu(_));
+        let r = list(ui, on_p, &Ikona::Svg(ik!("ter_styl")), RichText::new(tr("Styly povrchů")), &[Vpravo::Pocet(stav.styly_povrchu.len().to_string())], false);
+        if r.clicked() {
+            self.vyber_uzel(Uzel::StylyPovrchu);
+        }
 
         // ── nástroje ──
         sekce(ui, tr("Nástroje"));

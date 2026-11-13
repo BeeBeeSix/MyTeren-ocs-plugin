@@ -1417,7 +1417,6 @@ vybrat pro hromadné úpravy	select for bulk edits
 Ve výkrese zatím není povrch	There is no surface in the drawing yet
 Body už máte ({}). Stávající terén se spočítá z nich (bez vyloučených kódů, např. stromů).	You already have points ({}). The existing ground is computed from them (without excluded codes, e.g. trees).
 Nejdřív importujte body zaměření – povrch se z nich spočítá.	Import the survey points first – the surface is computed from them.
-Vytvořit stávající terén	Create existing ground
 Průvodce…	Wizard…
 Ve výkrese zatím nejsou body	There are no points in the drawing yet
 Importujte zaměření (TXT, CSV, XYZ, LandXML, GSI, Excel…) nebo vytvořte bod tlačítkem Nový bod na pásu karet.	Import a survey (TXT, CSV, XYZ, LandXML, GSI, Excel…) or create a point with New point on the ribbon.
@@ -1426,16 +1425,12 @@ vlastní	custom
 náhled v měřítku 1:{} · {} bodů ve výkrese	preview at scale 1:{} · {} points in the drawing
 Body ({})	Points ({})
 Export a nový povrch	Export and new surface
-Vytvořit povrch	Create surface
 výška {}	elevation {}
 Pravidla	Rules
 Nový bod ⏷	New point ⏷
-Ruční bod (klik nebo x,y,z)	Manual point (click or x,y,z)
-Bod na povrchu	Point on surface
 Nový bod se zadává ve výkrese (klik nebo souřadnice)	A new point is entered in the drawing (click or coordinates)
 body nemají kódy	the points have no codes
 jen body s výškou v tomto rozsahu (m)	only points with elevation in this range (m)
-od	from
 šipky · Ctrl+A · Delete · Esc · F2	arrows · Ctrl+A · Delete · Esc · F2
 šipky = pohyb · Ctrl+A vše · Delete smazat · Esc zrušit výběr · F2 / dvojklik upravit buňku · Enter ukázat ve výkrese	arrows = move · Ctrl+A all · Delete delete · Esc clear selection · F2 / double-click edit cell · Enter show in drawing
 Terén: příkaz {} se nepodařilo spustit – použijte tlačítko na pásu karet.	Terén: command {} could not be started – use the ribbon button.
@@ -1443,5 +1438,29 @@ Uložit do šablony	Save to template
 Načíst ze šablony	Load from template
 styly výkresu uloží do šablony ve vašem profilu	saves the drawing styles to the template in your profile
 načte styly ze šablony do tohoto výkresu	loads the styles from the template into this drawing
-{} · používá se {}	{} · {} in use
 {} · kód {}	{} · code {}
+upravený	modified
+úprava je uložená ve výkrese; „Vrátit původní nastavení“ ji zruší	the change is stored in the drawing; "Restore original settings" cancels it
+Velikost	Size
+Barva	Colour
+Tvar	Shape
+Blok	Block
+Popisek	Label
+Výška písma	Text height
+Výška bodu	Point elevation
+zobrazit kód (popis) bodu	show the point code (description)
+Barva textu	Text colour
+Pro kódy	For codes
+Změna se hned ukáže v náhledu a sama uloží (Ctrl+Z ve výkrese ji vrátí).	The change shows in the preview at once and is saved automatically (Ctrl+Z in the drawing undoes it).
+náhled v měřítku 1:{}	preview at scale 1:{}
+Styl „{}“ má zase původní nastavení.	Style "{}" has its original settings again.
+body se nekreslí	points are not drawn
+přesné číslo barvy (ACI 1–255)	exact colour number (ACI 1–255)
+Výchozí styl – platí pro body, jejichž skupina ani kód styl neurčují.	Default style – applies to points whose group or code sets no style.
+Styl zatím nic nepoužívá – přiřaďte ho skupině, kódům (pole Pro kódy) nebo vybraným bodům.	Nothing uses this style yet – assign it to a group, to codes (the For codes field) or to selected points.
+Styl má {} bodů:	The style has {} points:
+nastaveno přímo bodům	set directly on points
+podle skupiny ({})	by group ({})
+výchozí styl	default style
+Přednost má styl nastavený přímo bodu, pak podle kódu, pak podle skupiny.	A style set directly on the point wins, then by code, then by group.
+{} stylů, používá se {}	{} styles, {} in use

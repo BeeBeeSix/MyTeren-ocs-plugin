@@ -8,7 +8,7 @@ use eframe::egui;
 use super::{Cast, Okno, Uzel};
 
 pub(super) struct Foto {
-    kroky: Vec<(&'static str, Uzel)>,
+    kroky: Vec<(&'static str, Uzel, u8)>,
     i: usize,
     snimek: u32,
     ceka: bool,
@@ -34,8 +34,14 @@ impl Foto {
             ("12_styly_povrchu", Uzel::StylyPovrchu),
             ("13_kontrola", Uzel::Kontrola),
             ("14_nastaveni", Uzel::Nastaveni),
-            ("15_styl_bodu", Uzel::StylBodu(crate::styly::STANDARD.into())),
+            ("15_styl_standard", Uzel::StylBodu(crate::styly::STANDARD.into())),
+            ("16_styl_kriz_popis", Uzel::StylBodu("KRIZ_VYSKA".into())),
+            ("17_styl_strom", Uzel::StylBodu("STROM_L".into())),
+            ("18_styl_strom_pouziti", Uzel::StylBodu("STROM_L".into())),
+            ("19_styl_nezobrazovat", Uzel::StylBodu(crate::styly::SKRYT.into())),
         ];
+        let zalozka = |n: &str| if n.contains("popis") { 1 } else if n.contains("pouziti") { 2 } else { 0 };
+        let kroky = kroky.into_iter().map(|(n, u)| (n, u, zalozka(n))).collect();
         Some(Self { kroky, i: 0, snimek: 0, ceka: false, slozka })
     }
 }
@@ -76,8 +82,10 @@ impl Okno {
         }
         if f.snimek == 0 {
             let u = f.kroky[f.i].1.clone();
+            let zal = f.kroky[f.i].2;
             f.snimek = 1;
             self.vyber_uzel(u);
+            self.zalozka_stylu = zal;
             return;
         }
         f.snimek += 1;
