@@ -85,6 +85,35 @@ pub(super) fn prazdny_stav(ui: &mut egui::Ui, ikona: egui::ImageSource<'static>,
         });
 }
 
+/// Dlaždice stylu: ikona, název a popis (použití); celá je klikací.
+pub(super) fn dlazdice_stylu(
+    ui: &mut egui::Ui,
+    ikona: impl FnOnce(&mut egui::Ui) -> egui::Response,
+    nazev: &str,
+    popis: &str,
+    ztlumit: bool,
+) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(egui::vec2(236.0, 50.0), Sense::click());
+    if !ui.is_rect_visible(rect) {
+        return resp;
+    }
+    let v = ui.visuals().clone();
+    let stroke = if resp.hovered() { v.widgets.hovered.bg_stroke } else { v.widgets.noninteractive.bg_stroke };
+    let fill = if resp.hovered() { v.widgets.hovered.weak_bg_fill } else { v.extreme_bg_color };
+    ui.painter().rect(rect, 7.0, fill, stroke, egui::StrokeKind::Inside);
+    let mut c = ui.new_child(egui::UiBuilder::new().max_rect(rect.shrink2(egui::vec2(10.0, 6.0))).layout(egui::Layout::left_to_right(egui::Align::Center)));
+    let ri = ikona(&mut c);
+    c.add_space(4.0);
+    c.vertical(|ui| {
+        let sirka = ui.available_width();
+        let barva = if ztlumit { SEDA } else { v.strong_text_color() };
+        ui.add(egui::Label::new(RichText::new(nazev).strong().color(barva)).truncate().selectable(false)).on_hover_text(nazev);
+        ui.set_max_width(sirka);
+        ui.add(egui::Label::new(RichText::new(popis).size(11.5).color(SEDA)).truncate().selectable(false));
+    });
+    resp.union(ri).on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
 /// Hlavní číslo s popiskem pod ním.
 pub(super) fn kpi(ui: &mut egui::Ui, hodnota: &str, popis: &str) -> egui::Response {
     egui::Frame::new()
