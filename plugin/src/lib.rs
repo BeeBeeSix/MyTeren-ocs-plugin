@@ -44,7 +44,9 @@ static MANIFEST: PluginManifest = PluginManifest {
     name: "Terén",
     version: env!("CARGO_PKG_VERSION"),
     description: "Survey points, TIN surfaces, breaklines, boundaries, contours, 3D viewer, LandXML export (Czech / English)",
-    api_version: ApiVersion::CURRENT,
+    // API 21: od API 22 posílá Open CAD Studio místo seznamu vybraných objektů
+    // jen souhrn (SelectionChangedDigest) – Terén zatím čte seznam.
+    api_version: ApiVersion { major: 21 },
     ribbon_order: 60,
     xdata_apps: &[povrchy::APP_BOD, povrchy::APP_POVRCH, tra::objekt::APP, tra::pohled::APP, tra::objekt::APP_TRIDA],
     command_prefixes: &["TER_", "TRA_"],
