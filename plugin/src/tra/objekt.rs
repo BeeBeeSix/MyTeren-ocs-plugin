@@ -253,6 +253,42 @@ fn zaznam(def: &DefiniceTrasy) -> ExtendedDataRecord {
 fn zaznam_tridy() -> ExtendedDataRecord {
     crate::povrchy::zaznam_tridy("TRASA")
 }
+/// Bod vložení bloku trasy. Open CAD Studio na něm ukazuje vlastní úchop
+/// (posun celé trasy) – nesmí ležet na vrcholu ani na středu úseku, kde jsou
+/// úchopy trasy. Bere se střed rozsahu vrcholů; když padne na tečnový
+/// polygon (rovná trasa), odsune se kolmo stranou.
+fn bod_vlozeni(v: &[trasy::geometrie::Vrchol]) -> [f64; 2] {
+    let (mut x0, mut y0, mut x1, mut y1) = (f64::MAX, f64::MAX, f64::MIN, f64::MIN);
+    for p in v {
+        x0 = x0.min(p.x);
+        y0 = y0.min(p.y);
+        x1 = x1.max(p.x);
+        y1 = y1.max(p.y);
+    }
+    let c = [(x0 + x1) / 2.0, (y0 + y1) / 2.0];
+    let odstup = ((x1 - x0).hypot(y1 - y0) * 0.1).max(2.0);
+    // nejbližší úsek polygonu
+    let mut nejblizsi: Option<(f64, [f64; 2])> = None;
+    for w in v.windows(2) {
+        let (ax, ay, bx, by) = (w[0].x, w[0].y, w[1].x, w[1].y);
+        let (dx, dy) = (bx - ax, by - ay);
+        let l2 = dx * dx + dy * dy;
+        if l2 < 1e-12 {
+            continue;
+        }
+        let t = (((c[0] - ax) * dx + (c[1] - ay) * dy) / l2).clamp(0.0, 1.0);
+        let d = (c[0] - ax - t * dx).hypot(c[1] - ay - t * dy);
+        if nejblizsi.is_none_or(|(n, _)| d < n) {
+            let l = l2.sqrt();
+            nejblizsi = Some((d, [-dy / l, dx / l]));
+        }
+    }
+    match nejblizsi {
+        Some((d, n)) if d < odstup => [c[0] + n[0] * odstup, c[1] + n[1] * odstup],
+        _ => c,
+    }
+}
+
 
 /// Nakreslí trasu (novou nebo místo staré) z definice se SVĚTOVÝMI vrcholy.
 /// Když geometrie nejde spočítat, výkres se nezmění.
@@ -261,7 +297,7 @@ fn zaznam_tridy() -> ExtendedDataRecord {
 /// existují, takže není potřeba stahovat celý výkres – úprava je rychlejší.
 pub fn uloz(v: &mut dyn Vykres, doc: Option<&CadDocument>, stara: Option<&ObjektTrasy>, mut def: DefiniceTrasy) -> Result<Handle, String> {
     let g = geometrie(&def.vrcholy, def.pocatek).map_err(chyba_geometrie)?;
-    let zaklad = [def.vrcholy[0].x, def.vrcholy[0].y];
+    let zaklad = bod_vlozeni(&def.vrcholy);
     def.zaklad = zaklad;
     // Objekty se do bloku dají už posunuté o základní bod a blok má základ
     // 0,0 (jako povrch v Terénu). Se základem v souřadnicích terénu by ho
@@ -362,6 +398,21 @@ pub fn popis(t: &ObjektTrasy) -> String {
 
 #[cfg(test)]
 mod testy {
+    #[test]
+    fn bod_vlozeni_mimo_uchopy() {
+        use trasy::geometrie::Vrchol;
+        // rovná trasa: střed rozsahu by ležel na trojúhelníku „vložit vrchol“
+        let v = [Vrchol::new(0.0, 0.0, 0.0), Vrchol::new(100.0, 0.0, 0.0)];
+        let b = bod_vlozeni(&v);
+        assert!((b[0] - 50.0).abs() < 1e-9 && b[1].abs() >= 9.9, "{b:?}");
+        // lomená trasa: střed rozsahu leží mimo polygon i mimo vrcholy
+        let v = [Vrchol::new(0.0, 0.0, 0.0), Vrchol::new(100.0, 0.0, 30.0), Vrchol::new(100.0, 100.0, 0.0)];
+        let b = bod_vlozeni(&v);
+        for p in &v {
+            assert!((b[0] - p.x).hypot(b[1] - p.y) > 5.0, "{b:?}");
+        }
+    }
+
     use super::*;
 
     #[test]
