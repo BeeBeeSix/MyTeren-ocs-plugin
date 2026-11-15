@@ -205,6 +205,10 @@ impl PresKanal {
         )
     }
     /// Nové hodnoty polí panelu Bod Terénu.
+    /// Nové hodnoty polí libovolného panelu pluginu.
+    pub fn panel_id(&mut self, id: &str, hodnoty: std::collections::HashMap<String, ocs_plugin_api::dialog::DialogValue>) {
+        let _ = self.pozadavek(PluginRequest::UpdatePanel { panel_id: id.into(), values: hodnoty });
+    }
     pub fn panel(&mut self, hodnoty: std::collections::HashMap<String, ocs_plugin_api::dialog::DialogValue>) {
         let _ = self.pozadavek(PluginRequest::UpdatePanel { panel_id: crate::panel::ID.into(), values: hodnoty });
     }

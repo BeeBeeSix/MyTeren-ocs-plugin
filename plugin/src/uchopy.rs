@@ -24,6 +24,28 @@ pub static ZAPNUTO: AtomicBool = AtomicBool::new(false);
 /// Právě se táhne úchop – pracovní vlákno počká (viz `vykres`).
 pub static TAHNE: AtomicBool = AtomicBool::new(false);
 
+/// Sady úchopů Terénu (posun bodů) a tras/profilů. Open CAD Studio drží jednu
+/// sadu na plugin a každé ohlášení ji nahradí – proto se ohlašují vždy obě.
+static SADA_TEREN: Mutex<Vec<PluginGrip>> = Mutex::new(Vec::new());
+static SADA_TRASY: Mutex<Vec<PluginGrip>> = Mutex::new(Vec::new());
+
+fn spoj(g: Vec<PluginGrip>, moje: &Mutex<Vec<PluginGrip>>, druha: &Mutex<Vec<PluginGrip>>) -> Vec<PluginGrip> {
+    *moje.lock().unwrap_or_else(|e| e.into_inner()) = g.clone();
+    let mut out = g;
+    out.extend(druha.lock().unwrap_or_else(|e| e.into_inner()).iter().cloned());
+    out
+}
+
+/// Úchopy Terénu spojené s úchopy tras (k ohlášení Open CAD Studiu).
+pub fn spoj_teren(g: Vec<PluginGrip>) -> Vec<PluginGrip> {
+    spoj(g, &SADA_TEREN, &SADA_TRASY)
+}
+
+/// Úchopy tras spojené s úchopy Terénu (k ohlášení Open CAD Studiu).
+pub fn spoj_trasy(g: Vec<PluginGrip>) -> Vec<PluginGrip> {
+    spoj(g, &SADA_TRASY, &SADA_TEREN)
+}
+
 /// Nejvíc úchopů na plugin (limit Open CAD Studia).
 pub const MAX_UCHOPU: usize = 4096;
 
@@ -142,6 +164,6 @@ fn posun_bez_skupiny(host: &mut dyn HostApi, h: Handle, dx: f64, dy: f64) {
     // úchopy znovu – bod je jinde
     if let Ok(doc) = v.dokument() {
         let (g, _) = uchopy(&doc);
-        let _ = v.0.set_plugin_grips(crate::MANIFEST.id, g);
+        let _ = v.0.set_plugin_grips(crate::MANIFEST.id, spoj_teren(g));
     }
 }

@@ -15,6 +15,7 @@ mod panel;
 mod povrchy;
 mod spravce;
 mod styly;
+mod tra;
 mod uchopy;
 #[cfg(feature = "ukazka")]
 pub mod ukazka;
@@ -45,8 +46,8 @@ static MANIFEST: PluginManifest = PluginManifest {
     description: "Survey points, TIN surfaces, breaklines, boundaries, contours, 3D viewer, LandXML export (Czech / English)",
     api_version: ApiVersion::CURRENT,
     ribbon_order: 60,
-    xdata_apps: &[povrchy::APP_BOD, povrchy::APP_POVRCH],
-    command_prefixes: &["TER_"],
+    xdata_apps: &[povrchy::APP_BOD, povrchy::APP_POVRCH, tra::objekt::APP, tra::pohled::APP, tra::objekt::APP_TRIDA],
+    command_prefixes: &["TER_", "TRA_"],
 };
 
 const MERITKA: [u32; 6] = [100, 200, 250, 500, 1000, 2000];
@@ -62,6 +63,8 @@ fn tridy() -> &'static ocs_plugin_api::manifest::EntityClasses {
             ("VYSKA", "Výška bodu"),
             ("POPIS", "Popis bodu"),
             ("POVRCH", "Povrch TIN"),
+            ("TRASA", "Trasa (osa)"),
+            ("POHLED", "Pohled podélného profilu"),
         ]
         .into_iter()
         .map(|(k, v)| (k, tr(v)))
@@ -149,7 +152,7 @@ impl CadModule for TerenModule {
                 klik.reverse();
             }
             let klik_default = klik[0].0;
-            vec![
+            let mut skupiny = vec![
                 RibbonGroup {
                     title: tr("Prospektor"),
                     tools: vec![
@@ -302,7 +305,9 @@ impl CadModule for TerenModule {
                         RibbonItem::LabeledTool(tool("TER_KONTROLA", tr("Kontrola zaměření"), ikona!("ter_kontrola"))),
                     ],
                 },
-            ]
+            ];
+            skupiny.extend(tra::skupiny());
+            skupiny
         })
     }
 }
@@ -909,6 +914,10 @@ impl BuiltinPlugin for TerenPlugin {
         host: &mut dyn HostApi,
         event: ocs_plugin_api::host::CustomGripEvent,
     ) -> ocs_plugin_api::host::CustomGripResponse {
+        // úchopy tras a profilů mají značku v nejvyšším bitu id
+        if event.grip_id & tra::uchopy::ZNACKA != 0 {
+            return tra::grip_event(host, event);
+        }
         uchopy::udalost(host, event)
     }
     fn ribbon(&self) -> Box<dyn CadModule> {
@@ -918,11 +927,13 @@ impl BuiltinPlugin for TerenPlugin {
         if let Some(s) = host.plugin_request_sender() {
             spravce::registruj_kanal(host.tab_id(), s);
         }
+        tra::on_load(host);
         // quad panel se tu ještě registrovat nedá: Open CAD Studio přiřadí
         // pluginu jméno až po on_load (hlásilo by „plugin "" is not a loaded,
         // alive plugin“) – registruje se při první zprávě nebo prvním příkazu
     }
     fn on_notification(&mut self, _command_id: Option<u64>, n: HostNotification) {
+        tra::on_notification(&n);
         if !QUAD_HOTOVO.load(std::sync::atomic::Ordering::SeqCst) && !QUAD_POKUS.swap(true, std::sync::atomic::Ordering::SeqCst) {
             spravce::registruj_quad_pres_kanal(quad_panel());
         }
@@ -940,6 +951,10 @@ impl BuiltinPlugin for TerenPlugin {
         }
     }
     fn dispatch(&self, host: &mut dyn HostApi, cmd: &str) -> bool {
+        // trasy a profily
+        if cmd.trim_start().get(..4).is_some_and(|p| p.eq_ignore_ascii_case("TRA_")) {
+            return tra::dispatch(host, cmd);
+        }
         // PDMODE se nastavuje příkazem, který by krok Zpět ukončil – proto předem
         let c = cmd.trim().to_ascii_uppercase();
         if ["TER_IMPORT", "TER_PRIPRAVIT", "TER_BOD", "TER_NOVY", "TER_SB_"].iter().any(|p| c.starts_with(p)) {

@@ -8,5 +8,5 @@ license = "GPL-3.0-only"
 [opencad]
 api_version = 16
 ribbon_order = 60
-command_prefixes = ["TER_"]
-xdata_apps = ["TEREN_BOD", "TEREN_POVRCH"]
+command_prefixes = ["TER_", "TRA_"]
+xdata_apps = ["TEREN_BOD", "TEREN_POVRCH", "TRASY_TRASA", "TRASY_POHLED", "TRASY_TRIDA"]

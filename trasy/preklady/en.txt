@@ -1,0 +1,226 @@
+# Trasy – anglické texty. Řádek: český text<TAB>anglický text; \n = nový řádek.
+Trasy	Alignments
+Trasa (osa)	Alignment (centerline)
+Nová trasa	New alignment
+Z polylinie	From polyline
+Kreslit vrcholy	Draw by vertices
+Úpravy trasy	Edit alignment
+Úchopy zap/vyp	Grips on/off
+Vlastnosti trasy	Alignment properties
+Překreslit trasy	Redraw alignments
+Seznam tras	List alignments
+Beta	Beta
+Nápověda k betě	Beta help
+Trasa {}	Alignment {}
+Trasy: {}	Alignments: {}
+Trasy: vybraný objekt není trasa.	Alignments: the selected object is not an alignment.
+Trasy: ve výkrese není žádná trasa.	Alignments: there is no alignment in the drawing.
+Trasy: klikněte na trasu	Alignments: click an alignment
+Trasy: vybraný objekt není polylinie (2D křivka).	Alignments: the selected object is not a polyline (2D).
+Trasy: klikněte na polylinii osy	Alignments: click the centerline polyline
+Trasy: z této polylinie trasu udělat nejde – {}	Alignments: this polyline cannot become an alignment – {}
+Trasa z polylinie	Alignment from polyline
+Trasy: vytvořena {}	Alignments: created {}
+Trasy: polylinie zůstala ve výkrese (můžete ji smazat nebo nechat jako podklad).	Alignments: the polyline stays in the drawing (delete it or keep it as a reference).
+Kreslení trasy	Draw alignment
+Klikejte vrcholy tečnového polygonu, Enter ukončí kreslení. Ve vnitřních vrcholech bude oblouk se zvoleným poloměrem (0 = bez oblouku); poloměry jdou později změnit ve Vlastnostech nebo úchopem.	Click the vertices of the tangent polygon, Enter finishes. Inner vertices get a curve with the chosen radius (0 = no curve); radii can be changed later in Properties or with a grip.
+Poloměr oblouků R [m]	Curve radius R [m]
+Kreslit	Draw
+Zrušit	Cancel
+Trasy: trasu nejde vytvořit.	Alignments: the alignment cannot be created.
+Trasy: ve vrcholech {} se oblouk nevešel, jsou bez oblouku – poloměr upravte ve Vlastnostech trasy.	Alignments: the curve did not fit at vertices {}; they have no curve – adjust the radius in Alignment properties.
+Vlastnosti trasy {}	Alignment properties {}
+Název	Name
+Počáteční staničení [m]	Start station [m]
+Styl	Style
+Vzhled jen této trasy (● = výjimka proti stylu)	Appearance of this alignment only (● = override of the style)
+Krok hlavního staničení [m]	Major station interval [m]
+Krok vedlejšího staničení [m] (0 = nekreslit)	Minor station interval [m] (0 = none)
+Výška textu [mm na papíře]	Text height [mm on paper]
+Formát staničení	Station format
+Popisovat hlavní body (ZÚ, KÚ, TK, KT)	Label key points (start, end, TC, CT)
+Popisovat vrcholy (V) a poloměry	Label vertices (PI) and radii
+Kreslit tečnový polygon	Draw tangent polygon
+Vrátit vzhled na styl (zrušit výjimky)	Reset appearance to style (remove overrides)
+Vrcholy tečnového polygonu (souřadnice výkresu; R = poloměr oblouku, 0 = bez oblouku)	Tangent polygon vertices (drawing coordinates; R = curve radius, 0 = no curve)
+Použít	Apply
+Délka trasy {} m, oblouků {}.	Alignment length {} m, curves {}.
+Trasy: řádek {} tabulky vrcholů nemá platná čísla X a Y – nic se nezměnilo.	Alignments: row {} of the vertex table has no valid X and Y – nothing changed.
+Trasy: změna se nepřijala – {}	Alignments: change rejected – {}
+Trasy: úchopy zapnuté ({}) – čtverečky posouvají vrcholy, kolečka uprostřed oblouků mění poloměr. Znovu stejným tlačítkem vypnete.	Alignments: grips on ({}) – squares move vertices, circles in the middle of curves change the radius. The same button turns them off.
+Trasy: úchopy vypnuté.	Alignments: grips off.
+Trasy: trasa {} má vložení se změněným měřítkem – měřítko se ignoruje.	Alignments: alignment {} has a scaled block reference – the scale is ignored.
+Trasy: {}: {}	Alignments: {}: {}
+Trasy: překresleno tras: {}.	Alignments: redrawn: {}.
+Trasy ve výkrese: {}	Alignments in the drawing: {}
+Trasy: použití TRA_JAZYK cs | en | auto (platí po restartu Open CAD Studia).	Alignments: usage TRA_JAZYK cs | en | auto (applies after restarting Open CAD Studio).
+Trasy: jazyk uložen, projeví se po restartu Open CAD Studia.	Alignments: language saved, applies after restarting Open CAD Studio.
+Trasy: nastavení nejde uložit: {}	Alignments: settings cannot be saved: {}
+Trasa {} (plugin Trasy)	Alignment {} (Alignments plugin)
+blok trasy nejde vytvořit: {}	the alignment block cannot be created: {}
+Trasy: starý blok trasy nejde odstranit: {}	Alignments: the old alignment block cannot be removed: {}
+nepodařilo se uložit definici trasy	the alignment definition could not be saved
+{} „{}“: {} – {}, délka {} m, vrcholů {}, oblouků {}, styl {}	{} "{}": {} – {}, length {} m, vertices {}, curves {}, style {}
+{} „{}“: chyba geometrie – {}	{} "{}": geometry error – {}
+Trasa: klikněte začátek trasy	Alignment: click the start point
+Trasa: klikněte další vrchol	Alignment: click the next vertex
+Trasa: klikněte vrchol č. {} (Enter = konec, poloměr R = {} m)	Alignment: click vertex no. {} (Enter = finish, radius R = {} m)
+Úprava trasy	Edit alignment
+vloženo {} z {} objektů	inserted {} of {} objects
+objekt se nepodařilo vložit	the object could not be inserted
+trasa potřebuje aspoň dva vrcholy	an alignment needs at least two vertices
+vrcholy {} a {} splývají	vertices {} and {} coincide
+ve vrcholu {} se trasa obrací zpět	the alignment turns back at vertex {}
+poloměr ve vrcholu {} je záporný	the radius at vertex {} is negative
+oblouky ve vrcholech {} a {} se nevejdou na přímou mezi nimi – zmenšete poloměr nebo vrcholy oddalte	the curves at vertices {} and {} do not fit on the tangent between them – reduce the radius or move the vertices apart
+polylinie má méně než dva vrcholy	the polyline has fewer than two vertices
+uzavřená polylinie nemůže být trasou	a closed polyline cannot be an alignment
+polylinie musí začínat i končit přímým úsekem	the polyline must start and end with a straight segment
+oblouk za vrcholem {} polylinie má 180° nebo víc	the arc after polyline vertex {} is 180° or more
+ve vrcholu {} polylinie oblouk nenavazuje tečně (odchylka {}°)	at polyline vertex {} the arc is not tangent (deviation {}°)
+Situace 1:500	Plan 1:500
+Situace 1:250	Plan 1:250
+Situace 1:1000	Plan 1:1000
+Jen osa bez popisů	Centerline only, no labels
+Měřítko výkresu 1:	Drawing scale 1:
+Desetinná místa hlavního staničení	Decimals of major stations
+Desetinná místa u hlavních bodů	Decimals at key points
+Desetinná čárka	Decimal comma
+Popisovat hlavní body (ZÚ, KÚ, TK, KT)	Label key points (start, end, TC, CT)
+Zkratky bodů ZÚ,KÚ,TK,KT,V	Point abbreviations start,end,TC,CT,PI
+Trasy – beta 1 (neoficiální). Co umí:	Alignments – beta 1 (unofficial). What it does:
+  Z polylinie – vyberte 2D křivku z úseček a tečných oblouků (začíná i končí přímou).	  From polyline – pick a 2D polyline of lines and tangent arcs (starts and ends with a line).
+  Kreslit vrcholy – klikáte vrcholy tečnového polygonu, oblouky mají zvolený poloměr.	  Draw by vertices – click the tangent polygon vertices; curves get the chosen radius.
+  Úchopy zap/vyp – čtverečky posouvají vrcholy, kolečka mění poloměr; náhled je živý, červená = nevejde se.	  Grips on/off – squares move vertices, circles change the radius; live preview, red = does not fit.
+  Vlastnosti trasy – název, počáteční staničení, styl, výjimky vzhledu a tabulka vrcholů (X, Y, R).	  Alignment properties – name, start station, style, appearance overrides and the vertex table (X, Y, R).
+  Přesun a otočení celé trasy – běžnými příkazy na bloku trasy; Překreslit trasy srovná popisky.	  Move and rotate the whole alignment – with the usual commands on the alignment block; Redraw alignments straightens the labels.
+  Jazyk: příkaz TRA_JAZYK cs | en | auto.	  Language: command TRA_JAZYK cs | en | auto.
+Editor trasy	Alignment editor
+Upravovaná trasa	Edited alignment
+Poloměr dalšího oblouku R [m]	Next curve radius R [m]
+Prodloužit	Extend
+Vrátit vrchol	Undo vertex
+Vložit vrchol	Insert vertex
+Smazat vrchol	Delete vertex
+Oblouk ve vrcholu	Curve at vertex
+Úpravy myší: klikněte na trasu – čtverečky posouvají vrcholy, kolečka mění poloměr (chyťte kolečko, napište R a Enter = přesný poloměr), trojúhelníky uprostřed přímých přidají vrchol (s R z pole výše). Kreslení: klikejte vrcholy, oblouk dostane poloměr R zadaný v okamžiku kliknutí. Enter = hotovo, Esc = zrušit. Vložit/Smazat vrchol a Oblouk ve vrcholu pracují s trasou nejblíž kliknutí; Oblouk ve vrcholu: klik na vrchol, pak napište R do příkazového řádku a Enter (jen Enter = R z pole výše); Smazat oblouk = klik na vrchol.	Mouse editing: click the alignment – squares move vertices, circles change the radius (grab a circle, type R and Enter = exact radius), triangles in the middle of tangents add a vertex (with R from the field above). Drawing: click vertices; a curve gets the radius R set at the moment of the click. Enter = finish, Esc = cancel. Insert/Delete vertex and Curve at vertex work on the alignment nearest the click; Curve at vertex: click the vertex, then type R in the command line and press Enter (Enter alone = R from the field above); Delete curve = click the vertex.
+Prvky trasy	Alignment elements
+Prvek	Element
+Od	From
+Do	To
+Délka	Length
+Oblouk	Curve
+Přímá	Tangent
+L	L
+P	R
+Vrcholy (X, Y, R) – přepište a klikněte Použít	Vertices (X, Y, R) – edit and click Apply
+Použít vrcholy	Apply vertices
+Jiná trasa	Other alignment
+Vlastnosti	Properties
+žádná – nakreslete Novou trasu	none – draw a New alignment
+{} – {}, délka {} m	{} – {}, length {} m
+{} – {}: {}	{} – {}: {}
+Návrh trasy	Alignment design
+Vrcholy	Vertices
+Prodloužit trasu	Extend alignment
+Trasy: klikejte vrcholy trasy. Poloměr dalšího oblouku je v panelu Editor trasy (teď R = {} m) a jde měnit i během kreslení.	Alignments: click the alignment vertices. The next curve radius is in the Alignment editor panel (now R = {} m) and can be changed while drawing.
+Trasy: prodloužení trasy {} – klikejte další vrcholy od konce, Enter = hotovo.	Alignments: extending alignment {} – click further vertices from the end, Enter = finish.
+Prodloužení trasy	Extend alignment
+Trasy: ve vrcholech {} se oblouk nevešel, jsou bez oblouku – zmenšete R a použijte Oblouk ve vrcholu.	Alignments: the curve did not fit at vertices {}; they have no curve – reduce R and use Curve at vertex.
+Vložení vrcholu	Insert vertex
+Trasy: do trasy {} vložen vrchol {} – posuňte ho úchopem (Úchopy zap/vyp), oblouk R = {} m se objeví, až vrchol vybočí z přímky.	Alignments: vertex {1} inserted into alignment {0} – move it with a grip (Grips on/off); the curve R = {2} m appears once the vertex leaves the straight line.
+Trasy: trasa musí mít aspoň dva vrcholy.	Alignments: an alignment needs at least two vertices.
+Smazání vrcholu	Delete vertex
+Trasy: z trasy {} smazán vrchol {}.	Alignments: vertex {1} deleted from alignment {0}.
+Trasy: krajní vrchol nemůže mít oblouk – klikněte na vnitřní vrchol.	Alignments: an end vertex cannot have a curve – click an inner vertex.
+Trasy: vrchol {} trasy {} má poloměr R = {} m.	Alignments: vertex {} of alignment {} has radius R = {} m.
+Trasy: tabulka vrcholů se nezměnila.	Alignments: the vertex table has not changed.
+Úprava vrcholů trasy	Edit alignment vertices
+Trasy: vrcholy trasy {} upraveny.	Alignments: vertices of alignment {} updated.
+Trasa: klikněte vrchol č. {} (R = {} m z panelu; Enter = hotovo, Esc = zrušit)	Alignment: click vertex no. {} (R = {} m from the panel; Enter = finish, Esc = cancel)
+Trasy: klikněte na tečnový polygon, kam vložit vrchol	Alignments: click the tangent polygon where to insert a vertex
+Trasy: klikněte na vrchol, který smazat	Alignments: click the vertex to delete
+Trasy: klikněte na vrchol, kterému nastavit poloměr z panelu	Alignments: click the vertex to get the radius from the panel
+Prvky trasy – R nebo délku oblouku přepište a klikněte Použít změny	Alignment elements – edit a curve's R or length and click Apply changes
+Vrcholy (X, Y, R) – přepište a klikněte Použít změny	Vertices (X, Y, R) – edit and click Apply changes
+Použít změny	Apply changes
+Trasy: v tabulkách se nic nezměnilo.	Alignments: nothing has changed in the tables.
+Úprava oblouků trasy	Edit alignment curves
+Trasy: oblouky trasy {} upraveny.	Alignments: curves of alignment {} updated.
+Trasy: tabulka prvků už neodpovídá trase – nic se nezměnilo.	Alignments: the element table no longer matches the alignment – nothing changed.
+Trasy: řádek {} tabulky prvků nemá platné R nebo délku – nic se nezměnilo.	Alignments: row {} of the element table has no valid R or length – nothing changed.
+Oblouk ve vrcholu {} – trasa {}	Curve at vertex {} – alignment {}
+Poloměr oblouku R [m] (0 = bez oblouku)	Curve radius R [m] (0 = no curve)
+Smazání oblouku	Delete curve
+Trasy: ve vrcholu {} trasy {} už není oblouk.	Alignments: vertex {} of alignment {} no longer has a curve.
+Trasy: klikněte na vrchol, ve kterém zrušit oblouk	Alignments: click the vertex whose curve to remove
+Trasy: v tomto vrcholu oblouk není.	Alignments: this vertex has no curve.
+Smazat oblouk	Delete curve
+Trasy: klikněte na vrchol, kterému nastavit poloměr	Alignments: click the vertex to set its radius
+Zadejte poloměr a potvrďte, pak klikněte na vrchol trasy.	Enter the radius and confirm, then click an alignment vertex.
+Trasy: nejdřív klikněte na trasu (vybere se) a pak příkaz spusťte znovu.	Alignments: first click the alignment (it gets selected), then run the command again.
+Oblouk: klikněte na vrchol trasy	Curve: click an alignment vertex
+Oblouk ve vrcholu {}: napište poloměr R a Enter (nebo klikněte – R = vzdálenost od vrcholu; jen Enter = R {} m z panelu)	Curve at vertex {}: type radius R and Enter (or click – R = distance from the vertex; Enter alone = R {} m from the panel)
+Pohled podélného profilu	Longitudinal profile view
+Profil	Profile
+Podélný profil	Longitudinal profile
+Trasy: ve výkrese není žádný povrch Terénu – profil není z čeho spočítat.	Alignments: there is no Terén surface in the drawing – nothing to compute the profile from.
+Nový podélný profil	New longitudinal profile
+Trasa	Alignment
+Povrch (Terén)	Surface (Terén)
+Měřítko délek	Horizontal scale
+Převýšení (výšky ×)	Vertical exaggeration (heights ×)
+Srovnávací rovina [m n. m.] (0 = automaticky)	Datum [m a.s.l.] (0 = automatic)
+Po potvrzení klikněte do výkresu, kam umístit levý dolní roh pohledu.	After confirming, click in the drawing where to place the lower-left corner of the view.
+Vložit	Insert
+Trasy: klikněte, kam umístit levý dolní roh pohledu	Alignments: click where to place the lower-left corner of the view
+Trasy: pohled {} – terén z {} trojúhelníků, úseků profilu {}, srovnávací rovina {} m, mřížka po {} m / {} m.	Alignments: view {} – terrain from {} triangles, profile segments {}, datum {} m, grid every {} m / {} m.
+Trasy: profil nejde nakreslit – {}	Alignments: the profile cannot be drawn – {}
+Trasy: pohled {}: {}	Alignments: view {}: {}
+Trasy: překresleno pohledů: {}.	Alignments: views redrawn: {}.
+trasa {} už ve výkrese není	alignment {} is no longer in the drawing
+povrch {} už ve výkrese není	surface {} is no longer in the drawing
+povrch „{}“ nemá ve výkrese trojúhelníky – v Terénu mu nastavte styl se zobrazeným TIN a zkuste to znovu	surface "{}" has no triangles in the drawing – give it a style showing the TIN in Terén and try again
+trasa {} nepřechází přes povrch „{}“	alignment {} does not cross surface "{}"
+S.R. {} m n. m.	Datum {} m a.s.l.
+Podélný profil – {} · povrch {} · 1:{}/{}	Longitudinal profile – {} · surface {} · 1:{}/{}
+blok pohledu nejde vytvořit: {}	the view block cannot be created: {}
+Pohled podélného profilu {} (plugin Trasy)	Longitudinal profile view {} (Alignments plugin)
+nepodařilo se uložit definici pohledu	the view definition could not be saved
+Přepočet podélného profilu	Recompute longitudinal profile
+Trasy: přepočítáno pohledů: {}.	Alignments: views recomputed: {}.
+Staničení	Stationing
+Výška terénu	Ground elevation
+Výška nivelety	Design elevation
+Rozdíl (hloubka)	Difference (depth)
+Směrové poměry	Horizontal alignment
+Sklony nivelety	Design grades
+Niveleta	Design profile
+Niveleta {}	Design profile {}
+Trasy: nejdřív vložte podélný profil (tlačítko Podélný profil), niveleta se kreslí do něj.	Alignments: insert a longitudinal profile first (Longitudinal profile button); the design profile is drawn into it.
+Trasy: niveletu nejde vytvořit.	Alignments: the design profile cannot be created.
+Trasy: niveletu se nepodařilo uložit.	Alignments: the design profile could not be saved.
+Trasy: niveleta trasy {} uložena ({} vrcholů), překresleno pohledů: {}.	Alignments: design profile of alignment {} saved ({} vertices), views redrawn: {}.
+Niveleta: klikněte v pohledu profilu začátek nivelety	Design profile: click the start of the design profile in a profile view
+Niveleta: klikněte vrchol č. {} (oblouky R = {} m; Enter = hotovo, Esc = zrušit)	Design profile: click vertex no. {} (curves R = {} m; Enter = finish, Esc = cancel)
+niveleta potřebuje aspoň dva vrcholy	a design profile needs at least two vertices
+vrchol nivelety {} neleží za předchozím ve staničení	design profile vertex {} is not after the previous one
+zakružovací oblouky ve vrcholech nivelety {} a {} se překrývají – zmenšete poloměr	the vertical curves at design profile vertices {} and {} overlap – reduce the radius
+Vrcholy nivelety	Design profile vertices
+Smazat vrchol nivelety	Delete design profile vertex
+trasa nemá niveletu	the alignment has no design profile
+niveletu se nepodařilo uložit	the design profile could not be saved
+Trasy: nejdřív klikněte na pohled profilu s niveletou (nebo niveletu nakreslete tlačítkem Niveleta).	Alignments: first click a profile view with a design profile (or draw one with the Design profile button).
+Vrcholy nivelety – trasa {}	Design profile vertices – alignment {}
+Vrcholy: staničení [m], výška [m n. m.], R zakružovacího oblouku [m] (0 = bez oblouku)	Vertices: station [m], elevation [m a.s.l.], vertical curve R [m] (0 = no curve)
+Výška	Elevation
+Sklony úseků: {}	Segment grades: {}
+Trasy: řádek {} nemá platné staničení a výšku – nic se nezměnilo.	Alignments: row {} has no valid station and elevation – nothing changed.
+Trasy: niveleta trasy {} upravena, překresleno pohledů: {}.	Alignments: design profile of alignment {} updated, views redrawn: {}.
+Trasy: klikněte v pohledu profilu na vrchol nivelety, který smazat	Alignments: click the design profile vertex to delete in a profile view
+Trasy: klikněte do rámu pohledu profilu.	Alignments: click inside the profile view frame.
+Trasy: trasa tohoto pohledu nemá niveletu.	Alignments: the alignment of this view has no design profile.
+Trasy: niveleta musí mít aspoň dva vrcholy.	Alignments: a design profile needs at least two vertices.
+Smazání vrcholu nivelety	Delete design profile vertex
+Trasy: z nivelety trasy {} smazán vrchol {}.	Alignments: vertex {1} deleted from the design profile of alignment {0}.
+Úprava nivelety	Edit design profile

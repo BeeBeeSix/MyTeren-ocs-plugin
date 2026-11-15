@@ -10,7 +10,7 @@ encoding_rs = "0.8.42"
 spade = "2"
 
 [workspace]
-members = [".", "plugin"]
+members = [".", "plugin", "trasy"]
 
 [profile.release]
 opt-level = 3

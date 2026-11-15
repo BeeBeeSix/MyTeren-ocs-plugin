@@ -18,6 +18,7 @@ required-features = ["ukazka"]
 eframe = { version = "0.36.2", default-features = false, features = ["glow", "default_fonts", "x11"] }
 ocs_plugin_api = { git = "https://github.com/HakanSeven12/OpenCADStudio", rev = "fb0a667e269b6c924233ecd450a11dd7cba40eea", features = ["host"] }
 teren = { path = ".." }
+trasy = { path = "../trasy" }
 png = "0.17"
 egui_extras = { version = "0.36.2", default-features = false, features = ["svg"] }
 winit = { version = "0.30", default-features = false, features = ["x11", "rwh_06"] }

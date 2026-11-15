@@ -584,7 +584,7 @@ fn obnov_uchopy(k: &mut PresKanal, posledni: &mut Option<u64>) -> usize {
     let otisk = h.finish();
     if *posledni != Some(otisk) {
         *posledni = Some(otisk);
-        k.uchopy(g.clone());
+        k.uchopy(crate::uchopy::spoj_teren(g.clone()));
         if navic > 0 {
             k.info(&trf!("Terén: úchopy jen pro prvních {} bodů (dalších {} bez úchopu).", crate::uchopy::MAX_UCHOPU, navic));
         }
