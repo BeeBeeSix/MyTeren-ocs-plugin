@@ -209,6 +209,13 @@ impl PresKanal {
     pub fn panel_id(&mut self, id: &str, hodnoty: std::collections::HashMap<String, ocs_plugin_api::dialog::DialogValue>) {
         let _ = self.pozadavek(PluginRequest::UpdatePanel { panel_id: id.into(), values: hodnoty });
     }
+    /// Zaregistruje (když `def`) a ukáže panel pluginu.
+    pub fn panel_ukaz(&mut self, id: &str, def: Option<ocs_plugin_api::dialog::PanelDef>) {
+        if let Some(d) = def {
+            let _ = self.pozadavek(PluginRequest::RegisterPanel(d));
+        }
+        let _ = self.pozadavek(PluginRequest::TogglePanel { panel_id: id.into(), show: Some(true) });
+    }
     pub fn panel(&mut self, hodnoty: std::collections::HashMap<String, ocs_plugin_api::dialog::DialogValue>) {
         let _ = self.pozadavek(PluginRequest::UpdatePanel { panel_id: crate::panel::ID.into(), values: hodnoty });
     }

@@ -538,6 +538,11 @@ fn spust_obnovu(tab: u64) {
             let s = kanaly().lock().unwrap_or_else(|e| e.into_inner()).remove(&tab);
             let Some(s) = s else { break };
             let mut k = PresKanal(s);
+            // Prospektor právě mění výkres – počkat, až skončí
+            let start = std::time::Instant::now();
+            while crate::tra::prospektor::PRACUJE.load(Ordering::SeqCst) && start.elapsed() < std::time::Duration::from_secs(30) {
+                std::thread::sleep(std::time::Duration::from_millis(100));
+            }
             if let Ok(mut doc) = k.dokument() {
                 // pohledy, jejichž trasa nebo povrch se změnily (přepočet povrchu
                 // v Terénu, přesun trasy běžným příkazem, Zpět…)

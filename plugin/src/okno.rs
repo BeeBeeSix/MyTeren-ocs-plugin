@@ -31,6 +31,7 @@ mod napoveda;
 mod pruvodce;
 mod pohled3d;
 mod strom;
+mod trasy;
 mod vyber;
 
 use crate::styly::{self, Barva, StylBodu, StylPovrchu, BARVY, POPISKY, POPISY_VRSTEVNIC, ZNACKY};
@@ -285,6 +286,9 @@ enum Uzel {
     StylyPovrchu,
     StylPovrchu(String),
     Nastaveni,
+    Trasy,
+    Trasa(String),
+    Pohled(String),
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
@@ -430,6 +434,8 @@ struct Okno {
     pridat_skupinu: String,
     zvyraznena: Option<Handle>,
     nove_jmeno_povrchu: String,
+    /// Rozepsané vlastnosti trasy: (id trasy, jméno, počáteční staničení, styl).
+    jmeno_trasy: (String, String, f64, String),
     /// Povrch, jehož větev se má ve stromu rozbalit.
     rozbalit: Option<String>,
     // styly
@@ -695,7 +701,7 @@ impl Okno {
         }
         self.skok = *n;
         let vynutit = std::mem::take(&mut self.vynutit_skok);
-        if self.uzel == Uzel::Vyber && !vynutit && matches!(skok, Skok::Povrch(_) | Skok::Polozka(..) | Skok::Body(_)) {
+        if self.uzel == Uzel::Vyber && !vynutit && matches!(skok, Skok::Povrch(_) | Skok::Polozka(..) | Skok::Body(_) | Skok::Trasa(_) | Skok::Pohled(_)) {
             // sledování výběru: uzel Vybráno ve výkrese ukazuje výběr sám
             return;
         }
@@ -754,6 +760,17 @@ impl Okno {
             Skok::StylyPovrchu => {
                 otevri(egui::Id::new("u_styly"));
                 self.vyber_uzel(Uzel::StylyPovrchu);
+            }
+            Skok::Trasa(id) => {
+                otevri(egui::Id::new("u_trasy"));
+                self.vyber_uzel(Uzel::Trasa(id.clone()));
+            }
+            Skok::Pohled(id) => {
+                otevri(egui::Id::new("u_trasy"));
+                if let Some(t) = stav.trasy.iter().find(|t| t.pohledy.iter().any(|p| &p.id == id)) {
+                    otevri(egui::Id::new(("u_trasa", t.id.as_str())));
+                }
+                self.vyber_uzel(Uzel::Pohled(id.clone()));
             }
         }
     }
@@ -1302,6 +1319,13 @@ impl Okno {
             }
             Uzel::StylPovrchu(id) => {
                 egui::ScrollArea::both().id_salt("styl_p").auto_shrink([false, false]).show(ui, |ui| self.detail_styl_povrchu(ui, stav, &id));
+            }
+            Uzel::Trasy => self.detail_trasy(ui, stav),
+            Uzel::Trasa(id) => {
+                egui::ScrollArea::vertical().id_salt("trasa_s").auto_shrink([false, false]).show(ui, |ui| self.karta_trasy(ui, stav, &id));
+            }
+            Uzel::Pohled(id) => {
+                egui::ScrollArea::vertical().id_salt("pohled_s").auto_shrink([false, false]).show(ui, |ui| self.karta_pohledu(ui, stav, &id));
             }
         }
     }

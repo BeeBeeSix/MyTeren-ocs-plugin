@@ -103,6 +103,10 @@ pub enum Skok {
     StylPovrchu(String),
     StylyBodu,
     StylyPovrchu,
+    /// Trasa (id).
+    Trasa(String),
+    /// Pohled podélného profilu (id).
+    Pohled(String),
 }
 
 #[derive(Clone, Debug, Default)]
@@ -135,6 +139,11 @@ pub struct StavSpravce {
     pub vyber_povrchy: Vec<String>,
     /// Počet vybraných objektů, které nejsou bod ani povrch.
     pub vyber_jine: usize,
+    /// Trasy s niveletami a pohledy profilu.
+    pub trasy: Vec<crate::tra::prospektor::PrehledTrasy>,
+    /// Vybrané trasy a pohledy (id).
+    pub vyber_trasy: Vec<String>,
+    pub vyber_pohledy: Vec<String>,
     /// Načtené sítě povrchů pro prohlížeč 3D.
     pub site3d: Arc<Vec<Sit3D>>,
     /// Zvyšuje se při každé změně – okno podle toho překresluje.
@@ -326,6 +335,18 @@ pub enum Akce {
     Export(String, String, String, Oddelovac, bool),
     /// Akce, která počká, až se ve výkrese objeví skupina (po dokončení příkazu).
     Odlozena(Box<Akce>, Podminka),
+    // trasy a profily
+    /// Jméno, počáteční staničení a styl trasy.
+    TrasaNastav(Handle, String, f64, String),
+    /// Otevře panel Editor trasy s trasou.
+    TrasaEditor(Handle),
+    TrasaSmazat(Handle),
+    PohledSmazat(Handle),
+    /// Překreslit pohled (`None` = všechny zastaralé).
+    PohledyPrekreslit(Option<Handle>),
+    /// Vybere objekty ve výkrese a poradí, které tlačítko na pásu karet
+    /// použít (příkaz pluginu Prospektor spustit neumí).
+    Navod(Vec<Handle>, String),
 }
 
 /// Nový povrch z průvodce.
@@ -720,6 +741,8 @@ impl Pracovnik {
                 s.vyber_body.clear();
                 s.vyber_povrchy.clear();
                 s.vyber_jine = 0;
+                s.vyber_trasy.clear();
+                s.vyber_pohledy.clear();
             });
             if let Some(mut k) = kanal(tab) {
                 let povrch = k.dokument().map(|d| crate::panel::text_povrchu(&d)).unwrap_or_default();
@@ -756,17 +779,20 @@ impl Pracovnik {
             return;
         }
         let povrchy = if body.is_empty() { povrchy::povrchy_z_vyberu(&doc, &h) } else { Vec::new() };
-        let jine = if body.is_empty() && povrchy.is_empty() { h.len() } else { 0 };
+        let (trasy_v, pohledy_v) = if body.is_empty() { crate::tra::prospektor::z_vyberu(&doc, &h) } else { Default::default() };
+        let jine = if body.is_empty() && povrchy.is_empty() && trasy_v.is_empty() && pohledy_v.is_empty() { h.len() } else { 0 };
         // stejné objekty jako dosud (např. znovu vybrané po přestavbě povrchu)?
         let stejne = {
             let st = zamek(&sdilene().stav);
-            st.vyber_body == body && st.vyber_povrchy == povrchy
+            st.vyber_body == body && st.vyber_povrchy == povrchy && st.vyber_trasy == trasy_v && st.vyber_pohledy == pohledy_v
         };
         let po_akci = self.posledni_akce.is_some_and(|t| t.elapsed() < Duration::from_secs(3));
         uprav_stav(|s| {
             s.vyber_body = body;
             s.vyber_povrchy = povrchy;
             s.vyber_jine = jine;
+            s.vyber_trasy = trasy_v;
+            s.vyber_pohledy = pohledy_v;
         });
         // strom neskáče, když jde jen o znovu vybrání po vlastní akci
         // (jinak by po Uložit styl odskočil z editoru stylu)
@@ -914,6 +940,7 @@ impl Pracovnik {
             }
         };
         let p = prehled(&doc);
+        let trasy = crate::tra::prospektor::prehled(&doc);
         if let Some(tab) = Self::aktivni_tab() {
             self.ma_auto.insert(tab, p.povrchy.iter().any(|p| p.auto));
         }
@@ -930,6 +957,7 @@ impl Pracovnik {
         uprav_stav(|s| {
             s.styl_bodu = styl_bodu;
             s.povrchy = p.povrchy;
+            s.trasy = trasy;
             s.body = p.body;
             s.skupiny = p.skupiny;
             s.zdroje = p.zdroje;
@@ -978,6 +1006,24 @@ impl Pracovnik {
                 k.chyba(&t);
                 return;
             }
+            Akce::Navod(h, text) => {
+                if !h.is_empty() {
+                    k.vyber(h);
+                }
+                k.info(&text);
+                uprav_stav(|s| s.zprava = text);
+                return;
+            }
+            Akce::TrasaEditor(h) => {
+                crate::tra::prospektor::PRACUJE.store(true, Ordering::SeqCst);
+                let r = crate::tra::prospektor::otevri_editor(&mut k, h);
+                crate::tra::prospektor::PRACUJE.store(false, Ordering::SeqCst);
+                uprav_stav(|s| match r {
+                    Ok(z) => s.zprava = z,
+                    Err(e) => s.zprava = trf!("Chyba: {}", e),
+                });
+                return;
+            }
             Akce::Prikaz(p) => {
                 if !k.prikaz(&p) {
                     k.chyba(&trf!("Terén: příkaz {} se nepodařilo spustit – použijte tlačítko na pásu karet.", p));
@@ -1003,10 +1049,12 @@ impl Pracovnik {
             }
             k.zacatek_kroku(nazev_kroku(&a));
         }
+        crate::tra::prospektor::PRACUJE.store(true, Ordering::SeqCst);
         let vysledek = Self::proved(&mut k, a);
         if drzet {
             k.konec_kroku();
         }
+        crate::tra::prospektor::PRACUJE.store(false, Ordering::SeqCst);
         if let Err(e) = &vysledek {
             k.chyba(&trf!("Terén: {}", e));
         }
@@ -1238,7 +1286,11 @@ impl Pracovnik {
                 k.hotovo();
                 Ok(Some(trf!("Upraveno bodů: {}", n)))
             }
-            Akce::Uchopy(_) | Akce::Hlaseni(_) | Akce::Prikaz(_) => Ok(None),
+            Akce::Uchopy(_) | Akce::Hlaseni(_) | Akce::Prikaz(_) | Akce::Navod(..) | Akce::TrasaEditor(_) => Ok(None),
+            Akce::TrasaNastav(h, j, p, s) => crate::tra::prospektor::nastav(k, h, &j, p, &s).map(|z| (!z.is_empty()).then_some(z)),
+            Akce::TrasaSmazat(h) => crate::tra::prospektor::smaz_trasu(k, h).map(Some),
+            Akce::PohledSmazat(h) => crate::tra::prospektor::smaz_pohled(k, h).map(Some),
+            Akce::PohledyPrekreslit(h) => crate::tra::prospektor::prekresli(k, h).map(Some),
             Akce::Ukazat(stred, r, handly) => {
                 let r = (r * 1.4).max(15.0);
                 let _ = k.prikaz(&format!(
@@ -1844,6 +1896,13 @@ pub fn najdi_ve_strome(doc: &CadDocument, vyber: &[Handle]) -> Option<(Skok, Str
         let n = body.len();
         return Some((Skok::Body(body), trf!("Vybráno bodů: {}", n)));
     }
+    let (trasy, pohledy) = crate::tra::prospektor::z_vyberu(doc, vyber);
+    if let Some(id) = pohledy.into_iter().next() {
+        return Some((Skok::Pohled(id.clone()), trf!("Pohled profilu {}", id)));
+    }
+    if let Some(id) = trasy.into_iter().next() {
+        return Some((Skok::Trasa(id.clone()), trf!("Trasa {}", id)));
+    }
     None
 }
 
@@ -1993,6 +2052,10 @@ fn nazev_kroku(a: &Akce) -> &'static str {
         Akce::PripravVykres => tr("Terén: příprava výkresu"),
         Akce::NovyPovrch(_) | Akce::NovyPovrchPas(..) | Akce::PovrchZeSkupiny(..) => tr("Terén: nový povrch"),
         Akce::SrovnatBody(_) => tr("Terén: srovnání bodů"),
+        Akce::TrasaNastav(..) => tr("Trasy: vlastnosti trasy"),
+        Akce::TrasaSmazat(_) => tr("Trasy: smazání trasy"),
+        Akce::PohledSmazat(_) => tr("Trasy: smazání pohledu profilu"),
+        Akce::PohledyPrekreslit(_) => tr("Trasy: překreslení pohledů"),
         _ => tr("Terén"),
     }
 }

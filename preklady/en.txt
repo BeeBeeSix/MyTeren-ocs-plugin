@@ -1464,3 +1464,77 @@ podle skupiny ({})	by group ({})
 výchozí styl	default style
 Přednost má styl nastavený přímo bodu, pak podle kódu, pak podle skupiny.	A style set directly on the point wins, then by code, then by group.
 {} stylů, používá se {}	{} styles, {} in use
+ · profilů {} · nivelet {}	 · profiles {} · design profiles {}
++ nový	+ new
+Editor trasy	Alignment editor
+Geometrie trasy nejde spočítat: {}	The alignment geometry cannot be computed: {}
+Nakreslit niveletu	Draw design profile
+Nakreslit trasu	Draw alignment
+Niveleta {}	Design profile {}
+Niveletu nakreslíte v podélném profilu (nejdřív vložte profil).	Draw the design profile in a longitudinal profile (insert a profile first).
+Nivelety	Design profiles
+Nový podélný profil…	New longitudinal profile…
+Podélné profily	Longitudinal profiles
+Podélný profil {}	Longitudinal profile {}
+Pohled profilu už ve výkrese není.	The profile view is no longer in the drawing.
+Pohled profilu {}	Profile view {}
+Pohled profilu {} je smazaný.	Profile view {} has been deleted.
+Pohled {} · {}	View {} · {}
+Povrch {} ve výkrese není – terénní profil nejde spočítat.	Surface {} is not in the drawing – the ground profile cannot be computed.
+Překreslit	Redraw
+Překreslit zastaralé pohledy	Redraw outdated views
+Překreslit zastaralé pohledy ({})	Redraw outdated views ({})
+Smazat pohled	Delete view
+Smazat trasu	Delete alignment
+Trasa nebo povrch se od posledního kreslení změnily – pohled je potřeba překreslit.	The alignment or surface changed since the last drawing – the view needs to be redrawn.
+Trasa už ve výkrese není.	The alignment is no longer in the drawing.
+Trasa z polylinie	Alignment from polyline
+Trasa zatím nemá niveletu – nakreslete ji tlačítkem Niveleta v pohledu profilu.	The alignment has no design profile yet – draw one with the Design profile button in a profile view.
+Trasa zatím nemá podélný profil.	The alignment has no longitudinal profile yet.
+Trasa {}	Alignment {}
+Trasa „{}“ je smazaná i s pohledy profilu ({}).	Alignment “{}” has been deleted together with its profile views ({}).
+Trasa „{}“ je smazaná.	Alignment “{}” has been deleted.
+Trasu (osu) vytvoříte z polylinie, nebo ji nakreslíte klikáním. Potom k ní přidáte podélný profil a niveletu.	Create an alignment from a polyline or draw it by clicking. Then add a longitudinal profile and a design profile.
+Trasy	Alignments
+Trasy: přejmenování trasy	Alignments: rename alignment
+Trasy: překreslení pohledů	Alignments: redraw views
+Trasy: smazání pohledu profilu	Alignments: delete profile view
+Trasy: smazání trasy	Alignments: delete alignment
+Ve výkrese zatím není žádná trasa	There is no alignment in the drawing yet
+Vlastnosti trasy…	Alignment properties…
+Vlastnosti…	Properties…
+Vrcholy nivelety…	Design profile vertices…
+chyba	error
+chyba geometrie: {}	geometry error: {}
+klikáním vrcholů v tomto pohledu; nahradí dosavadní niveletu trasy	by clicking vertices in this view; replaces the alignment's current design profile
+měřítko délek	horizontal scale
+nejmenší R	smallest R
+oblouků	curves
+otevřít trasu	open alignment
+povrch	surface
+profil zastaralý	profile outdated
+pásů	bands
+převýšení	vertical exaggeration
+staničení	stations
+styl trasy	alignment style
+styl trasy, výjimek objektu: {}	alignment style, object overrides: {}
+trasa	alignment
+trasa nebo povrch se změnily – pohled je potřeba překreslit	the alignment or surface changed – the view needs to be redrawn
+vloží nový pohled podélného profilu této trasy	inserts a new longitudinal profile view of this alignment
+vrcholů	vertices
+vybraná ve výkrese	selected in the drawing
+vybraný ve výkrese	selected in the drawing
+zastaralé pohledy profilu: {}	outdated profile views: {}
+zatím žádná trasa	no alignment yet
+{} m · {} vrcholů · {} oblouků · {}	{} m · {} vertices · {} curves · {}
+{} vrch.	{} vert.
+{} vrcholů · {} oblouků · {} – {} · výšky {} – {} m · sklony {}	{} vertices · {} curves · {} – {} · elevations {} – {} m · grades {}
+{}1:{} · převýšení {}× · pásů {}	{}1:{} · exaggeration {}× · bands {}
+Počáteční staničení	Start station
+Trasy: vlastnosti trasy	Alignments: alignment properties
+Trasa je vybraná ve výkrese – výjimky stylu a vrcholy upravíte tlačítkem Vlastnosti trasy na pásu karet Terén.	The alignment is selected in the drawing – edit style overrides and vertices with the Alignment properties button on the Terén ribbon tab.
+Trasa je vybraná ve výkrese – na pásu karet Terén klikněte na Podélný profil a potom do výkresu, kam profil umístit.	The alignment is selected in the drawing – click Longitudinal profile on the Terén ribbon tab, then click where to place the profile.
+Na pásu karet Terén klikněte na Nová trasa › Z polylinie a potom na polylinii osy.	On the Terén ribbon tab click New alignment › From polyline, then click the centreline polyline.
+Na pásu karet Terén klikněte na Nová trasa › Kreslit vrcholy a klikejte vrcholy trasy.	On the Terén ribbon tab click New alignment › Draw vertices and click the alignment vertices.
+Pohled je vybraný ve výkrese – na pásu karet Terén klikněte na Vrcholy nivelety.	The view is selected in the drawing – click Design profile vertices on the Terén ribbon tab.
+Pohled je vybraný ve výkrese – na pásu karet Terén klikněte na Niveleta a naklikejte vrcholy v pohledu.	The view is selected in the drawing – click Design profile on the Terén ribbon tab and click the vertices in the view.

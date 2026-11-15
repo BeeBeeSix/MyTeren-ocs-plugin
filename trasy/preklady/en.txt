@@ -224,3 +224,18 @@ Trasy: niveleta musí mít aspoň dva vrcholy.	Alignments: a design profile need
 Smazání vrcholu nivelety	Delete design profile vertex
 Trasy: z nivelety trasy {} smazán vrchol {}.	Alignments: vertex {1} deleted from the design profile of alignment {0}.
 Úprava nivelety	Edit design profile
+Pohled profilu {} smazán	Profile view {} deleted
+Přejmenování trasy	Rename alignment
+Překresleno pohledů profilu: {}	Profile views redrawn: {}
+Překreslení pohledů profilu	Redraw profile views
+Smazání pohledu profilu	Delete profile view
+Smazání trasy	Delete alignment
+Trasa „{}“ přejmenována na „{}“	Alignment “{}” renamed to “{}”
+Trasa „{}“ smazána	Alignment “{}” deleted
+Trasa „{}“ smazána i s pohledy profilu ({})	Alignment “{}” deleted together with its profile views ({})
+jméno nesmí být prázdné	the name must not be empty
+pohled už ve výkrese není	the view is no longer in the drawing
+trasa už ve výkrese není	the alignment is no longer in the drawing
+Editor trasy: {}	Alignment editor: {}
+Trasa „{}“ upravena	Alignment “{}” updated
+neplatné počáteční staničení	invalid start station

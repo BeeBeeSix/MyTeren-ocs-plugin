@@ -300,6 +300,8 @@ impl Okno {
                 }
             });
 
+        self.strom_tras(ui, stav);
+
         // ── vzhled ──
         sekce(ui, tr("Vzhled"));
         let pocty = pocty_stylu(stav);

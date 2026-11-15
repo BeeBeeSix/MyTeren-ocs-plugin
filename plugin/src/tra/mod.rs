@@ -10,6 +10,7 @@ pub mod objekt;
 pub mod pohled;
 pub mod povrchy;
 pub mod prikazy;
+pub mod prospektor;
 pub mod uchopy;
 
 use std::collections::{BTreeMap, HashMap};
