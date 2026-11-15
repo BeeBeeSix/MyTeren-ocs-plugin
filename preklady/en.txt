@@ -1538,3 +1538,6 @@ Na pásu karet Terén klikněte na Nová trasa › Z polylinie a potom na polyli
 Na pásu karet Terén klikněte na Nová trasa › Kreslit vrcholy a klikejte vrcholy trasy.	On the Terén ribbon tab click New alignment › Draw vertices and click the alignment vertices.
 Pohled je vybraný ve výkrese – na pásu karet Terén klikněte na Vrcholy nivelety.	The view is selected in the drawing – click Design profile vertices on the Terén ribbon tab.
 Pohled je vybraný ve výkrese – na pásu karet Terén klikněte na Niveleta a naklikejte vrcholy v pohledu.	The view is selected in the drawing – click Design profile on the Terén ribbon tab and click the vertices in the view.
+Na pásu karet Terén klikněte na Nový bod › Ruční bod a klikněte do výkresu nebo zadejte x,y.	On the Terén ribbon tab click New point › Manual point, then click in the drawing or enter x,y.
+Na pásu karet Terén klikněte na Nový bod › Bod na povrchu a klikejte do výkresu.	On the Terén ribbon tab click New point › Point on surface, then click in the drawing.
+Nový bod se zadává ve výkrese tlačítkem Nový bod na pásu karet Terén (klik nebo souřadnice)	New points are entered in the drawing with the New point button on the Terén ribbon tab (click or coordinates)

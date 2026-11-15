@@ -288,8 +288,6 @@ pub enum Akce {
     BodyPanel(Vec<Handle>, Option<String>, Option<f64>, Option<String>, Option<String>),
     /// Jen zpráva do příkazového řádku.
     Hlaseni(String),
-    /// Spustí příkaz Terénu ve výkrese (např. TER_BOD = Nový bod).
-    Prikaz(String),
     /// Hromadně: výška (hodnota, přičíst), kód.
     BodyHromadne(Vec<Handle>, Option<(f64, bool)>, Option<String>),
     BodyPrecislovat(Vec<Handle>, u64, u64),
@@ -1024,12 +1022,6 @@ impl Pracovnik {
                 });
                 return;
             }
-            Akce::Prikaz(p) => {
-                if !k.prikaz(&p) {
-                    k.chyba(&trf!("Terén: příkaz {} se nepodařilo spustit – použijte tlačítko na pásu karet.", p));
-                }
-                return;
-            }
             a => self.akce_hlavni(k, a),
         }
     }
@@ -1286,7 +1278,7 @@ impl Pracovnik {
                 k.hotovo();
                 Ok(Some(trf!("Upraveno bodů: {}", n)))
             }
-            Akce::Uchopy(_) | Akce::Hlaseni(_) | Akce::Prikaz(_) | Akce::Navod(..) | Akce::TrasaEditor(_) => Ok(None),
+            Akce::Uchopy(_) | Akce::Hlaseni(_) | Akce::Navod(..) | Akce::TrasaEditor(_) => Ok(None),
             Akce::TrasaNastav(h, j, p, s) => crate::tra::prospektor::nastav(k, h, &j, p, &s).map(|z| (!z.is_empty()).then_some(z)),
             Akce::TrasaSmazat(h) => crate::tra::prospektor::smaz_trasu(k, h).map(Some),
             Akce::PohledSmazat(h) => crate::tra::prospektor::smaz_pohled(k, h).map(Some),

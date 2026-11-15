@@ -1534,7 +1534,7 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
                     ))
                     .clicked()
                 {
-                    spravce::posli(Akce::Prikaz("TER_BOD".into()));
+                    spravce::posli(Akce::Navod(Vec::new(), tr("Na pásu karet Terén klikněte na Nový bod › Ruční bod a klikněte do výkresu nebo zadejte x,y.").into()));
                     ui.close();
                 }
                 if ui
@@ -1544,12 +1544,12 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
                     ))
                     .clicked()
                 {
-                    spravce::posli(Akce::Prikaz("TER_BOD_POVRCH".into()));
+                    spravce::posli(Akce::Navod(Vec::new(), tr("Na pásu karet Terén klikněte na Nový bod › Bod na povrchu a klikejte do výkresu.").into()));
                     ui.close();
                 }
             })
             .response
-            .on_hover_text(tr("Nový bod se zadává ve výkrese (klik nebo souřadnice)"));
+            .on_hover_text(tr("Nový bod se zadává ve výkrese tlačítkem Nový bod na pásu karet Terén (klik nebo souřadnice)"));
             if karta::tlacitko(ui, Some(strom::ik!("ter_styl_bodu")), tr("Překreslit body"), false)
                 .on_hover_text(tr("znovu vykreslí značky a popisy všech bodů podle stylů a měřítka"))
                 .clicked()
