@@ -74,6 +74,7 @@ pub fn uchopy(doc: &CadDocument) -> (Vec<PluginGrip>, usize) {
         .iter()
         .take(MAX_UCHOPU)
         .map(|b| PluginGrip {
+            xy_plane: false,
             grip_id: b.handle.value(),
             anchor: Some(b.handle),
             point: [b.bod.x, b.bod.y, b.bod.z],

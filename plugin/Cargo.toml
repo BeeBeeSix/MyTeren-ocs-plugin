@@ -16,7 +16,7 @@ required-features = ["ukazka"]
 
 [dependencies]
 eframe = { version = "0.36.2", default-features = false, features = ["glow", "default_fonts", "x11"] }
-ocs_plugin_api = { git = "https://github.com/HakanSeven12/OpenCADStudio", rev = "fb0a667e269b6c924233ecd450a11dd7cba40eea", features = ["host"] }
+ocs_plugin_api = { git = "https://github.com/HakanSeven12/OpenCADStudio", rev = "8b4d27046040b27eb07d3faed7b7472bd7bdaea9", features = ["host"] }
 teren = { path = ".." }
 trasy = { path = "../trasy" }
 png = "0.17"

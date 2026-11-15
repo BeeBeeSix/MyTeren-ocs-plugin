@@ -87,7 +87,7 @@ pub fn uchopy_pohledu(p: &ObjektPohledu, t: &ObjektTrasy) -> Vec<PluginGrip> {
     let mut out = Vec::new();
     let mut grip = |id: u64, bod: Option<[f64; 3]>, osa: Option<[f64; 3]>, tvar: PluginGripShape| {
         if let Some(point) = bod {
-            out.push(PluginGrip { grip_id: id, anchor: Some(p.insert), point, axis: osa, shape: tvar });
+            out.push(PluginGrip { grip_id: id, anchor: Some(p.insert), point, axis: osa, shape: tvar, xy_plane: false });
         }
     };
     for (i, v) in n.vrcholy.iter().enumerate() {
@@ -238,6 +238,7 @@ pub fn uchopy_trasy(t: &ObjektTrasy) -> Vec<PluginGrip> {
         let v = t.vrcholy();
         for (i, x) in v.iter().enumerate() {
             out.push(PluginGrip {
+                xy_plane: false,
                 grip_id: id(&t, i, VRCHOL),
                 anchor: Some(t.insert),
                 point: [x.x, x.y, 0.0],
@@ -247,6 +248,7 @@ pub fn uchopy_trasy(t: &ObjektTrasy) -> Vec<PluginGrip> {
         }
         for i in 0..v.len().saturating_sub(1) {
             out.push(PluginGrip {
+                xy_plane: false,
                 grip_id: id(&t, i, VLOZIT),
                 anchor: Some(t.insert),
                 point: [(v[i].x + v[i + 1].x) / 2.0, (v[i].y + v[i + 1].y) / 2.0, 0.0],
@@ -259,6 +261,7 @@ pub fn uchopy_trasy(t: &ObjektTrasy) -> Vec<PluginGrip> {
                 if u.tecna > 0.0 {
                     let p = [v[i].x + u.vzepeti * u.osa[0], v[i].y + u.vzepeti * u.osa[1], 0.0];
                     out.push(PluginGrip {
+                        xy_plane: false,
                         grip_id: id(&t, i, POLOMER),
                         anchor: Some(t.insert),
                         point: p,
