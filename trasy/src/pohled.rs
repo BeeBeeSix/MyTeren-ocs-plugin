@@ -4,7 +4,8 @@
 
 use std::collections::BTreeMap;
 
-use crate::pasy::{vychozi_sada, Pas};
+use crate::pasy::{sada_sablony, vychozi_sada, Pas};
+use crate::styl::{vysledne, Hodnoty, Klic, Styl};
 
 /// Verze zápisu definice pohledu.
 pub const VERZE: &str = "POHLED1";
@@ -143,6 +144,55 @@ impl DefinicePohledu {
     }
 }
 
+/// Nastavení vzhledu pohledu (klíče stylu; pohled může mít výjimky).
+pub const SCHEMA: [Klic; 8] = [
+    Klic { klic: "cary_pasu", vychozi: "ramecek", popis: "Čáry pásů (rámeček / jen svislice)" },
+    Klic { klic: "stupnice", vychozi: "vlevo", popis: "Výšková stupnice (vlevo / obě strany / skrýt)" },
+    Klic { klic: "mrizka", vychozi: "1", popis: "Mřížka v grafu" },
+    Klic { klic: "ram", vychozi: "1", popis: "Rámeček grafu" },
+    Klic { klic: "staniceni", vychozi: "km", popis: "Formát staničení" },
+    Klic { klic: "sklon", vychozi: "promile", popis: "Jednotka sklonu (‰ / %)" },
+    Klic { klic: "pismo", vychozi: "2.5", popis: "Výška písma [mm]" },
+    Klic { klic: "sablona", vychozi: "", popis: "Šablona (obor)" },
+];
+
+/// Šablony podle oboru: id stylu, český název, kód sady pásů.
+pub const SABLONY: [(&str, &str, &str); 4] = [
+    ("ZAKLAD", "Základní", ""),
+    ("OBECNA", "Obecná – stávající a upravený terén", "obecna"),
+    ("KANALIZACE", "Vodovod a kanalizace", "kanalizace"),
+    ("TOK", "Vodní toky", "tok"),
+];
+
+/// Vestavěné styly pohledu (šablony podle oboru dědí ze základního).
+pub fn styly_vestavene() -> Vec<Styl> {
+    let cisty = [("cary_pasu", "svislice"), ("stupnice", "skryt"), ("mrizka", "0"), ("ram", "0")];
+    let mut v = vec![Styl::novy("ZAKLAD", "Základní")];
+    for (id, nazev, sada) in &SABLONY[1..] {
+        let mut h: Vec<(&str, &str)> = cisty.to_vec();
+        h.push(("sablona", sada));
+        v.push(Styl::odvozeny(id, nazev, "ZAKLAD", &h));
+    }
+    v
+}
+
+/// Výsledné nastavení pohledu: šablona ← výjimky pohledu.
+pub fn nastaveni(d: &DefinicePohledu) -> Hodnoty<'static> {
+    vysledne(&SCHEMA, &styly_vestavene(), &d.styl, &d.vyjimky)
+}
+
+impl DefinicePohledu {
+    /// Nový pohled podle šablony (id stylu ze `SABLONY`): styl i sada pásů.
+    pub fn podle_sablony(id: &str, trasa: &str, povrch: &str, sablona: &str) -> Self {
+        let mut d = Self::novy(id, trasa, povrch);
+        if let Some((sid, _, sada)) = SABLONY.iter().find(|s| s.0 == sablona) {
+            d.styl = sid.to_string();
+            d.pasy = if sada.is_empty() { vychozi_sada() } else { sada_sablony(sada) };
+        }
+        d
+    }
+}
+
 /// Rozvržení os pohledu.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Osy {
@@ -243,6 +293,23 @@ mod testy {
         let r = d.zapis();
         let rr: Vec<&str> = r.iter().map(String::as_str).collect();
         assert_eq!(DefinicePohledu::cti(&rr), Some(d));
+    }
+
+    #[test]
+    fn sablony_a_nastaveni() {
+        let d = DefinicePohledu::novy("P1", "T1", "S");
+        let n = nastaveni(&d);
+        assert_eq!((n.text("cary_pasu"), n.ano("mrizka")), ("ramecek", true));
+        let mut k = DefinicePohledu::podle_sablony("P2", "T1", "S", "KANALIZACE");
+        assert_eq!(k.styl, "KANALIZACE");
+        assert!(k.pasy.iter().any(|p| p.zahlavi() == "Kóta dna potrubí"));
+        let n = nastaveni(&k);
+        assert_eq!((n.text("cary_pasu"), n.text("stupnice"), n.ano("ram")), ("svislice", "skryt", false));
+        k.vyjimky.insert("stupnice".into(), "vlevo".into());
+        assert_eq!(nastaveni(&k).text("stupnice"), "vlevo");
+        let r = k.zapis();
+        let rr: Vec<&str> = r.iter().map(String::as_str).collect();
+        assert_eq!(DefinicePohledu::cti(&rr), Some(k));
     }
 
     #[test]

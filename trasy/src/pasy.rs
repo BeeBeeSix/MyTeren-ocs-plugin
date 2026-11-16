@@ -1,25 +1,43 @@
-//! Pásy pod podélným profilem (tabulka): definice, místa zápisu, hodnoty.
+//! Pásy pod (a nad) podélným profilem: definice, místa zápisu, hodnoty.
 
 /// Druh pásu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DruhPasu {
     /// Staničení.
     Staniceni,
-    /// Výška terénu.
+    /// Výška terénu (povrch pohledu).
     Teren,
     /// Výška nivelety (návrhového profilu).
     Niveleta,
-    /// Rozdíl niveleta − terén (hloubka / výška násypu).
+    /// Rozdíl dvou výšek (výchozí niveleta − terén: hloubka / výška násypu).
     Rozdil,
     /// Směrové poměry trasy (přímá, oblouk s poloměrem).
     Smer,
     /// Sklony nivelety s délkami úseků.
     Sklony,
+    /// Výška z libovolného zdroje (jiný povrch, niveleta…).
+    Kota,
+    /// Vzdálenosti mezi místy zápisu.
+    Vzdalenosti,
+    /// Jeden text přes celou délku.
+    Text,
+    /// Úseky s textem (katastrální území, parcely, druh povrchu, uložení…).
+    Useky,
 }
 
 impl DruhPasu {
-    pub const VSE: [DruhPasu; 6] =
-        [DruhPasu::Staniceni, DruhPasu::Teren, DruhPasu::Niveleta, DruhPasu::Rozdil, DruhPasu::Smer, DruhPasu::Sklony];
+    pub const VSE: [DruhPasu; 10] = [
+        DruhPasu::Staniceni,
+        DruhPasu::Teren,
+        DruhPasu::Niveleta,
+        DruhPasu::Rozdil,
+        DruhPasu::Smer,
+        DruhPasu::Sklony,
+        DruhPasu::Kota,
+        DruhPasu::Vzdalenosti,
+        DruhPasu::Text,
+        DruhPasu::Useky,
+    ];
 
     pub fn kod(self) -> &'static str {
         match self {
@@ -29,6 +47,10 @@ impl DruhPasu {
             DruhPasu::Rozdil => "rozdil",
             DruhPasu::Smer => "smer",
             DruhPasu::Sklony => "sklony",
+            DruhPasu::Kota => "kota",
+            DruhPasu::Vzdalenosti => "vzdalenosti",
+            DruhPasu::Text => "text",
+            DruhPasu::Useky => "useky",
         }
     }
     pub fn z_kodu(k: &str) -> Option<Self> {
@@ -43,8 +65,64 @@ impl DruhPasu {
             DruhPasu::Rozdil => "Rozdíl (hloubka)",
             DruhPasu::Smer => "Směrové poměry",
             DruhPasu::Sklony => "Sklony nivelety",
+            DruhPasu::Kota => "Kóta",
+            DruhPasu::Vzdalenosti => "Vzdálenosti",
+            DruhPasu::Text => "Text",
+            DruhPasu::Useky => "Úseky s textem",
         }
     }
+    /// Zapisuje hodnoty do míst (svislé texty)?
+    pub fn hodnotovy(self) -> bool {
+        matches!(self, DruhPasu::Staniceni | DruhPasu::Teren | DruhPasu::Niveleta | DruhPasu::Rozdil | DruhPasu::Kota)
+    }
+    /// Řádek s textem v rámečku (úseky, sklony, vzdálenosti…)?
+    pub fn textovy(self) -> bool {
+        matches!(self, DruhPasu::Sklony | DruhPasu::Vzdalenosti | DruhPasu::Text | DruhPasu::Useky)
+    }
+}
+
+/// Odkud pás čte výšku.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Zdroj {
+    /// Povrch pohledu (terénní profil).
+    Teren,
+    /// Jiný povrch Terénu podle id.
+    Povrch(String),
+    /// Niveleta trasy.
+    Niveleta,
+}
+
+impl Zdroj {
+    pub fn kod(&self) -> String {
+        match self {
+            Zdroj::Teren => "teren".into(),
+            Zdroj::Niveleta => "niveleta".into(),
+            Zdroj::Povrch(id) => format!("povrch:{id}"),
+        }
+    }
+    pub fn z_kodu(k: &str) -> Option<Self> {
+        match k.trim() {
+            "teren" => Some(Zdroj::Teren),
+            "niveleta" => Some(Zdroj::Niveleta),
+            k => k.strip_prefix("povrch:").filter(|id| !id.is_empty()).map(|id| Zdroj::Povrch(id.into())),
+        }
+    }
+}
+
+/// Umístění pásu vůči grafu.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Poloha {
+    #[default]
+    Pod,
+    Nad,
+}
+
+/// Úsek textového pásu: staničení od–do a text.
+#[derive(Clone, Debug, PartialEq)]
+pub struct Usek {
+    pub od: f64,
+    pub do_: f64,
+    pub text: String,
 }
 
 /// Jeden pás.
@@ -55,7 +133,7 @@ pub struct Pas {
     pub vyska: f64,
     /// Zápis po kroku [m]; 0 = ne.
     pub krok: f64,
-    /// Zápis v lomech terénu.
+    /// Zápis v lomech (terénu, nivelety).
     pub lomy: bool,
     /// Zápis v hlavních bodech trasy (ZÚ, TK, KT, KÚ).
     pub body_trasy: bool,
@@ -63,22 +141,68 @@ pub struct Pas {
     pub rucni: Vec<f64>,
     /// Desetinná místa hodnot.
     pub desetin: usize,
+    /// Vlastní záhlaví; prázdné = podle druhu.
+    pub nazev: String,
+    pub poloha: Poloha,
+    /// Výška pro kótu, u rozdílu „A“.
+    pub zdroj: Zdroj,
+    /// U rozdílu „B“ (A − B).
+    pub zdroj2: Zdroj,
+    /// Text pásu Text.
+    pub text: String,
+    /// Úseky pásu Úseky.
+    pub useky: Vec<Usek>,
+    /// Text úseků na střed (jinak vlevo).
+    pub na_stred: bool,
+}
+
+/// Zakóduje text do zápisu pásu (oddělovače `;`, `|`, `=`).
+fn kod_textu(t: &str) -> String {
+    t.replace('%', "%25").replace(';', "%3B").replace('|', "%7C").replace('=', "%3D")
+}
+fn dekod_textu(t: &str) -> String {
+    t.replace("%3D", "=").replace("%7C", "|").replace("%3B", ";").replace("%25", "%")
 }
 
 impl Pas {
     pub fn novy(druh: DruhPasu) -> Self {
         let (vyska, desetin) = match druh {
             DruhPasu::Smer | DruhPasu::Sklony => (10.0, 1),
-            DruhPasu::Staniceni => (15.0, 2),
+            DruhPasu::Vzdalenosti | DruhPasu::Text | DruhPasu::Useky => (6.0, 2),
             _ => (15.0, 2),
         };
-        Self { druh, vyska, krok: 20.0, lomy: false, body_trasy: true, rucni: Vec::new(), desetin }
+        let (zdroj, zdroj2) = match druh {
+            DruhPasu::Niveleta | DruhPasu::Rozdil => (Zdroj::Niveleta, Zdroj::Teren),
+            _ => (Zdroj::Teren, Zdroj::Niveleta),
+        };
+        Self {
+            druh,
+            vyska,
+            krok: 20.0,
+            lomy: false,
+            body_trasy: true,
+            rucni: Vec::new(),
+            desetin,
+            nazev: String::new(),
+            poloha: Poloha::Pod,
+            zdroj,
+            zdroj2,
+            text: String::new(),
+            useky: Vec::new(),
+            na_stred: false,
+        }
     }
 
-    /// Řádek pro uložení: `kód;výška;krok;lomy;body;desetin;r1|r2|…`.
+    /// Záhlaví pásu (vlastní, jinak podle druhu – český text, plugin překládá).
+    pub fn zahlavi(&self) -> &str {
+        if self.nazev.trim().is_empty() { self.druh.nazev() } else { &self.nazev }
+    }
+
+    /// Řádek pro uložení: `kód;výška;krok;lomy;body;desetin;r1|r2|…` a za ním
+    /// volitelné `klíč=hodnota` (starší verze je přeskočí).
     pub fn zapis(&self) -> String {
         let r: Vec<String> = self.rucni.iter().map(|s| format!("{s}")).collect();
-        format!(
+        let mut t = format!(
             "{};{};{};{};{};{};{}",
             self.druh.kod(),
             self.vyska,
@@ -87,7 +211,31 @@ impl Pas {
             u8::from(self.body_trasy),
             self.desetin,
             r.join("|")
-        )
+        );
+        let vychozi = Pas::novy(self.druh);
+        if !self.nazev.is_empty() {
+            t += &format!(";n={}", kod_textu(&self.nazev));
+        }
+        if self.poloha == Poloha::Nad {
+            t += ";p=nad";
+        }
+        if self.zdroj != vychozi.zdroj {
+            t += &format!(";z={}", kod_textu(&self.zdroj.kod()));
+        }
+        if self.zdroj2 != vychozi.zdroj2 {
+            t += &format!(";z2={}", kod_textu(&self.zdroj2.kod()));
+        }
+        if !self.text.is_empty() {
+            t += &format!(";t={}", kod_textu(&self.text));
+        }
+        if !self.useky.is_empty() {
+            let u: Vec<String> = self.useky.iter().map(|u| format!("{}:{}:{}", u.od, u.do_, kod_textu(&u.text))).collect();
+            t += &format!(";u={}", u.join("|"));
+        }
+        if self.na_stred {
+            t += ";s=1";
+        }
+        t
     }
 
     pub fn cti(t: &str) -> Option<Self> {
@@ -107,6 +255,29 @@ impl Pas {
             p.desetin = (x as usize).min(4);
         }
         p.rucni = c.get(6).map_or(Vec::new(), |x| x.split('|').filter_map(|v| v.trim().parse().ok()).collect());
+        for kv in c.iter().skip(7) {
+            let Some((k, v)) = kv.split_once('=') else { continue };
+            match k {
+                "n" => p.nazev = dekod_textu(v),
+                "p" => p.poloha = if v == "nad" { Poloha::Nad } else { Poloha::Pod },
+                "z" => p.zdroj = Zdroj::z_kodu(&dekod_textu(v)).unwrap_or(p.zdroj),
+                "z2" => p.zdroj2 = Zdroj::z_kodu(&dekod_textu(v)).unwrap_or(p.zdroj2),
+                "t" => p.text = dekod_textu(v),
+                "u" => {
+                    p.useky = v
+                        .split('|')
+                        .filter_map(|x| {
+                            let mut d = x.splitn(3, ':');
+                            let od = d.next()?.trim().parse().ok()?;
+                            let do_ = d.next()?.trim().parse().ok()?;
+                            Some(Usek { od, do_, text: dekod_textu(d.next().unwrap_or("")) })
+                        })
+                        .collect()
+                }
+                "s" => p.na_stred = v == "1",
+                _ => {}
+            }
+        }
         Some(p)
     }
 }
@@ -123,6 +294,79 @@ pub fn vychozi_sada() -> Vec<Pas> {
         Pas::novy(DruhPasu::Staniceni),
         Pas::novy(DruhPasu::Smer),
     ]
+}
+
+/// Úsek přes celou trasu (pro šablony; staničení se ořízne na rozsah pohledu).
+fn cely(text: &str) -> Vec<Usek> {
+    vec![Usek { od: 0.0, do_: 1e9, text: text.into() }]
+}
+
+fn pojmenovany(druh: DruhPasu, nazev: &str, vyska: f64) -> Pas {
+    let mut p = Pas::novy(druh);
+    p.nazev = nazev.into();
+    p.vyska = vyska;
+    p
+}
+
+/// Hodnoty jen v lomových bodech (bez kroku).
+fn v_lomech(mut p: Pas) -> Pas {
+    p.krok = 0.0;
+    p.lomy = true;
+    p
+}
+
+fn nad(mut p: Pas) -> Pas {
+    p.poloha = Poloha::Nad;
+    p
+}
+
+/// Šablony pohledu podle oboru (`obecna`, `kanalizace`, `tok`); neznámá = výchozí sada.
+/// Pásy, pro které Trasy zatím nemají data (parcely, katastr…), jsou textové
+/// úseky k vyplnění.
+pub fn sada_sablony(sablona: &str) -> Vec<Pas> {
+    use DruhPasu as D;
+    match sablona {
+        "obecna" => {
+            let mut rozdil = pojmenovany(D::Rozdil, "Rozdíl (výkop − / násyp +)", 9.0);
+            rozdil = v_lomech(rozdil);
+            vec![
+                nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Katastrální území", 5.0) }),
+                nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Parcelní čísla", 5.0) }),
+                nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Druh povrchu", 5.0) }),
+                v_lomech(pojmenovany(D::Niveleta, "Kóta upraveného terénu", 11.0)),
+                v_lomech(pojmenovany(D::Teren, "Kóta stávajícího terénu", 11.0)),
+                rozdil,
+                v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 11.0)),
+                pojmenovany(D::Sklony, "Sklon [‰] – délka [m]", 5.0),
+                Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Druh úpravy", 5.0) },
+            ]
+        }
+        "kanalizace" => vec![
+            nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Katastrální území", 5.0) }),
+            nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Parcelní čísla", 5.0) }),
+            nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Druh povrchu", 5.0) }),
+            nad(pojmenovany(D::Vzdalenosti, "Vzdálenosti šachet", 5.0)),
+            v_lomech(pojmenovany(D::Teren, "Kóta terénu", 11.0)),
+            v_lomech(Pas { zdroj: Zdroj::Teren, zdroj2: Zdroj::Niveleta, ..pojmenovany(D::Rozdil, "Hloubka dna potrubí", 9.0) }),
+            v_lomech(pojmenovany(D::Niveleta, "Kóta dna potrubí", 11.0)),
+            v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 11.0)),
+            Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Profil – materiál – délka", 5.0) },
+            pojmenovany(D::Sklony, "Sklon [‰] – délka [m]", 5.0),
+            Pas { useky: cely("pískové lože tl. 100 mm"), ..pojmenovany(D::Useky, "Uložení", 5.0) },
+        ],
+        "tok" => vec![
+            nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Katastrální území", 5.0) }),
+            nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Parcelní čísla", 5.0) }),
+            nad(pojmenovany(D::Vzdalenosti, "Vzdálenosti profilů", 5.0)),
+            v_lomech(pojmenovany(D::Teren, "Kóta dna stávající", 11.0)),
+            v_lomech(pojmenovany(D::Niveleta, "Kóta dna navržená", 11.0)),
+            v_lomech(pojmenovany(D::Rozdil, "Rozdíl dna (výkop − / násyp +)", 9.0)),
+            v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 11.0)),
+            pojmenovany(D::Sklony, "Sklon dna [‰] – délka [m]", 5.0),
+            Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Opevnění koryta", 5.0) },
+        ],
+        _ => vychozi_sada(),
+    }
 }
 
 /// Staničení, ve kterých pás zapisuje hodnoty (seřazená, bez opakování).
@@ -203,6 +447,39 @@ mod testy {
         p.rucni = vec![12.5, 40.0];
         assert_eq!(Pas::cti(&p.zapis()), Some(p));
         assert_eq!(Pas::cti("nesmysl;1"), None);
+    }
+
+    #[test]
+    fn zapis_novych_poli() {
+        let mut p = Pas::novy(DruhPasu::Useky);
+        p.nazev = "Druh; povrchu = test|x".into();
+        p.poloha = Poloha::Nad;
+        p.useky = vec![Usek { od: 0.0, do_: 120.5, text: "svah 1:2; 50 %".into() }, Usek { od: 120.5, do_: 330.0, text: "asfalt".into() }];
+        p.na_stred = true;
+        assert_eq!(Pas::cti(&p.zapis()), Some(p));
+        let mut k = Pas::novy(DruhPasu::Kota);
+        k.zdroj = Zdroj::Povrch("Zamereni2019".into());
+        assert_eq!(Pas::cti(&k.zapis()), Some(k));
+        let mut r = Pas::novy(DruhPasu::Rozdil);
+        r.zdroj = Zdroj::Teren;
+        r.zdroj2 = Zdroj::Povrch("P2".into());
+        assert_eq!(Pas::cti(&r.zapis()), Some(r));
+        // starý zápis bez nových polí
+        let s = Pas::cti("teren;15;20;1;1;2;").unwrap();
+        assert_eq!((s.poloha, s.nazev.as_str(), s.zdroj.clone()), (Poloha::Pod, "", Zdroj::Teren));
+    }
+
+    #[test]
+    fn sablony() {
+        for sab in ["obecna", "kanalizace", "tok"] {
+            let s = sada_sablony(sab);
+            assert!(s.iter().any(|p| p.poloha == Poloha::Nad), "{sab}");
+            assert!(s.iter().any(|p| p.druh == DruhPasu::Staniceni), "{sab}");
+            for p in &s {
+                assert_eq!(Pas::cti(&p.zapis()).as_ref(), Some(p), "{sab}: {}", p.zahlavi());
+            }
+        }
+        assert_eq!(sada_sablony("neznama"), vychozi_sada());
     }
 
     #[test]
