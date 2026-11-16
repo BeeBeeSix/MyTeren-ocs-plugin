@@ -777,7 +777,8 @@ fn vlastnosti_hotovo(host: &mut dyn HostApi, arg: &str) {
 
 /// Volby dialogu nového pohledu: id tras a povrchů v pořadí nabídek.
 static VOLBY_POHLEDU: std::sync::Mutex<Option<(Vec<String>, Vec<String>)>> = std::sync::Mutex::new(None);
-const MERITKA_POHLEDU: [f64; 4] = [500.0, 1000.0, 2000.0, 5000.0];
+/// Šablona posledního nového pohledu (výchozí volba v dialogu).
+static POSLEDNI_SABLONA: std::sync::Mutex<&'static str> = std::sync::Mutex::new("OBECNA");
 
 fn pohled_cmd(host: &mut dyn HostApi) {
     let mut v = PresHost(host);
@@ -797,7 +798,14 @@ fn pohled_cmd(host: &mut dyn HostApi) {
     let i_trasy = vybrana.and_then(|id| trasy.iter().position(|t| t.def.id == id)).unwrap_or(0);
     *VOLBY_POHLEDU.lock().unwrap_or_else(|e| e.into_inner()) =
         Some((trasy.iter().map(|t| t.def.id.clone()).collect(), povrchy.iter().map(|p| p.id.clone()).collect()));
+    let i_sablony = trasy::pohled::SABLONY.iter().position(|x| x.0 == *POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner())).unwrap_or(1);
     let d = DialogDef::new(tr("Nový podélný profil"))
+        .with_control(DialogControl::Choice {
+            id: "sablona".into(),
+            label: tr("Šablona").into(),
+            options: trasy::pohled::SABLONY.iter().map(|x| tr(x.1).to_string()).collect(),
+            default_index: i_sablony,
+        })
         .with_control(DialogControl::Choice {
             id: "trasa".into(),
             label: tr("Trasa").into(),
@@ -810,11 +818,13 @@ fn pohled_cmd(host: &mut dyn HostApi) {
             options: povrchy.iter().map(|p| p.jmeno.clone()).collect(),
             default_index: 0,
         })
-        .with_control(DialogControl::Choice {
+        .with_control(DialogControl::Number {
             id: "meritko".into(),
-            label: tr("Měřítko délek").into(),
-            options: MERITKA_POHLEDU.iter().map(|m| format!("1:{m}")).collect(),
-            default_index: 1,
+            label: tr("Měřítko délek 1:").into(),
+            default: 1000.0,
+            min: Some(10.0),
+            max: Some(100000.0),
+            step: Some(50.0),
         })
         .with_control(DialogControl::Number {
             id: "prevyseni".into(),
@@ -863,9 +873,11 @@ fn pohled_vloz_cmd(host: &mut dyn HostApi, arg: &str) {
     };
     let (Some(trasa), Some(povrch)) = (trasy.get(volba("trasa")), povrchy.get(volba("povrch"))) else { return };
     let id = trasy::pohled::volne_id(pohled::pohledy(&doc).iter().map(|p| p.def.id.as_str()));
-    let mut def = trasy::pohled::DefinicePohledu::novy(&id, trasa, povrch);
-    def.meritko = MERITKA_POHLEDU.get(volba("meritko")).copied().unwrap_or(1000.0);
-    def.prevyseni = cislo_z("prevyseni").unwrap_or(10.0).max(1.0);
+    let sablona = trasy::pohled::SABLONY.get(volba("sablona")).map_or("ZAKLAD", |x| x.0);
+    *POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner()) = sablona;
+    let mut def = trasy::pohled::DefinicePohledu::podle_sablony(&id, trasa, povrch, sablona);
+    def.meritko = cislo_z("meritko").filter(|x| *x >= 10.0).unwrap_or(1000.0);
+    def.prevyseni = cislo_z("prevyseni").unwrap_or(10.0).max(0.5);
     def.srovnavaci = cislo_z("srovnavaci").filter(|x| *x != 0.0);
     v.zpet(tr("Podélný profil"));
     match pohled::uloz(&mut v, &doc, None, &def, bod) {

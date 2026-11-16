@@ -239,3 +239,13 @@ trasa už ve výkrese není	the alignment is no longer in the drawing
 Editor trasy: {}	Alignment editor: {}
 Trasa „{}“ upravena	Alignment “{}” updated
 neplatné počáteční staničení	invalid start station
+Šablona	Template
+Měřítko délek 1:	Horizontal scale 1:
+Základní	Basic
+Obecná – stávající a upravený terén	General – existing and modified ground
+Vodovod a kanalizace	Water supply and sewer
+Vodní toky	Watercourses
+Kóta	Elevation
+Vzdálenosti	Distances
+Text	Text
+Úseky s textem	Text segments
