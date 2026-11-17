@@ -1,63 +1,116 @@
 # Terén
 
-**Survey points and terrain surfaces for Open CAD Studio.**
-Import a survey, get a TIN surface with contours in a minute – and keep
-everything in the drawing, editable and one Undo away.
+**Survey points, terrain surfaces and contours for [Open CAD Studio](https://github.com/HakanSeven12/OpenCADStudio) – free and open source.**
+
+[![Latest release](https://img.shields.io/github/v/release/pabloxbezx/teren-ocs-plugin?label=release)](https://github.com/pabloxbezx/teren-ocs-plugin/releases/latest)
+[![Open CAD Studio 2026.46](https://img.shields.io/badge/Open%20CAD%20Studio-2026.46-2b6cb0)](https://github.com/HakanSeven12/OpenCADStudio/releases)
+[![License: GPL-3.0-only](https://img.shields.io/badge/license-GPL--3.0--only-blue)](https://www.gnu.org/licenses/gpl-3.0.html)
 
 *Česky: [README.cs.md](README.cs.md)*
 
-![Existing-ground surface with contours and survey points in Open CAD Studio](manual/img/povrch2.png)
+Import a survey and get a TIN surface with labelled contours in a minute.
+Edit points and triangles right in the drawing – everything stays in the
+DWG, and every action is a single Undo step. Interface in English or Czech.
 
-## Why Terén
+<table>
+<tr>
+<td><img src="docs/img/contours.png" width="400" height="260" alt="Contours with labels and survey points"></td>
+<td><img src="docs/img/viewer-3d.png" width="400" height="270" alt="3D viewer – surface coloured by elevation"></td>
+</tr>
+</table>
 
-- **Works right away.** Point import detects the format, delimiter and
-  encoding and shows a preview. A new surface recalculates itself whenever
-  its points, breaklines or boundaries change.
-- **You always see the state.** Up-to-date ✔ or outdated ⚠ surface, the
-  active surface, where a point gets its style from, what an action will do.
-- **Edit where you look.** Drag a point in the drawing, type into the point
-  table, use the *Point properties* panel in the dock or the cursor menu.
-- **Nothing breaks by accident.** Every action is a single Undo step. The
-  surface can't be picked by a stray click.
-- **Made for Czech surveys.** S-JTSK coordinates, PYXZD files from
-  surveyors, Windows-1250 encoding. Interface in Czech or English.
+## What's new in 1.1.0
 
-## Start in four steps
+- **Open CAD Studio 2026.46.** Built for the current release.
+- **Alignments and long profiles – work-in-progress concept.** Draw an
+  alignment from a polyline or by picking vertices, add a long profile view
+  with the terrain from your surfaces, a design profile and data bands.
+  Try it out, but expect features, look and storage in the drawing to
+  change; the manual does not cover it yet.
+- **Styles for profiles and alignments.** Profile styles (look and set of
+  bands, templates for general use, water and sewer, and watercourses) and
+  alignment styles (stations, labels, colours, lineweights) are stored in
+  the drawing; editing a style redraws everything that uses it.
+- **Faster surfaces.** Triangles are stored as a mesh instead of thousands
+  of 3D faces, so large surfaces insert, save and delete much faster.
 
-1. Install *Terén* from the **Plugin Manager** in Open CAD Studio.
-2. **Terén** tab › **Import points** › pick your survey file › check the
-   preview › Import.
-3. **New surface** › **Existing ground (from points)** – triangles, contours
-   and labels appear.
-4. Open the **Prospector** to see points, groups, surfaces and styles.
+All releases: [Releases](https://github.com/pabloxbezx/teren-ocs-plugin/releases) ·
+change log in Czech: [README.cs.md](README.cs.md#co-je-nového)
 
-Just looking? Open the sample drawing `ukazka/teren-sample.dwg` – a small
-forest survey with a finished surface.
+## Features
 
-## What it does
+<table>
+<tr>
+<td width="400" valign="top"><img src="docs/img/import.png" width="400" height="260" alt="Point import with column roles and checks"></td>
+<td valign="top">
 
-| Area | What you get |
-|---|---|
-| **Points** | Import from text and CSV in any column order, from the clipboard, Excel, LandXML, Trimble JobXML, Leica GSI and from points drawn in the drawing; preview with checks of errors, S-JTSK and duplicates. Manual points, points on a surface, survey check of suspicious elevations, export back to text. |
-| **Point groups** | Rules in plain words (“code is T, PAT”, “number 1-50”, “from file …”), exclusions, points added by hand, live preview. |
-| **Point styles** | Marker (cross, circle, tree, manhole, hydrant… or your own block), label layout, decimals; by code, by group or per point. Labels move aside when they overlap. |
-| **Surfaces** | Delaunay TIN from point groups and drawing objects, breaklines, boundaries and holes, max. edge length. |
-| **Triangle edits** | Swap, add or delete an edge, delete a triangle, add or remove a point – kept with the surface, visible at once. |
-| **Display** | Minor and major contours with labels, triangles, outline, slope arrows; surface styles. |
-| **3D viewer** | Colours by elevation or slope, vertical exaggeration, contours and breaklines, save as image. |
-| **Prospector** | One window for the selection, the tree of everything in the drawing, settings, help and a new-surface wizard. |
-| **Export** | Surface to LandXML 1.2 or DXF 3D faces; points to text files. |
+### Point import
+Text and CSV in any column order, clipboard, Excel, LandXML, Trimble
+JobXML, Leica GSI and points drawn in the drawing. Format, delimiter,
+encoding and S-JTSK coordinates are detected automatically; errors and
+duplicates show up before anything is imported.
 
-Everything is stored in the drawing (DWG/DXF) – no side files, no database.
+</td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/img/surface-card.png" width="400" height="260" alt="Prospector – surface card"></td>
+<td valign="top">
 
-![3D viewer – surface coloured by elevation](manual/img/3d-en.png)
+### Surfaces and the Prospector
+Delaunay TIN from point groups and drawing objects with breaklines,
+boundaries and holes. Minor and major contours with labels, triangles and
+slope arrows set by surface styles. The Prospector shows every point, group,
+surface and style in the drawing, with status and the main numbers at a
+glance.
 
-![Prospector – drawing tree and point table](manual/img/prospektor-en.png)
+</td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/img/profile-view.png" width="400" height="260" alt="Long profile view card"></td>
+<td valign="top">
 
-## Installation
+### Alignments and long profiles <sub>concept</sub>
+Horizontal alignments with tangents and arcs, stationing and key points.
+Long profile views with the terrain line, a design profile and bands above
+and below the graph, drawn to the scale and exaggeration you choose.
 
-Each Terén release is built for one Open CAD Studio release (the host checks
-that both sides use the same drawing data format):
+</td>
+</tr>
+<tr>
+<td valign="top"><img src="docs/img/alignment-style.png" width="400" height="145" alt="Alignment style – colours and lineweights"></td>
+<td valign="top">
+
+### Styles stored in the drawing
+Point, surface, profile and alignment styles. Built-in styles can be
+adjusted or reset; your own styles travel with the DWG – no side files, no
+database.
+
+</td>
+</tr>
+</table>
+
+**Also:** point groups by plain-language rules, point styles with markers
+and labels by code or group, triangle edits (swap, add or delete an edge),
+moving points by grip, a 3D viewer coloured by elevation or slope, export
+of surfaces to LandXML 1.2 or DXF and of points to text files.
+
+## Try it in 2 minutes
+
+1. In Open CAD Studio 2026.46 open the **Plugin Manager**, find *Terén* and
+   click Install. After a restart the **Terén** tab appears.
+2. Open the sample drawing
+   [teren-sample.dwg](https://github.com/pabloxbezx/teren-ocs-plugin/raw/main/ukazka/teren-sample.dwg)
+   – a small forest survey with a finished surface.
+3. Open the **Prospector**, click the surface, then try **View in 3D** or
+   drag a point with **Move points** on (Ctrl+Z undoes it).
+
+Your own survey: **Import points** › pick the file › check the preview ›
+Import, then **New surface** › **Existing ground (from points)**.
+
+## Compatibility and installation
+
+Each Terén release is built for one Open CAD Studio release; the Plugin
+Manager offers the right one.
 
 | Open CAD Studio | Terén |
 |---|---|
@@ -65,9 +118,8 @@ that both sides use the same drawing data format):
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
-- **Plugin Manager** in Open CAD Studio: find *Terén* and click Install.
-- **Manually (Windows):** download `Teren-windows.zip` from
-  [Releases](https://github.com/pabloxbezx/teren-ocs-plugin/releases),
+- **Manually (Windows):** download `Teren-windows.zip` from the
+  [latest release](https://github.com/pabloxbezx/teren-ocs-plugin/releases/latest),
   extract it and run `nainstalovat.bat`.
 - **From source:** `cargo build --release -p teren_plugin` (any stable
   Rust), then copy the library and `plugin/plugin.toml` to
@@ -80,23 +132,21 @@ English), applied after a restart.
 
 - **Manual** (PDF): [English](manual/Teren-manual-en.pdf) ·
   [česky](manual/Teren-manual-cs.pdf); also attached to every release.
-- **In the app:** Terén tab › Help, or F1 in the Prospector.
-- **What's new:** [Releases](https://github.com/pabloxbezx/teren-ocs-plugin/releases)
-  and the change log in [README.cs.md](README.cs.md). Version 1.1.0 adds
-  **alignments and long profiles as a work-in-progress concept** – try them
-  out, but expect their features, look and storage in the drawing to change;
-  the manual does not cover them yet.
+  In the app: Terén tab › Help, or F1 in the Prospector.
 - **Found a bug or missing something?**
   [Open an issue](https://github.com/pabloxbezx/teren-ocs-plugin/issues) –
-  a short description and, if possible, a small made-up survey file help most.
+  a short description and, if possible, a small made-up survey file help
+  most.
 
 ## For developers
 
 - `src/` – the `teren` library: point import, TIN, breaklines, contours,
-  groups, LandXML/DXF writers (also a small command-line tool that writes DXF).
-- `plugin/` – the Open CAD Studio plugin (ribbon, commands, Prospector in egui).
+  groups, LandXML/DXF writers (also a small command-line tool that writes
+  DXF).
+- `trasy/` – alignments, profiles, bands and their styles.
+- `plugin/` – the Open CAD Studio plugin (ribbon, commands, Prospector in
+  egui).
 - `preklady/en.txt` – translations, one line per text: Czech, tab, English.
-  Other languages can be added the same way.
 - `manual/` – manual sources (HTML) and PDFs.
 
 ## License
