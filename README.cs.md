@@ -61,6 +61,7 @@ kontroluje, že obě strany používají stejný formát dat výkresu):
 
 | Open CAD Studio | Terén |
 |---|---|
+| 2026.46 | 1.1.0 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
@@ -88,6 +89,26 @@ angličtina), projeví se po novém spuštění.
   nejvíc pomůže krátký popis a malý vymyšlený soubor zaměření.
 
 # Co je nového
+
+## Verze 1.1.0
+
+- **Pro Open CAD Studio 2026.46.** Starší Terén se v něm nenačte; Terén
+  1.1.0 zase nepoběží ve starších verzích Open CAD Studia.
+- **Trasy a podélné profily – rozpracovaný koncept.** Nová část pluginu na
+  pásu karet Terén: trasa z polylinie nebo kreslením vrcholů (přímky
+  a oblouky, staničení, hlavní body), úpravy úchopy a v Editoru trasy,
+  pohled podélného profilu s terénem z povrchů, niveleta a pásy pod
+  a nad grafem. Funkce, vzhled i uložení ve výkrese se budou ještě měnit –
+  zatím ji berte jako ukázku k vyzkoušení, ne jako hotový nástroj pro
+  odevzdávanou dokumentaci. Manuál ji zatím nepopisuje.
+- **Prospektor**: větev Trasy (trasy, jejich pohledy profilu a nivelety,
+  přejmenování, staničení, styl, mazání), ve Vzhledu nové **Styly profilů**
+  (vzhled a sada pásů, šablony obecná / vodovod a kanalizace / vodní toky)
+  a **Styly tras** (staničení, popisy, barvy a tloušťky). Styly se ukládají
+  do výkresu; změna stylu překreslí objekty, které ho používají.
+- **Povrch jako síť**: trojúhelníky povrchu jsou v bloku jako síť místo
+  tisíců 3D ploch – velký povrch se rychleji vkládá, ukládá i maže. Hrany
+  na spojnicích a hranicích se kreslí v barvě jejich hladin.
 
 ## Verze 1.0.9
 

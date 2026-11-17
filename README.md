@@ -61,6 +61,7 @@ that both sides use the same drawing data format):
 
 | Open CAD Studio | Terén |
 |---|---|
+| 2026.46 | 1.1.0 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
@@ -81,7 +82,10 @@ English), applied after a restart.
   [česky](manual/Teren-manual-cs.pdf); also attached to every release.
 - **In the app:** Terén tab › Help, or F1 in the Prospector.
 - **What's new:** [Releases](https://github.com/pabloxbezx/teren-ocs-plugin/releases)
-  and the change log in [README.cs.md](README.cs.md).
+  and the change log in [README.cs.md](README.cs.md). Version 1.1.0 adds
+  **alignments and long profiles as a work-in-progress concept** – try them
+  out, but expect their features, look and storage in the drawing to change;
+  the manual does not cover them yet.
 - **Found a bug or missing something?**
   [Open an issue](https://github.com/pabloxbezx/teren-ocs-plugin/issues) –
   a short description and, if possible, a small made-up survey file help most.
