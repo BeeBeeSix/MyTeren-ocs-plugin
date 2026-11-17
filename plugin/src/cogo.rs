@@ -1347,3 +1347,29 @@ mod testy_posunu {
         assert_eq!(body(&doc).iter().filter(|b| b.bod.cislo == "6").count(), 2);
     }
 }
+
+#[cfg(test)]
+mod testy_velikosti {
+    use super::*;
+
+    /// Velikost výkresu s body ve zprávě pro OCS (bincode jako přenos pluginu).
+    #[test]
+    #[ignore = "měření, spouštět ručně"]
+    fn velikost_snimku_s_body() {
+        for n in [18usize, 71, 142] {
+            let mut doc = CadDocument::new();
+            let body: Vec<Bod> = (0..n * n)
+                .map(|i| Bod { cislo: format!("{}", i + 1), x: 1000.0 + (i / n) as f64 * 2.0, y: 2000.0 + (i % n) as f64 * 2.0, z: 300.0, popis: "T".into() })
+                .collect();
+            let ro = Rozlisovac::new(&doc);
+            let ent = crate::import::objekty_importu(&body, &ro, 500.0, "test.txt", None, "");
+            let pocet = ent.len();
+            let vel_ent = bincode::serialize(&ent).unwrap().len();
+            for e in ent {
+                doc.add_entity(e).unwrap();
+            }
+            let vel_doc = bincode::serialize(&doc).unwrap().len();
+            eprintln!("{} bodů: {} objektů, objekty {:.1} MB, celý výkres {:.1} MB", n * n, pocet, vel_ent as f64 / 1e6, vel_doc as f64 / 1e6);
+        }
+    }
+}

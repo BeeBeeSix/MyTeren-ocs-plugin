@@ -11,6 +11,66 @@ use ocs_plugin_api::host::{
     Document as CadDocument, EntityType, ExtendedDataRecord, Handle, HostApi, LayerConfig, PluginRequestSender, TableOperation,
 };
 use ocs_plugin_api::ipc::protocol::{PluginRequest, PluginResponse};
+use std::sync::atomic::{AtomicU64, Ordering as Poradi};
+
+// ── Velikost zpráv ──────────────────────────────────────────────────────────
+//
+// Open CAD Studio přenese mezi pluginem a hostitelem zprávu nejvýš 64 MB.
+// Větší snímek výkresu hostitel neodešle a plugin by na odpověď čekal navždy
+// (pomocný proces pluginu pak do restartu OCS nereaguje). Proto:
+// - vkládání objektů jde po dávkách,
+// - před stažením velkého výkresu se jeho velikost odhadne ze sdílené paměti
+//   a při překročení limitu se vrátí srozumitelná chyba.
+
+/// Limit zprávy s rezervou na obálku zprávy.
+pub const LIMIT_ZPRAVY: u64 = 60 * 1024 * 1024;
+/// Největší dávka vkládaných objektů.
+const DAVKA: u64 = 24 * 1024 * 1024;
+/// Od této velikosti posledního snímku se před dalším ověřuje velikost.
+const HLIDAT_OD: u64 = 32 * 1024 * 1024;
+/// Velikost posledního staženého snímku výkresu (bajty, odhad).
+static POSLEDNI_SNIMEK: AtomicU64 = AtomicU64::new(0);
+
+/// Velikost objektu ve zprávě.
+fn velikost(e: &EntityType) -> u64 {
+    bincode::serialized_size(e).unwrap_or(0)
+}
+
+/// Rozdělí objekty do dávek, které se vejdou do jedné zprávy.
+pub fn davky(e: Vec<EntityType>) -> Vec<Vec<EntityType>> {
+    let mut out: Vec<Vec<EntityType>> = Vec::new();
+    let mut akt: Vec<EntityType> = Vec::new();
+    let (mut vel, mut celkem) = (0u64, 0u64);
+    for x in e {
+        let v = velikost(&x);
+        if !akt.is_empty() && vel + v > DAVKA {
+            out.push(std::mem::take(&mut akt));
+            vel = 0;
+        }
+        vel += v;
+        celkem += v;
+        akt.push(x);
+    }
+    if !akt.is_empty() {
+        out.push(akt);
+    }
+    // vložené objekty zvětší výkres – ať se před dalším snímkem ověří velikost
+    POSLEDNI_SNIMEK.fetch_add(celkem, Poradi::Relaxed);
+    out
+}
+
+/// Zapamatuje si velikost staženého snímku (jen u velkých výkresů – výpočet něco stojí).
+fn zapamatuj_velikost(doc: &CadDocument) {
+    let v = if doc.entities().count() > 15_000 { bincode::serialized_size(doc).unwrap_or(0) } else { 0 };
+    POSLEDNI_SNIMEK.store(v, Poradi::Relaxed);
+}
+
+fn chyba_velikosti(v: u64) -> String {
+    trf!(
+        "výkres je na přenos do Terénu příliš velký (asi {} MB, Open CAD Studio přenese nejvýš 64 MB) – rozdělte body do více výkresů nebo zmenšete povrch",
+        v / (1024 * 1024)
+    )
+}
 
 pub trait Vykres {
     /// Aktuální stav výkresu (kopie).
@@ -80,7 +140,10 @@ impl Vykres for PresHost<'_> {
     }
     fn pridej(&mut self, e: Vec<EntityType>) -> Result<Vec<Handle>, String> {
         let n = e.len();
-        let h = self.0.add_entities(e);
+        let mut h = Vec::with_capacity(n);
+        for d in davky(e) {
+            h.extend(self.0.add_entities(d));
+        }
         if h.len() == n { Ok(h) } else { Err(trf!("vloženo {} z {} objektů", h.len(), n)) }
     }
     fn pridej_jednu(&mut self, e: EntityType) -> Result<Handle, String> {
@@ -277,10 +340,40 @@ impl PresKanal {
     }
 }
 
+impl PresKanal {
+    /// Odhad velikosti snímku výkresu ze sdílené paměti OCS (bez přenosu výkresu).
+    fn odhad_velikosti(&self) -> Option<u64> {
+        let tab = match self.pozadavek(PluginRequest::GetTabId).ok()? {
+            PluginResponse::TabId(t) => t,
+            _ => return None,
+        };
+        let cesta = match self.pozadavek(PluginRequest::OpenDocumentViewV4 { tab_id: tab }).ok()? {
+            PluginResponse::DocumentViewV4 { path, .. } => path,
+            _ => return None,
+        };
+        let v = ocs_plugin_api::shm::SharedDocumentReader::<ocs_plugin_api::shm::DocumentViewDataV4>::open(std::path::Path::new(&cesta))
+            .ok()
+            .and_then(|r| r.payload().map(|p| p.entities.iter().map(|e| e.data.len() as u64 + 16).sum::<u64>()));
+        // pohled zavřít – otevřený by OCS obnovoval po každé změně
+        let _ = self.pozadavek(PluginRequest::CloseDocumentViewV4 { tab_id: tab });
+        v
+    }
+}
+
 impl Vykres for PresKanal {
     fn dokument(&mut self) -> Result<CadDocument, String> {
+        if POSLEDNI_SNIMEK.load(Poradi::Relaxed) > HLIDAT_OD {
+            if let Some(v) = self.odhad_velikosti() {
+                if v > LIMIT_ZPRAVY {
+                    return Err(chyba_velikosti(v));
+                }
+            }
+        }
         match self.pozadavek(PluginRequest::DocumentSnapshot)? {
-            PluginResponse::Document(d) => Ok(*d),
+            PluginResponse::Document(d) => {
+                zapamatuj_velikost(&d);
+                Ok(*d)
+            }
             o => Err(format!("neočekávaná odpověď {o:?}")),
         }
     }
@@ -315,10 +408,14 @@ impl Vykres for PresKanal {
         let _ = self.pozadavek(PluginRequest::SetDirty);
     }
     fn pridej(&mut self, e: Vec<EntityType>) -> Result<Vec<Handle>, String> {
-        match self.pozadavek(PluginRequest::AddEntities(e))? {
-            PluginResponse::Handles(h) => Ok(h),
-            o => Err(format!("neočekávaná odpověď {o:?}")),
+        let mut h = Vec::with_capacity(e.len());
+        for d in davky(e) {
+            match self.pozadavek(PluginRequest::AddEntities(d))? {
+                PluginResponse::Handles(x) => h.extend(x),
+                o => return Err(format!("neočekávaná odpověď {o:?}")),
+            }
         }
+        Ok(h)
     }
     fn pridej_jednu(&mut self, e: EntityType) -> Result<Handle, String> {
         match self.pozadavek(PluginRequest::AddEntity(e))? {
@@ -461,5 +558,27 @@ fn pockej_na_konec_prikazu() {
             }
         }
         std::thread::sleep(std::time::Duration::from_millis(40));
+    }
+}
+
+#[cfg(test)]
+mod testy {
+    use super::*;
+    use ocs_plugin_api::host::codec::entities::Text;
+    use ocs_plugin_api::host::codec::types::Vector3;
+
+    #[test]
+    fn davky_se_vejdou_do_zpravy() {
+        // texty po ~1 kB: 60 000 objektů ≈ 60 MB → víc dávek, žádná přes limit
+        let t = "x".repeat(1000);
+        let e: Vec<EntityType> = (0..60_000).map(|i| EntityType::Text(Text::with_value(format!("{i}{t}"), Vector3::new(i as f64, 0.0, 0.0)))).collect();
+        let n = e.len();
+        let d = davky(e);
+        assert!(d.len() >= 2);
+        assert_eq!(d.iter().map(Vec::len).sum::<usize>(), n);
+        for x in &d {
+            assert!(bincode::serialized_size(x).unwrap() <= DAVKA + 2048);
+        }
+        assert_eq!(davky(Vec::new()).len(), 0);
     }
 }
