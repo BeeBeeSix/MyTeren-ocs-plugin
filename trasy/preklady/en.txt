@@ -251,3 +251,4 @@ Text	Text
 Úseky s textem	Text segments
 Úprava pohledu profilu	Profile view edit
 Pohled profilu {} upraven	Profile view {} updated
+Styl profilu	Profile style

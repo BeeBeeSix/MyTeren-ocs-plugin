@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use std::sync::{Mutex, OnceLock};
 
 use ocs_plugin_api::host::codec::entities::text::{TextHorizontalAlignment, TextVerticalAlignment};
-use ocs_plugin_api::host::codec::entities::{Face3D, Insert, Line, LwPolyline, Point, Text};
+use ocs_plugin_api::host::codec::entities::{Insert, Line, LwPolyline, Text};
 use ocs_plugin_api::host::codec::types::{Color, Vector2, Vector3};
 use ocs_plugin_api::host::{
     Document as CadDocument, EntityType, ExtendedDataRecord, Handle, LayerConfig, TableOperation, XDataValue,
@@ -864,6 +864,11 @@ fn posun(mut e: EntityType, dx: f64, dy: f64) -> EntityType {
         v.y += dy;
     };
     match &mut e {
+        EntityType::PolyfaceMesh(m) => {
+            for v in &mut m.vertices {
+                p(&mut v.location);
+            }
+        }
         EntityType::Face3D(f) => {
             p(&mut f.first_corner);
             p(&mut f.second_corner);
@@ -948,6 +953,20 @@ pub fn zajisti_hladinu(v: &mut dyn Vykres, doc: &CadDocument, nazev: &str, barva
     }
 }
 
+/// Vypnutá netisknutelná hladina pro skryté části povrchů (síť bez
+/// zobrazení TIN, styl Nezobrazovat).
+fn zajisti_skrytou_hladinu(v: &mut dyn Vykres, doc: &CadDocument) {
+    if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(H_SKRYTY_POVRCH)) {
+        v.hladina(LayerConfig {
+            name: H_SKRYTY_POVRCH.into(),
+            off: Some(true),
+            plottable: Some(false),
+            description: Some(tr("Skryté povrchy (styl Nezobrazovat)").into()),
+            ..Default::default()
+        });
+    }
+}
+
 fn zajisti_hladiny(v: &mut dyn Vykres, doc: &CadDocument, z: &ZaznamPovrchu) {
     let h = z.hladiny();
     for (nazev, barva) in [
@@ -1009,14 +1028,17 @@ pub fn prestav_s(v: &mut dyn Vykres, z: &mut ZaznamPovrchu, doc: Option<CadDocum
         e
     };
     let mut ent: Vec<EntityType> = Vec::new();
-    if st.tin {
-        for t in &povrch.trojuhelniky {
-            let [a, b, c] = t.map(|i| {
-                let (x, y, zz) = povrch.globalni(i);
-                Vector3::new(x, y, zz)
-            });
-            ent.push(barvene(EntityType::Face3D(Face3D::triangle(a, b, c)), &h.tin, st.barva_tin, -1));
-        }
+    // Trojúhelníky jsou v bloku vždy jako síť: podélné profily a další
+    // výpočty z nich čtou terén. Bez zobrazení TIN leží síť na vypnuté
+    // hladině skrytých povrchů.
+    let hladina_site = if st.tin {
+        h.tin.clone()
+    } else {
+        zajisti_skrytou_hladinu(v, &doc);
+        H_SKRYTY_POVRCH.to_string()
+    };
+    for m in crate::sit::site(&povrch) {
+        ent.push(crate::sit::entita(m, &hladina_site, styly::barva(st.barva_tin), styly::tloustka(-1)));
     }
     let (interval, hlavni) = st.interval.unwrap_or((z.interval, z.hlavni));
     let vrst = if st.vrstevnice {
@@ -1055,20 +1077,6 @@ pub fn prestav_s(v: &mut dyn Vykres, z: &mut ZaznamPovrchu, doc: Option<CadDocum
     if povrch.trojuhelniky.is_empty() {
         return Err(tr("povrch nemá žádné trojúhelníky – zkontrolujte hranici (neořízla vše?), díry a skupiny bodů v Prospektoru").into());
     }
-    if ent.is_empty() {
-        // styl Nezobrazovat – blok potřebuje aspoň jeden objekt: bod na vypnuté hladině
-        if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(H_SKRYTY_POVRCH)) {
-            v.hladina(LayerConfig {
-                name: H_SKRYTY_POVRCH.into(),
-                off: Some(true),
-                plottable: Some(false),
-                description: Some(tr("Skryté povrchy (styl Nezobrazovat)").into()),
-                ..Default::default()
-            });
-        }
-        let (x, y) = povrch.pocatek;
-        ent.push(na_hladine(EntityType::Point(Point::from_coords(x, y, 0.0)), H_SKRYTY_POVRCH));
-    }
 
     zajisti_hladiny(v, &doc, z);
     // základní bod bloku v povrchu (ne v počátku – jinak by „zoom vše“ zahrnul i počátek)
@@ -1084,7 +1092,21 @@ pub fn prestav_s(v: &mut dyn Vykres, z: &mut ZaznamPovrchu, doc: Option<CadDocum
     if doc.block_records.iter().any(|b| b.name.eq_ignore_ascii_case(&docasny)) {
         let _ = v.tabulka(TableOperation::BlockDelete { name: docasny.clone() });
     }
-    let handly = v.pridej(ent)?;
+    // jedna zpráva pluginu má limit 64 MB – vkládat po dávkách (díl sítě ≈ 32 000 ploch)
+    let mut handly = Vec::with_capacity(ent.len());
+    let mut davka = Vec::new();
+    let mut vaha = 0usize;
+    for e in ent {
+        vaha += crate::sit::vaha(&e);
+        davka.push(e);
+        if vaha >= 100_000 {
+            handly.extend(v.pridej(std::mem::take(&mut davka))?);
+            vaha = 0;
+        }
+    }
+    if !davka.is_empty() {
+        handly.extend(v.pridej(davka)?);
+    }
     v.tabulka(TableOperation::BlockCreate {
         name: docasny.clone(),
         entities: handly,

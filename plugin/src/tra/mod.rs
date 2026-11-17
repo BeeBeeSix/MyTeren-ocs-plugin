@@ -778,7 +778,7 @@ fn vlastnosti_hotovo(host: &mut dyn HostApi, arg: &str) {
 /// Volby dialogu nového pohledu: id tras a povrchů v pořadí nabídek.
 static VOLBY_POHLEDU: std::sync::Mutex<Option<(Vec<String>, Vec<String>)>> = std::sync::Mutex::new(None);
 /// Šablona posledního nového pohledu (výchozí volba v dialogu).
-static POSLEDNI_SABLONA: std::sync::Mutex<&'static str> = std::sync::Mutex::new("OBECNA");
+static POSLEDNI_SABLONA: std::sync::Mutex<String> = std::sync::Mutex::new(String::new());
 
 fn pohled_cmd(host: &mut dyn HostApi) {
     let mut v = PresHost(host);
@@ -798,12 +798,15 @@ fn pohled_cmd(host: &mut dyn HostApi) {
     let i_trasy = vybrana.and_then(|id| trasy.iter().position(|t| t.def.id == id)).unwrap_or(0);
     *VOLBY_POHLEDU.lock().unwrap_or_else(|e| e.into_inner()) =
         Some((trasy.iter().map(|t| t.def.id.clone()).collect(), povrchy.iter().map(|p| p.id.clone()).collect()));
-    let i_sablony = trasy::pohled::SABLONY.iter().position(|x| x.0 == *POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner())).unwrap_or(1);
+    let styly = crate::styly::styly_profilu(&doc);
+    let posledni = POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner()).clone();
+    let posledni = if posledni.is_empty() { "OBECNA".to_string() } else { posledni };
+    let i_sablony = styly.iter().position(|x| x.id == posledni).unwrap_or(0);
     let d = DialogDef::new(tr("Nový podélný profil"))
         .with_control(DialogControl::Choice {
             id: "sablona".into(),
-            label: tr("Šablona").into(),
-            options: trasy::pohled::SABLONY.iter().map(|x| tr(x.1).to_string()).collect(),
+            label: tr("Styl profilu").into(),
+            options: styly.iter().map(|x| trasy::preklad::tr_dyn(&x.jmeno)).collect(),
             default_index: i_sablony,
         })
         .with_control(DialogControl::Choice {
@@ -873,9 +876,10 @@ fn pohled_vloz_cmd(host: &mut dyn HostApi, arg: &str) {
     };
     let (Some(trasa), Some(povrch)) = (trasy.get(volba("trasa")), povrchy.get(volba("povrch"))) else { return };
     let id = trasy::pohled::volne_id(pohled::pohledy(&doc).iter().map(|p| p.def.id.as_str()));
-    let sablona = trasy::pohled::SABLONY.get(volba("sablona")).map_or("ZAKLAD", |x| x.0);
-    *POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner()) = sablona;
-    let mut def = trasy::pohled::DefinicePohledu::podle_sablony(&id, trasa, povrch, sablona);
+    let styly = crate::styly::styly_profilu(&doc);
+    let styl = styly.get(volba("sablona")).cloned().unwrap_or_else(|| styly[0].clone());
+    *POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner()) = styl.id.clone();
+    let mut def = trasy::pohled::DefinicePohledu::podle_stylu(&id, trasa, povrch, &styl);
     def.meritko = cislo_z("meritko").filter(|x| *x >= 10.0).unwrap_or(1000.0);
     def.prevyseni = cislo_z("prevyseni").unwrap_or(10.0).max(0.5);
     def.srovnavaci = cislo_z("srovnavaci").filter(|x| *x != 0.0);

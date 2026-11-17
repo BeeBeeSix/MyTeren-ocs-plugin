@@ -13,6 +13,7 @@ mod nastaveni;
 mod okno;
 mod panel;
 mod povrchy;
+mod sit;
 mod spravce;
 mod styly;
 mod tra;

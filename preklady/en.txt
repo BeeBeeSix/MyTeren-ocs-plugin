@@ -1599,3 +1599,31 @@ Sklony nivelety	Design grades
 Kóta	Elevation
 Vzdálenosti	Distances
 Úseky s textem	Text segments
+Styly profilů	Profile styles
+Vzory vzhledu a pásů podélných profilů	Appearance and band templates for profiles
+Styl profilu	Profile style
+Změna stylu nahradí pásy a zruší výjimky pohledu.	Changing the style replaces the bands and clears the view overrides.
+výjimky tohoto pohledu: {}	overrides in this view: {}
+zrušit výjimky	clear overrides
+podle stylu „{}“ – úprava je udělá vlastními	from style “{}” – editing makes them view-specific
+vlastní pásy tohoto pohledu	bands specific to this view
+vrátit pásy ze stylu	restore bands from style
+Uložit jako nový styl…	Save as new style…
+nastavení a pásy tohoto pohledu jako nový styl profilu ve výkrese	this view’s settings and bands as a new profile style in the drawing
+Styl z pohledu {}	Style from view {}
+Vzory pro pohledy podélných profilů: vzhled a sada pásů. Změna stylu překreslí všechny pohledy, které ho používají.	Templates for profile views: appearance and band set. Changing a style redraws every view that uses it.
++ Nový styl profilu	+ New profile style
+Nový styl profilu	New profile style
+{} pásů · 1:{} · převýšení {}× · pohledů {}	{} bands · 1:{} · exaggeration {}× · views {}
+Styl profilu už ve výkrese není.	The profile style is no longer in the drawing.
+vestavěný · upravený	built-in · modified
+Žádný pohled tento styl nepoužívá.	No view uses this style.
+Používají ho pohledy: {}	Used by views: {}
+Výchozí měřítko 1:	Default scale 1:
+uloží styl do výkresu a překreslí pohledy, které ho používají	saves the style to the drawing and redraws the views that use it
+Duplikovat	Duplicate
+Obnovit výchozí	Restore default
+{} – kopie	{} – copy
+Styl profilu „{}“ uložen. {}	Profile style “{}” saved. {}
+Trasy: styl profilu	Alignments: profile style
+Styly bodů, povrchů a profilů (plugin Terén) – nemazat	Point, surface and profile styles (Terén plugin) – do not delete

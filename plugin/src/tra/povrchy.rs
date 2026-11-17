@@ -45,7 +45,7 @@ pub fn povrchy(doc: &CadDocument) -> Vec<PovrchTerenu> {
         .collect()
 }
 
-/// Trojúhelníky povrchu ve světových souřadnicích (z 3D ploch v bloku).
+/// Trojúhelníky povrchu ve světových souřadnicích (ze sítí nebo 3D ploch v bloku).
 pub fn trojuhelniky(doc: &CadDocument, p: &PovrchTerenu) -> Vec<Troj> {
     let zaklad = doc
         .block_records
@@ -59,13 +59,18 @@ pub fn trojuhelniky(doc: &CadDocument, p: &PovrchTerenu) -> Vec<Troj> {
     };
     let mut out = Vec::new();
     for e in doc.entities_in_block(&p.blok) {
-        if let EntityType::Face3D(f) = e {
-            let (a, b, cc, d) = (svet(&f.first_corner), svet(&f.second_corner), svet(&f.third_corner), svet(&f.fourth_corner));
-            out.push([a, b, cc]);
-            // čtyřúhelník = dva trojúhelníky
-            if (d[0] - cc[0]).hypot(d[1] - cc[1]) > 1e-9 {
-                out.push([a, cc, d]);
+        match e {
+            // starší výkresy: povrch jako samostatné 3D plochy
+            EntityType::Face3D(f) => {
+                let (a, b, cc, d) = (svet(&f.first_corner), svet(&f.second_corner), svet(&f.third_corner), svet(&f.fourth_corner));
+                out.push([a, b, cc]);
+                // čtyřúhelník = dva trojúhelníky
+                if (d[0] - cc[0]).hypot(d[1] - cc[1]) > 1e-9 {
+                    out.push([a, cc, d]);
+                }
             }
+            EntityType::PolyfaceMesh(m) => out.extend(crate::sit::trojuhelniky(m, |v| svet(v))),
+            _ => {}
         }
     }
     out

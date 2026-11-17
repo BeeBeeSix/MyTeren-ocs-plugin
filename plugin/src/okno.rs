@@ -285,6 +285,8 @@ enum Uzel {
     StylBodu(String),
     StylyPovrchu,
     StylPovrchu(String),
+    StylyProfilu,
+    StylProfilu(String),
     Nastaveni,
     Trasy,
     Trasa(String),
@@ -440,6 +442,10 @@ struct Okno {
     uprava_pohledu: Option<(String, ::trasy::pohled::DefinicePohledu)>,
     /// Pás s rozbaleným nastavením v editoru pohledu.
     otevreny_pas: Option<usize>,
+    /// Rozpracovaná úprava stylu profilu.
+    uprava_stylu_profilu: Option<::trasy::pohled::StylProfilu>,
+    /// Pás s rozbaleným nastavením v editoru stylu profilu.
+    otevreny_pas_stylu: Option<usize>,
     /// Povrch, jehož větev se má ve stromu rozbalit.
     rozbalit: Option<String>,
     // styly
@@ -765,6 +771,13 @@ impl Okno {
                 otevri(egui::Id::new("u_styly"));
                 self.vyber_uzel(Uzel::StylyPovrchu);
             }
+            Skok::StylProfilu(id) => {
+                self.uprava_stylu_profilu = None;
+                self.vyber_uzel(Uzel::StylProfilu(id.clone()));
+            }
+            Skok::StylyProfilu => {
+                self.vyber_uzel(Uzel::StylyProfilu);
+            }
             Skok::Trasa(id) => {
                 otevri(egui::Id::new("u_trasy"));
                 self.vyber_uzel(Uzel::Trasa(id.clone()));
@@ -836,7 +849,7 @@ impl Okno {
         match (&self.rezim, &self.uzel) {
             (Rezim::Pohled3D, _) => "3d",
             (_, Uzel::Skupiny | Uzel::Skupina(_)) => "skupiny",
-            (_, Uzel::StylyBodu | Uzel::StylBodu(_) | Uzel::StylyPovrchu | Uzel::StylPovrchu(_)) => "styly",
+            (_, Uzel::StylyBodu | Uzel::StylBodu(_) | Uzel::StylyPovrchu | Uzel::StylPovrchu(_) | Uzel::StylyProfilu | Uzel::StylProfilu(_)) => "styly",
             (_, Uzel::Definice(_, Cast::Upravy)) => "upravy",
             (_, Uzel::Povrch(_) | Uzel::Povrchy | Uzel::Definice(..) | Uzel::Body) => "teren",
             _ => "prospektor",
@@ -1330,6 +1343,12 @@ impl Okno {
             }
             Uzel::Pohled(id) => {
                 egui::ScrollArea::vertical().id_salt("pohled_s").auto_shrink([false, false]).show(ui, |ui| self.karta_pohledu(ui, stav, &id));
+            }
+            Uzel::StylyProfilu => {
+                egui::ScrollArea::vertical().id_salt("styly_pp").auto_shrink([false, false]).show(ui, |ui| self.detail_styly_profilu(ui, stav));
+            }
+            Uzel::StylProfilu(id) => {
+                egui::ScrollArea::vertical().id_salt("styl_pp").auto_shrink([false, false]).show(ui, |ui| self.karta_stylu_profilu(ui, stav, &id));
             }
         }
     }

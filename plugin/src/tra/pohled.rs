@@ -12,7 +12,7 @@ use ocs_plugin_api::host::{Document as CadDocument, EntityType, ExtendedDataReco
 
 use trasy::geometrie::{DruhBodu, Geometrie, Prvek};
 use trasy::pasy::{mista_bez_kolizi, vyska_v, DruhPasu, Pas, Poloha, Zdroj};
-use trasy::pohled::{nastaveni, DefinicePohledu, Osy};
+use trasy::pohled::{nastaveni_s, DefinicePohledu, Osy};
 use trasy::preklad::tr;
 use trasy::profil::{profil_terenu, rozsah_vysek, Povrch};
 use trasy::stanice::{cislo, staniceni, FormatStanice};
@@ -56,7 +56,9 @@ pub fn otisk_s(doc: &CadDocument, def: &DefinicePohledu, nova: Option<&objekt::O
         format!("{:X}@{:.3},{:.3},{:.6}#{:X}", t.insert.value(), t.vlozeni[0], t.vlozeni[1], t.otoceni, h)
     });
     let p = p.map_or("-".to_string(), |p| format!("{:X}@{:.3},{:.3}", p.insert.value(), p.vlozeni[0], p.vlozeni[1]));
-    format!("{t};{p}")
+    // styl profilu: jeho změna překreslí všechny pohledy, které ho používají
+    let s = crate::styly::styly_profilu(doc).into_iter().find(|s| s.id == def.styl).map_or("-".to_string(), |s| s.otisk());
+    format!("{t};{p};{s}")
 }
 
 /// Překreslí pohledy, jejichž trasa nebo povrch se od posledního kreslení
@@ -182,7 +184,11 @@ pub fn sestav(doc: &CadDocument, def: &DefinicePohledu, nova: Option<&objekt::Ob
     }
     let osy = Osy::rozvrhni(od, do_, zmin, zmax, def);
 
-    let nast = nastaveni(def);
+    // pásy ze stylu výkresu (nebo vlastní pásy pohledu), nastavení přes styly výkresu
+    let styly = crate::styly::styly_profilu(doc);
+    let efektivni = trasy::pohled::efektivni(def, &styly);
+    let def = &efektivni;
+    let nast = nastaveni_s(def, &styly);
     let svislice = nast.text("cary_pasu") == "svislice";
     let fmt = FormatStanice::z_kodu(nast.text("staniceni"));
     let sablona = nast.text("sablona").to_string();

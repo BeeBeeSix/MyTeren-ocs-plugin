@@ -33,6 +33,8 @@ pub struct DefinicePohledu {
     pub otisk: String,
     /// Pásy pod profilem (shora dolů).
     pub pasy: Vec<Pas>,
+    /// Pásy se berou ze stylu (`pasy` je jen záloha); `false` = vlastní pásy pohledu.
+    pub pasy_ze_stylu: bool,
     /// Osy z posledního kreslení: od, do, srovnávací rovina, horní okraj,
     /// převýšení (pro klikání do pohledu bez přepočtu terénu).
     pub osy: Option<[f64; 5]>,
@@ -69,6 +71,7 @@ impl DefinicePohledu {
             vyjimky: BTreeMap::new(),
             otisk: String::new(),
             pasy: vychozi_sada(),
+            pasy_ze_stylu: false,
             osy: None,
         }
     }
@@ -92,6 +95,9 @@ impl DefinicePohledu {
         r.push(format!("styl={}", self.styl));
         if !self.otisk.is_empty() {
             r.push(format!("otisk={}", self.otisk));
+        }
+        if self.pasy_ze_stylu {
+            r.push("pasy_ze_stylu=1".into());
         }
         if self.pasy.is_empty() {
             r.push("pasy=zadne".into());
@@ -130,6 +136,7 @@ impl DefinicePohledu {
                 "otisk" => d.otisk = h.into(),
                 "pas" => d.pasy.extend(Pas::cti(h)),
                 "pasy" => bez_pasu = h == "zadne",
+                "pasy_ze_stylu" => d.pasy_ze_stylu = h == "1",
                 "osy" => {
                     let c: Vec<f64> = h.split(';').filter_map(cti).collect();
                     if let [a, b, c2, d2, e] = c[..] {
@@ -194,9 +201,133 @@ impl DefinicePohledu {
         if let Some((sid, _, sada)) = SABLONY.iter().find(|s| s.0 == sablona) {
             d.styl = sid.to_string();
             d.pasy = if sada.is_empty() { vychozi_sada() } else { sada_sablony(sada) };
+            d.pasy_ze_stylu = true;
         }
         d
     }
+
+    /// Nový pohled podle stylu profilu (pásy, měřítko a převýšení ze stylu).
+    pub fn podle_stylu(id: &str, trasa: &str, povrch: &str, s: &StylProfilu) -> Self {
+        let mut d = Self::novy(id, trasa, povrch);
+        d.styl = s.id.clone();
+        d.pasy = s.pasy.clone();
+        d.pasy_ze_stylu = true;
+        d.meritko = s.meritko;
+        d.prevyseni = s.prevyseni;
+        d
+    }
+}
+
+/// Styl profilu: pojmenované nastavení vzhledu a sada pásů (vzor pro pohledy).
+#[derive(Clone, Debug, PartialEq)]
+pub struct StylProfilu {
+    pub id: String,
+    pub jmeno: String,
+    /// Hodnoty klíčů `SCHEMA` (chybějící = výchozí hodnota schématu).
+    pub hodnoty: BTreeMap<String, String>,
+    pub pasy: Vec<Pas>,
+    /// Výchozí měřítko a převýšení nového pohledu.
+    pub meritko: f64,
+    pub prevyseni: f64,
+}
+
+impl StylProfilu {
+    /// Vestavěné styly (šablony podle oboru).
+    pub fn vestavene() -> Vec<Self> {
+        let styly = styly_vestavene();
+        SABLONY
+            .iter()
+            .map(|(id, jmeno, sada)| {
+                let h = vysledne(&SCHEMA, &styly, id, &BTreeMap::new());
+                let hodnoty = SCHEMA
+                    .iter()
+                    .filter(|k| h.text(k.klic) != k.vychozi)
+                    .map(|k| (k.klic.to_string(), h.text(k.klic).to_string()))
+                    .collect();
+                Self {
+                    id: id.to_string(),
+                    jmeno: jmeno.to_string(),
+                    hodnoty,
+                    pasy: if sada.is_empty() { vychozi_sada() } else { sada_sablony(sada) },
+                    meritko: 1000.0,
+                    prevyseni: 10.0,
+                }
+            })
+            .collect()
+    }
+
+    pub fn je_vestaveny(&self) -> bool {
+        SABLONY.iter().any(|s| s.0 == self.id)
+    }
+
+    /// Řádky pro uložení do výkresu.
+    pub fn zapis(&self) -> Vec<String> {
+        let mut r = vec![
+            format!("id={}", self.id),
+            format!("jmeno={}", self.jmeno),
+            format!("meritko={}", f(self.meritko)),
+            format!("prevyseni={}", f(self.prevyseni)),
+        ];
+        for (k, v) in &self.hodnoty {
+            r.push(format!("k.{k}={v}"));
+        }
+        if self.pasy.is_empty() {
+            r.push("pasy=zadne".into());
+        }
+        for p in &self.pasy {
+            r.push(format!("pas={}", p.zapis()));
+        }
+        r
+    }
+
+    pub fn precti<S: AsRef<str>>(radky: &[S]) -> Option<Self> {
+        let mut s = Self { id: String::new(), jmeno: String::new(), hodnoty: BTreeMap::new(), pasy: Vec::new(), meritko: 1000.0, prevyseni: 10.0 };
+        for r in radky {
+            let Some((k, h)) = r.as_ref().split_once('=') else { continue };
+            match k {
+                "id" => s.id = h.into(),
+                "jmeno" => s.jmeno = h.into(),
+                "meritko" => s.meritko = cti(h).filter(|x| *x >= 10.0).unwrap_or(1000.0),
+                "prevyseni" => s.prevyseni = cti(h).filter(|x| *x > 0.0).unwrap_or(10.0),
+                "pas" => s.pasy.extend(Pas::cti(h)),
+                k if k.starts_with("k.") => {
+                    s.hodnoty.insert(k[2..].to_string(), h.to_string());
+                }
+                _ => {}
+            }
+        }
+        (!s.id.is_empty()).then_some(s)
+    }
+
+    /// Styl pro skládání hodnot (`vysledne`).
+    pub fn jako_styl(&self) -> Styl {
+        Styl { id: self.id.clone(), nazev: self.jmeno.clone(), rodic: None, hodnoty: self.hodnoty.clone() }
+    }
+
+    /// Otisk obsahu (pohledy podle něj poznají, že se styl změnil).
+    pub fn otisk(&self) -> String {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.zapis().hash(&mut h);
+        format!("{:016X}", h.finish())
+    }
+}
+
+/// Výsledné nastavení pohledu se styly výkresu.
+pub fn nastaveni_s(d: &DefinicePohledu, styly: &[StylProfilu]) -> Hodnoty<'static> {
+    let s: Vec<Styl> = styly.iter().map(StylProfilu::jako_styl).collect();
+    vysledne(&SCHEMA, &s, &d.styl, &d.vyjimky)
+}
+
+/// Definice, podle které se pohled kreslí: pásy ze stylu, je-li to tak nastavené.
+pub fn efektivni(d: &DefinicePohledu, styly: &[StylProfilu]) -> DefinicePohledu {
+    let mut e = d.clone();
+    if d.pasy_ze_stylu {
+        if let Some(s) = styly.iter().find(|s| s.id == d.styl) {
+            e.pasy = s.pasy.clone();
+        }
+    }
+    e
 }
 
 /// Rozvržení os pohledu.
@@ -316,6 +447,33 @@ mod testy {
         let r = k.zapis();
         let rr: Vec<&str> = r.iter().map(String::as_str).collect();
         assert_eq!(DefinicePohledu::cti(&rr), Some(k));
+    }
+
+    #[test]
+    fn styly_profilu() {
+        let v = StylProfilu::vestavene();
+        assert_eq!(v.len(), SABLONY.len());
+        let k = v.iter().find(|s| s.id == "KANALIZACE").unwrap();
+        assert_eq!(k.hodnoty.get("cary_pasu").map(String::as_str), Some("svislice"));
+        assert_eq!(StylProfilu::precti(&k.zapis()).as_ref(), Some(k));
+        // pohled podle stylu bere pásy ze stylu, nastavení se skládá přes styly výkresu
+        let mut vlastni = k.clone();
+        vlastni.id = "MUJ".into();
+        vlastni.pasy.truncate(2);
+        vlastni.hodnoty.insert("stupnice".into(), "obe".into());
+        let styly = vec![v[0].clone(), vlastni.clone()];
+        let mut d = DefinicePohledu::podle_stylu("P1", "T1", "S", &vlastni);
+        d.pasy.clear();
+        assert_eq!(efektivni(&d, &styly).pasy.len(), 2);
+        assert_eq!(nastaveni_s(&d, &styly).text("stupnice"), "obe");
+        d.pasy_ze_stylu = false;
+        assert!(efektivni(&d, &styly).pasy.is_empty());
+        // zápis pohledu drží příznak
+        d.pasy_ze_stylu = true;
+        let r = d.zapis();
+        let rr: Vec<&str> = r.iter().map(String::as_str).collect();
+        assert!(DefinicePohledu::cti(&rr).unwrap().pasy_ze_stylu);
+        assert_ne!(k.otisk(), vlastni.otisk());
     }
 
     #[test]

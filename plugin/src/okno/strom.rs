@@ -317,6 +317,11 @@ impl Okno {
         if r.clicked() {
             self.vyber_uzel(Uzel::StylyPovrchu);
         }
+        let on_pp = matches!(self.uzel, Uzel::StylyProfilu | Uzel::StylProfilu(_));
+        let r = list(ui, on_pp, &Ikona::Svg(ik!("tra_profil")), RichText::new(tr("Styly profilů")), &[Vpravo::Pocet(stav.styly_profilu.len().to_string())], false);
+        if r.on_hover_text(tr("Vzory vzhledu a pásů podélných profilů")).clicked() {
+            self.vyber_uzel(Uzel::StylyProfilu);
+        }
 
         // ── nástroje ──
         sekce(ui, tr("Nástroje"));

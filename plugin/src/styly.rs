@@ -24,6 +24,7 @@ use crate::vykres::Vykres;
 pub const H_STYLY: &str = "TER_STYLY";
 const STYL_BODU: &str = "STYL_BODU";
 const STYL_POVRCHU: &str = "STYL_POVRCHU";
+const STYL_PROFILU: &str = "STYL_PROFILU";
 /// Tvar značky v jednotkách poloměru (r = 1, osa y nahoru).
 #[derive(Clone, Debug, PartialEq)]
 pub enum Tvar {
@@ -599,7 +600,7 @@ fn ulozene(doc: &CadDocument) -> Vec<(Handle, String, Vec<String>)> {
             let r = e.common().extended_data.get_record(APP_POVRCH)?;
             let t = retezce(r);
             let druh = t.first()?.clone();
-            (druh == STYL_BODU || druh == STYL_POVRCHU).then(|| (e.common().handle, druh, t[1..].to_vec()))
+            (druh == STYL_BODU || druh == STYL_POVRCHU || druh == STYL_PROFILU).then(|| (e.common().handle, druh, t[1..].to_vec()))
         })
         .collect()
 }
@@ -635,6 +636,27 @@ pub fn styly_povrchu(doc: &CadDocument) -> Vec<StylPovrchu> {
         }
     }
     v
+}
+
+/// Styly podélných profilů výkresu: vestavěné (případně přepsané) a vlastní.
+pub fn styly_profilu(doc: &CadDocument) -> Vec<trasy::pohled::StylProfilu> {
+    let mut v = trasy::pohled::StylProfilu::vestavene();
+    for (_, druh, t) in ulozene(doc) {
+        if druh != STYL_PROFILU {
+            continue;
+        }
+        if let Some(s) = trasy::pohled::StylProfilu::precti(&t) {
+            match v.iter_mut().find(|x| x.id == s.id) {
+                Some(x) => *x = s,
+                None => v.push(s),
+            }
+        }
+    }
+    v
+}
+
+pub fn uloz_styl_profilu(v: &mut dyn Vykres, doc: &CadDocument, s: &trasy::pohled::StylProfilu) -> Result<(), String> {
+    uloz(v, doc, STYL_PROFILU, &s.id, s.zapis())
 }
 
 pub fn styl_povrchu(doc: &CadDocument, id: &str) -> StylPovrchu {
@@ -679,7 +701,7 @@ fn zajisti_hladinu(v: &mut dyn Vykres, doc: &CadDocument) {
             color: Some(Color::from_index(8)),
             off: Some(true),
             plottable: Some(false),
-            description: Some(tr("Styly bodů a povrchů (plugin Terén) – nemazat").into()),
+            description: Some(tr("Styly bodů, povrchů a profilů (plugin Terén) – nemazat").into()),
             ..Default::default()
         });
     }
@@ -729,6 +751,7 @@ pub fn volne_id(doc: &CadDocument, jmeno: &str) -> String {
         .into_iter()
         .map(|s| s.id)
         .chain(styly_povrchu(doc).into_iter().map(|s| s.id))
+        .chain(styly_profilu(doc).into_iter().map(|s| s.id))
         .map(|s| s.to_uppercase())
         .collect();
     if !obsazene.contains(&zaklad) {
