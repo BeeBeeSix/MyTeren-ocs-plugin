@@ -80,10 +80,14 @@ and below the graph, drawn to the scale and exaggeration you choose.
 <td valign="top"><img src="docs/img/alignment-style.png" width="400" height="145" alt="Alignment style – colours and lineweights"></td>
 <td valign="top">
 
-### Styles stored in the drawing
-Point, surface, profile and alignment styles. Built-in styles can be
-adjusted or reset; your own styles travel with the DWG – no side files, no
-database.
+### Alignment and profile styles
+**Alignment styles** set stationing intervals and format, key-point and
+vertex labels, the tangent polygon, and the colour and lineweight of the
+centreline, stations, key points and polygon. **Profile styles** set the
+scale, vertical exaggeration, formats and the set of bands above and below
+the graph, with templates for general use, water and sewer, and
+watercourses. Like point and surface styles they are stored in the drawing
+– built-in styles can be adjusted or reset, your own travel with the DWG.
 
 </td>
 </tr>
@@ -106,6 +110,18 @@ of surfaces to LandXML 1.2 or DXF and of points to text files.
 
 Your own survey: **Import points** › pick the file › check the preview ›
 Import, then **New surface** › **Existing ground (from points)**.
+
+## Roadmap
+
+- **Now – settle and polish.** Alignments, long profiles and their styles
+  keep their current shape. The next releases fine-tune them: how profile
+  views and bands look, alignment and profile styles, editing in the
+  Prospector, and the manual.
+- **Next – corridors.** Once alignments and profiles are stable, a corridor
+  builds on them: a cross-section template swept along the alignment and
+  design profile, giving the design surface of a road, path or channel.
+
+No dates promised – feedback decides what comes first.
 
 ## Compatibility and installation
 
