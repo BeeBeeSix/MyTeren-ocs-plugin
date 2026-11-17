@@ -968,6 +968,12 @@ impl BuiltinPlugin for TerenPlugin {
                 }
             }
         }
+        // Trojúhelníky povrchu jsou síť (PolyfaceMesh). OCS u sítí kreslí jen
+        // hrany, kde se sousední plochy lámou víc než o VSEDGESMOOTH (výchozí
+        // 1°) – na mírném terénu by většina hran TIN chyběla. 0 = všechny hrany.
+        if c.starts_with("TER_") && hrany_site_nastavit(host.system_variable("VSEDGESMOOTH")) {
+            host.execute_command("VSEDGESMOOTH 0");
+        }
         if ["TER_IMPORT", "TER_PRIPRAVIT", "TER_BOD", "TER_NOVY", "TER_SB_", "TER_PROSPEKTOR"].iter().any(|p| c.starts_with(p)) {
             let mut v = vykres::PresHost(host);
             if let Ok(doc) = v.dokument() {
@@ -1305,4 +1311,21 @@ fn zaznam_padu() {
             puvodni(info);
         }));
     });
+}
+
+/// VSEDGESMOOTH = 0 už nastaveno v tomto spuštění OCS.
+static HRANY_SITE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Je potřeba nastavit VSEDGESMOOTH na 0 (všechny hrany sítě povrchu)?
+/// OCS hodnotu pluginu nemusí vrátit – pak se nastaví jednou za spuštění.
+pub(crate) fn hrany_site_nastavit(hodnota: Option<ocs_plugin_api::host::HostSettingValue>) -> bool {
+    use std::sync::atomic::Ordering;
+    let nastavit = match hodnota {
+        Some(ocs_plugin_api::host::HostSettingValue::Number(m)) => m.abs() > 1e-9,
+        _ => !HRANY_SITE.load(Ordering::SeqCst),
+    };
+    if nastavit {
+        HRANY_SITE.store(true, Ordering::SeqCst);
+    }
+    nastavit
 }

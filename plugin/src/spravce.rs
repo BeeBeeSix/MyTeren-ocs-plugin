@@ -1103,6 +1103,10 @@ impl Pracovnik {
             if k.promenna("PDMODE").is_some_and(|m| (m - 1.0).abs() > 1e-9) {
                 k.prikaz("PDMODE 1");
             }
+            // všechny hrany sítě povrchu (viz dispatch v lib.rs)
+            if crate::hrany_site_nastavit(k.promenna("VSEDGESMOOTH").map(ocs_plugin_api::host::HostSettingValue::Number)) {
+                k.prikaz("VSEDGESMOOTH 0");
+            }
             k.zacatek_kroku(nazev_kroku(&a));
         }
         crate::tra::prospektor::PRACUJE.store(true, Ordering::SeqCst);
