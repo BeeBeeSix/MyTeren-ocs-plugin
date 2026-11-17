@@ -322,6 +322,11 @@ impl Okno {
         if r.on_hover_text(tr("Vzory vzhledu a pásů podélných profilů")).clicked() {
             self.vyber_uzel(Uzel::StylyProfilu);
         }
+        let on_tr = matches!(self.uzel, Uzel::StylyTras | Uzel::StylTrasy(_));
+        let r = list(ui, on_tr, &Ikona::Svg(ik!("tra_editor")), RichText::new(tr("Styly tras")), &[Vpravo::Pocet(stav.styly_tras.len().to_string())], false);
+        if r.on_hover_text(tr("Vzory vzhledu tras: staničení, popisy, barvy a tloušťky")).clicked() {
+            self.vyber_uzel(Uzel::StylyTras);
+        }
 
         // ── nástroje ──
         sekce(ui, tr("Nástroje"));

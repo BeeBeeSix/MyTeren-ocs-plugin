@@ -287,6 +287,8 @@ enum Uzel {
     StylPovrchu(String),
     StylyProfilu,
     StylProfilu(String),
+    StylyTras,
+    StylTrasy(String),
     Nastaveni,
     Trasy,
     Trasa(String),
@@ -444,6 +446,8 @@ struct Okno {
     otevreny_pas: Option<usize>,
     /// Rozpracovaná úprava stylu profilu.
     uprava_stylu_profilu: Option<::trasy::pohled::StylProfilu>,
+    /// Rozpracovaná úprava stylu trasy.
+    uprava_stylu_trasy: Option<::trasy::styl::Styl>,
     /// Pás s rozbaleným nastavením v editoru stylu profilu.
     otevreny_pas_stylu: Option<usize>,
     /// Povrch, jehož větev se má ve stromu rozbalit.
@@ -778,6 +782,13 @@ impl Okno {
             Skok::StylyProfilu => {
                 self.vyber_uzel(Uzel::StylyProfilu);
             }
+            Skok::StylTrasy(id) => {
+                self.uprava_stylu_trasy = None;
+                self.vyber_uzel(Uzel::StylTrasy(id.clone()));
+            }
+            Skok::StylyTras => {
+                self.vyber_uzel(Uzel::StylyTras);
+            }
             Skok::Trasa(id) => {
                 otevri(egui::Id::new("u_trasy"));
                 self.vyber_uzel(Uzel::Trasa(id.clone()));
@@ -849,7 +860,7 @@ impl Okno {
         match (&self.rezim, &self.uzel) {
             (Rezim::Pohled3D, _) => "3d",
             (_, Uzel::Skupiny | Uzel::Skupina(_)) => "skupiny",
-            (_, Uzel::StylyBodu | Uzel::StylBodu(_) | Uzel::StylyPovrchu | Uzel::StylPovrchu(_) | Uzel::StylyProfilu | Uzel::StylProfilu(_)) => "styly",
+            (_, Uzel::StylyBodu | Uzel::StylBodu(_) | Uzel::StylyPovrchu | Uzel::StylPovrchu(_) | Uzel::StylyProfilu | Uzel::StylProfilu(_) | Uzel::StylyTras | Uzel::StylTrasy(_)) => "styly",
             (_, Uzel::Definice(_, Cast::Upravy)) => "upravy",
             (_, Uzel::Povrch(_) | Uzel::Povrchy | Uzel::Definice(..) | Uzel::Body) => "teren",
             _ => "prospektor",
@@ -1349,6 +1360,12 @@ impl Okno {
             }
             Uzel::StylProfilu(id) => {
                 egui::ScrollArea::vertical().id_salt("styl_pp").auto_shrink([false, false]).show(ui, |ui| self.karta_stylu_profilu(ui, stav, &id));
+            }
+            Uzel::StylyTras => {
+                egui::ScrollArea::vertical().id_salt("styly_tr").auto_shrink([false, false]).show(ui, |ui| self.detail_styly_tras(ui, stav));
+            }
+            Uzel::StylTrasy(id) => {
+                egui::ScrollArea::vertical().id_salt("styl_tr").auto_shrink([false, false]).show(ui, |ui| self.karta_stylu_trasy(ui, stav, &id));
             }
         }
     }

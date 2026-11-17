@@ -252,3 +252,5 @@ Text	Text
 Úprava pohledu profilu	Profile view edit
 Pohled profilu {} upraven	Profile view {} updated
 Styl profilu	Profile style
+Překresleno tras: {}	Alignments redrawn: {}
+Styl trasy	Alignment style

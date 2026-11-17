@@ -156,6 +156,15 @@ pub const SCHEMA: &[Klic] = &[
     Klic { klic: "popis_vrcholy", vychozi: "0", popis: "Popisovat vrcholy (V) a poloměry" },
     Klic { klic: "zkratky", vychozi: "ZÚ,KÚ,TK,KT,V", popis: "Zkratky bodů ZÚ,KÚ,TK,KT,V" },
     Klic { klic: "polygon", vychozi: "1", popis: "Kreslit tečnový polygon" },
+    // barva = index ACI 1–255, 256 = podle hladiny; tloušťka v setinách mm, -1 = podle hladiny
+    Klic { klic: "barva_osa", vychozi: "256", popis: "Barva osy" },
+    Klic { klic: "tloustka_osa", vychozi: "-1", popis: "Tloušťka osy" },
+    Klic { klic: "barva_staniceni", vychozi: "256", popis: "Barva staničení" },
+    Klic { klic: "tloustka_staniceni", vychozi: "-1", popis: "Tloušťka staničení" },
+    Klic { klic: "barva_body", vychozi: "256", popis: "Barva hlavních bodů" },
+    Klic { klic: "tloustka_body", vychozi: "-1", popis: "Tloušťka hlavních bodů" },
+    Klic { klic: "barva_polygon", vychozi: "256", popis: "Barva tečnového polygonu" },
+    Klic { klic: "tloustka_polygon", vychozi: "-1", popis: "Tloušťka tečnového polygonu" },
 ];
 
 pub const STYL_ZAKLAD: &str = "SITUACE_500";
@@ -173,6 +182,53 @@ pub fn vestavene_styly() -> Vec<Styl> {
             &[("krok_hlavni", "0"), ("krok_vedlejsi", "0"), ("popis_body", "0"), ("polygon", "0")],
         ),
     ]
+}
+
+/// Vestavěné styly bez dědění: každý nese všechny hodnoty odlišné od
+/// schématu (tak se ukládají do výkresu a upravují v Prospektoru).
+pub fn vestavene_ploche() -> Vec<Styl> {
+    let styly = vestavene_styly();
+    styly.iter().map(|s| plochy(s, &styly)).collect()
+}
+
+/// Styl bez rodiče s výslednými hodnotami odlišnými od schématu.
+pub fn plochy(s: &Styl, styly: &[Styl]) -> Styl {
+    let h = crate::styl::vysledne(SCHEMA, styly, &s.id, &BTreeMap::new());
+    Styl {
+        id: s.id.clone(),
+        nazev: s.nazev.clone(),
+        rodic: None,
+        hodnoty: SCHEMA.iter().filter(|k| h.text(k.klic) != k.vychozi).map(|k| (k.klic.to_string(), h.text(k.klic).to_string())).collect(),
+    }
+}
+
+pub fn je_vestaveny(id: &str) -> bool {
+    vestavene_styly().iter().any(|s| s.id == id)
+}
+
+/// Řádky stylu trasy pro uložení do výkresu.
+pub fn zapis_stylu(s: &Styl) -> Vec<String> {
+    let mut r = vec![format!("id={}", s.id), format!("jmeno={}", s.nazev)];
+    for (k, v) in &s.hodnoty {
+        r.push(format!("k.{k}={v}"));
+    }
+    r
+}
+
+pub fn precti_styl<S: AsRef<str>>(radky: &[S]) -> Option<Styl> {
+    let mut s = Styl::default();
+    for r in radky {
+        let Some((k, h)) = r.as_ref().split_once('=') else { continue };
+        match k {
+            "id" => s.id = h.into(),
+            "jmeno" => s.nazev = h.into(),
+            k if k.starts_with("k.") => {
+                s.hodnoty.insert(k[2..].to_string(), h.to_string());
+            }
+            _ => {}
+        }
+    }
+    (!s.id.is_empty()).then_some(s)
 }
 
 /// Další volné id trasy („T1“, „T2“…).
@@ -226,6 +282,18 @@ mod testy {
         let h = vysledne(SCHEMA, &vestavene_styly(), "SITUACE_1000", &BTreeMap::new());
         assert_eq!(h.cislo("meritko"), 1000.0);
         assert_eq!(h.cislo("krok_hlavni"), 100.0);
+    }
+
+    #[test]
+    fn styl_zapis_a_ploche() {
+        let p = vestavene_ploche();
+        let s = p.iter().find(|s| s.id == "JEN_OSA").unwrap();
+        assert!(s.rodic.is_none());
+        assert_eq!(s.hodnoty.get("polygon").map(String::as_str), Some("0"));
+        let mut s = s.clone();
+        s.hodnoty.insert("barva_osa".into(), "3".into());
+        assert_eq!(precti_styl(&zapis_stylu(&s)), Some(s.clone()));
+        assert_eq!(vysledne(SCHEMA, &[s], "JEN_OSA", &BTreeMap::new()).cislo("barva_osa"), 3.0);
     }
 
     #[test]

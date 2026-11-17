@@ -109,6 +109,8 @@ pub enum Skok {
     Pohled(String),
     StylProfilu(String),
     StylyProfilu,
+    StylTrasy(String),
+    StylyTras,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -134,6 +136,7 @@ pub struct StavSpravce {
     pub ulozene_styly: Vec<String>,
     /// Styly podélných profilů (vestavěné, upravené a vlastní).
     pub styly_profilu: Vec<trasy::pohled::StylProfilu>,
+    pub styly_tras: Vec<trasy::styl::Styl>,
     /// Měřítko výkresu (jmenovatel).
     pub meritko: f64,
     /// Styl každého bodu (id stylu) a odkud ho bod má.
@@ -350,6 +353,10 @@ pub enum Akce {
     PohledUpravit(Handle, Box<trasy::pohled::DefinicePohledu>),
     /// Uloží styl profilu (prázdné id = nový) a překreslí pohledy, které ho používají.
     UlozStylProfilu(Box<trasy::pohled::StylProfilu>),
+    /// Uložit styl trasy (prázdné id = nový) a překreslit trasy, které ho používají.
+    UlozStylTrasy(Box<trasy::styl::Styl>),
+    /// Smazat vlastní styl trasy, u vestavěného obnovit výchozí.
+    SmazStylTrasy(String),
     /// Smaže vlastní styl profilu / vrátí vestavěný na výchozí.
     SmazStylProfilu(String),
     /// Vybere objekty ve výkrese a poradí, které tlačítko na pásu karet
@@ -974,12 +981,14 @@ impl Pracovnik {
             s.bloky = cogo::bloky_pro_znacky(&doc);
             s.styly_povrchu = styly::styly_povrchu(&doc);
             s.styly_profilu = styly::styly_profilu(&doc);
+            s.styly_tras = styly::styly_tras(&doc);
             s.ulozene_styly = s
                 .styly_bodu
                 .iter()
                 .map(|x| x.id.clone())
                 .chain(s.styly_povrchu.iter().map(|x| x.id.clone()))
                 .chain(s.styly_profilu.iter().map(|x| x.id.clone()))
+                .chain(s.styly_tras.iter().map(|x| x.id.clone()))
                 .filter(|id| styly::je_ulozeny(&doc, id))
                 .collect();
             s.meritko = nastaveni::meritko(&doc);
@@ -1312,6 +1321,34 @@ impl Pracovnik {
                 let z = crate::tra::prospektor::prekresli(k, None)?;
                 skoc(Skok::StylProfilu(st.id.clone()));
                 Ok(Some(trf!("Styl profilu „{}“ uložen. {}", st.jmeno, z)))
+            }
+            Akce::UlozStylTrasy(st) => {
+                let mut st = *st;
+                let doc = k.dokument()?;
+                st.nazev = st.nazev.trim().to_string();
+                st.rodic = None;
+                if st.nazev.is_empty() {
+                    return Err(tr("jméno stylu nesmí být prázdné").into());
+                }
+                if st.id.is_empty() {
+                    st.id = styly::volne_id(&doc, &st.nazev);
+                }
+                k.zpet(tr("Styl trasy"));
+                styly::uloz_styl_trasy(k, &doc, &st)?;
+                k.hotovo();
+                let z = crate::tra::prospektor::prekresli_trasy_stylu(k, &st.id, None)?;
+                skoc(Skok::StylTrasy(st.id.clone()));
+                Ok(Some(trf!("Styl trasy „{}“ uložen. {}", trasy::preklad::tr_dyn(&st.nazev), z)))
+            }
+            Akce::SmazStylTrasy(id) => {
+                let doc = k.dokument()?;
+                k.zpet(tr("Styl trasy"));
+                styly::smaz_styl(k, &doc, &id);
+                k.hotovo();
+                let nahrada = (!trasy::trasa::je_vestaveny(&id)).then_some(trasy::trasa::STYL_ZAKLAD);
+                let z = crate::tra::prospektor::prekresli_trasy_stylu(k, &id, nahrada)?;
+                skoc(Skok::StylyTras);
+                Ok(Some(z))
             }
             Akce::SmazStylProfilu(id) => {
                 let doc = k.dokument()?;
@@ -2089,6 +2126,7 @@ fn nazev_kroku(a: &Akce) -> &'static str {
         Akce::PohledyPrekreslit(_) => tr("Trasy: překreslení pohledů"),
         Akce::PohledUpravit(..) => tr("Trasy: úprava pohledu profilu"),
         Akce::UlozStylProfilu(..) | Akce::SmazStylProfilu(_) => tr("Trasy: styl profilu"),
+        Akce::UlozStylTrasy(..) | Akce::SmazStylTrasy(_) => tr("Trasy: styl trasy"),
         _ => tr("Terén"),
     }
 }

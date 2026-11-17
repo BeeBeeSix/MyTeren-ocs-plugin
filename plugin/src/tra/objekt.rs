@@ -17,7 +17,8 @@ use trasy::geometrie::{geometrie, DruhBodu, Geometrie, Prvek, Vrchol};
 use trasy::preklad::{tr, tr_dyn};
 use trasy::stanice::{cislo, staniceni, FormatStanice};
 use trasy::styl::{vysledne, Hodnoty};
-use trasy::trasa::{vestavene_styly, DefiniceTrasy, SCHEMA};
+use trasy::styl::Styl;
+use trasy::trasa::{vestavene_ploche, DefiniceTrasy, SCHEMA};
 use trasy::trf;
 
 use crate::vykres::Vykres;
@@ -79,9 +80,33 @@ pub fn z_entity(e: &EntityType) -> Option<ObjektTrasy> {
     })
 }
 
-/// Všechny trasy ve výkrese.
+/// Všechny trasy ve výkrese (zároveň načte styly tras výkresu).
 pub fn trasy(doc: &CadDocument) -> Vec<ObjektTrasy> {
+    crate::styly::styly_tras(doc);
     doc.model_space_entities().filter_map(z_entity).collect()
+}
+
+/// Styly tras posledního načteného výkresu. Kreslení je potřebuje i při
+/// tažení úchopu, kdy se celý výkres nestahuje.
+static STYLY: std::sync::Mutex<Vec<Styl>> = std::sync::Mutex::new(Vec::new());
+
+pub fn nastav_styly(s: Vec<Styl>) {
+    if let Ok(mut g) = STYLY.lock() {
+        *g = s;
+    }
+}
+
+/// Styly tras (vestavěné a uložené ve výkrese).
+pub fn styly() -> Vec<Styl> {
+    match STYLY.lock() {
+        Ok(g) if !g.is_empty() => g.clone(),
+        _ => vestavene_ploche(),
+    }
+}
+
+/// Přeložené jméno stylu (nebo id, když styl neexistuje).
+pub fn jmeno_stylu(id: &str) -> String {
+    styly().into_iter().find(|s| s.id == id).map_or_else(|| id.to_string(), |s| tr_dyn(&s.nazev))
 }
 
 /// Trasy, na které ukazuje výběr (vložení bloku trasy).
@@ -105,7 +130,23 @@ pub fn nejblizsi(doc: &CadDocument, p: [f64; 2]) -> Option<ObjektTrasy> {
 
 /// Výsledné hodnoty stylu pro definici.
 pub fn hodnoty(def: &DefiniceTrasy) -> Hodnoty<'static> {
-    vysledne(SCHEMA, &vestavene_styly(), &def.styl, &def.vyjimky)
+    vysledne(SCHEMA, &styly(), &def.styl, &def.vyjimky)
+}
+
+/// Barva a tloušťka ze stylu podle hladiny objektu (osa, staničení,
+/// hlavní body, polygon).
+fn obarvi(e: &mut EntityType, h: &Hodnoty) {
+    let cast = match e.common().layer.as_str() {
+        H_OSA => "osa",
+        H_STANICENI => "staniceni",
+        H_BODY => "body",
+        H_POLYGON => "polygon",
+        _ => return,
+    };
+    let b = h.cislo(&format!("barva_{cast}")) as i16;
+    let t = h.cislo(&format!("tloustka_{cast}")) as i16;
+    e.common_mut().color = crate::styly::barva(b);
+    e.common_mut().line_weight = crate::styly::tloustka(t);
 }
 
 // ── Kreslení ────────────────────────────────────────────────────────────────
@@ -227,6 +268,9 @@ pub fn objekty(def: &DefiniceTrasy, vrcholy: &[Vrchol], g: &Geometrie) -> Vec<En
             }
             out.push(text(t, [v.x + vyska, v.y + vyska], 0.0, vyska, H_BODY, true));
         }
+    }
+    for e in &mut out {
+        obarvi(e, &h);
     }
     out
 }
@@ -376,7 +420,7 @@ pub fn smaz(v: &mut dyn Vykres, doc: &CadDocument, t: &ObjektTrasy) {
 pub fn popis(t: &ObjektTrasy) -> String {
     let h = hodnoty(&t.def);
     let f = FormatStanice::z_kodu(h.text("format"));
-    let styl = vestavene_styly().into_iter().find(|s| s.id == t.def.styl).map_or(t.def.styl.clone(), |s| tr_dyn(&s.nazev));
+    let styl = jmeno_stylu(&t.def.styl);
     match t.geometrie() {
         Ok(g) => {
             let oblouku = g.prvky.iter().filter(|(_, p)| p.je_oblouk()).count();
@@ -430,5 +474,25 @@ mod testy {
         if let Some(EntityType::Text(t)) = e.iter().find(|x| matches!(x, EntityType::Text(_))) {
             eprintln!("výška {} vrstva {} zarovnání {:?}", t.height, t.common.layer, t.horizontal_alignment);
         }
+    }
+
+    #[test]
+    fn barvy_ze_stylu() {
+        let mut st = vestavene_ploche();
+        let mut s = st[0].clone();
+        s.id = "TEST_BARVY".into();
+        s.hodnoty.insert("barva_osa".into(), "3".into());
+        s.hodnoty.insert("tloustka_polygon".into(), "50".into());
+        st.push(s);
+        nastav_styly(st);
+        let v = vec![Vrchol::new(0.0, 0.0, 0.0), Vrchol::new(100.0, 40.0, 36.0), Vrchol::new(150.0, 160.0, 0.0)];
+        let def = DefiniceTrasy::nova("T1", "Trasa 1", v.clone(), "TEST_BARVY");
+        let g = geometrie(&v, 0.0).unwrap();
+        let e = objekty(&def, &v, &g);
+        let osa: Vec<_> = e.iter().filter(|x| x.common().layer == H_OSA).collect();
+        assert!(!osa.is_empty() && osa.iter().all(|x| x.common().color == Color::from_index(3)));
+        let pol: Vec<_> = e.iter().filter(|x| x.common().layer == H_POLYGON).collect();
+        assert!(!pol.is_empty() && pol.iter().all(|x| x.common().line_weight == crate::styly::tloustka(50)));
+        assert!(e.iter().filter(|x| x.common().layer == H_STANICENI).all(|x| x.common().color == Color::ByLayer));
     }
 }

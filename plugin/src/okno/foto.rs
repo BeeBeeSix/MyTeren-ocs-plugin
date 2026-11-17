@@ -42,6 +42,8 @@ impl Foto {
             ("20_pohled_profilu", Uzel::Pohled("P1".into())),
             ("21_styly_profilu", Uzel::StylyProfilu),
             ("22_styl_profilu", Uzel::StylProfilu("KANALIZACE".into())),
+            ("23_styly_tras", Uzel::StylyTras),
+            ("24_styl_trasy", Uzel::StylTrasy("SITUACE_500".into())),
         ];
         let zalozka = |n: &str| if n.contains("popis") { 1 } else if n.contains("pouziti") { 2 } else { 0 };
         let kroky = kroky.into_iter().map(|(n, u)| (n, u, zalozka(n))).collect();

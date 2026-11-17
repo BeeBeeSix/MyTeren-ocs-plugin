@@ -4,7 +4,6 @@
 use ocs_plugin_api::host::{Document as CadDocument, Handle};
 
 use trasy::preklad::tr_dyn;
-use trasy::trasa::vestavene_styly;
 
 use crate::tra::{editor, objekt, pohled};
 use crate::vykres::{PresKanal, Vykres};
@@ -12,11 +11,6 @@ use crate::vykres::{PresKanal, Vykres};
 /// Prospektor právě mění výkres – automatický přepočet pohledů Tras počká
 /// (jinak by pohled překreslil podruhé a ve výkrese by byl dvakrát).
 pub static PRACUJE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
-
-/// Styly tras k výběru: (id, název).
-pub fn styly() -> Vec<(String, String)> {
-    vestavene_styly().into_iter().map(|s| (s.id.clone(), tr_dyn(&s.nazev))).collect()
-}
 
 /// Pohled podélného profilu v přehledu.
 #[derive(Clone, Debug, Default)]
@@ -64,6 +58,8 @@ pub struct PrehledTrasy {
     pub styl: String,
     pub styl_id: String,
     pub vyjimek: usize,
+    /// Výjimky trasy proti stylu (klíč → hodnota).
+    pub vyjimky: std::collections::BTreeMap<String, String>,
     pub vrcholu: usize,
     pub oblouku: usize,
     pub min_r: Option<f64>,
@@ -92,7 +88,6 @@ fn obalka(body: impl Iterator<Item = [f64; 2]>) -> ([f64; 2], f64) {
 /// Přehled všech tras výkresu s jejich niveletami a pohledy.
 pub fn prehled(doc: &CadDocument) -> Vec<PrehledTrasy> {
     let povrchy = crate::povrchy::povrchy(doc);
-    let styly = vestavene_styly();
     let pohledy = pohled::pohledy(doc);
     let mut out: Vec<PrehledTrasy> = objekt::trasy(doc)
         .into_iter()
@@ -153,9 +148,10 @@ pub fn prehled(doc: &CadDocument) -> Vec<PrehledTrasy> {
                 id: t.def.id.clone(),
                 jmeno: t.def.jmeno.clone(),
                 insert: t.insert,
-                styl: styly.iter().find(|s| s.id == t.def.styl).map_or_else(|| t.def.styl.clone(), |s| tr_dyn(&s.nazev)),
+                styl: objekt::jmeno_stylu(&t.def.styl),
                 styl_id: t.def.styl.clone(),
                 vyjimek: t.def.vyjimky.len(),
+                vyjimky: t.def.vyjimky.clone(),
                 vrcholu: vrcholy.len(),
                 oblouku: oblouky.len(),
                 min_r: oblouky.iter().copied().reduce(f64::min),
@@ -197,7 +193,7 @@ pub fn nastav(v: &mut dyn Vykres, insert: Handle, jmeno: &str, pocatek: f64, sty
     let mut def = t.def.clone();
     def.jmeno = jmeno.to_string();
     def.pocatek = pocatek;
-    if vestavene_styly().iter().any(|s| s.id == styl) {
+    if objekt::styly().iter().any(|s| s.id == styl) {
         def.styl = styl.to_string();
     }
     def.vrcholy = t.vrcholy();
@@ -290,4 +286,21 @@ pub fn uprav_pohled(v: &mut dyn Vykres, insert: Handle, def: &trasy::pohled::Def
     pohled::uloz(v, &doc, Some(&p), &def, p.vlozeni)?;
     v.hotovo();
     Ok(trasy::trf!("Pohled profilu {} upraven", def.id))
+}
+
+/// Překreslí trasy se stylem `styl` (např. po jeho uložení). S `nahrada`
+/// jim zároveň styl změní (smazaný vlastní styl → základní).
+pub fn prekresli_trasy_stylu(v: &mut dyn Vykres, styl: &str, nahrada: Option<&str>) -> Result<String, String> {
+    let doc = v.dokument()?;
+    let trasy: Vec<_> = objekt::trasy(&doc).into_iter().filter(|t| t.def.styl == styl).collect();
+    for t in &trasy {
+        let mut def = t.def.clone();
+        if let Some(s) = nahrada {
+            def.styl = s.to_string();
+        }
+        def.vrcholy = t.vrcholy();
+        v.zpet(&tr_dyn("Styl trasy"));
+        objekt::uloz(v, Some(&doc), Some(t), def)?;
+    }
+    Ok(if trasy.is_empty() { String::new() } else { trasy::trf!("Překresleno tras: {}", trasy.len()) })
 }

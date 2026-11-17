@@ -307,7 +307,7 @@ impl Okno {
         if self.jmeno_trasy.0 != t.id {
             self.jmeno_trasy = (t.id.clone(), t.jmeno.clone(), t.pocatek, t.styl_id.clone());
         }
-        let styly = crate::tra::prospektor::styly();
+        let styly: Vec<(String, String)> = stav.styly_tras.iter().map(|s| (s.id.clone(), trasy::preklad::tr_dyn(&s.nazev))).collect();
         egui::Grid::new(("vlastnosti_trasy", t.id.as_str())).num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
             ui.label(tr("Jméno"));
             ui.add(egui::TextEdit::singleline(&mut self.jmeno_trasy.1).desired_width(220.0));
@@ -332,6 +332,12 @@ impl Okno {
             }
             if zmeneno && ui.button(tr("Vrátit")).clicked() {
                 self.jmeno_trasy.0.clear();
+            }
+            if ui.button(tr("Uložit jako nový styl…")).on_hover_text(tr("vzhled této trasy (styl a výjimky) jako nový styl trasy ve výkrese")).clicked() {
+                spravce::posli(Akce::UlozStylTrasy(Box::new(styl_z_trasy(&t, &stav.styly_tras))));
+            }
+            if ui.button(tr("Upravit styl")).clicked() {
+                self.vyber_uzel(Uzel::StylTrasy(t.styl_id.clone()));
             }
         });
 
@@ -986,5 +992,229 @@ impl Okno {
             otevreny = None;
         }
         self.otevreny_pas_stylu = otevreny;
+    }
+}
+
+// ── Styly tras ──────────────────────────────────────────────────────────────
+
+use trasy::styl::Styl;
+use trasy::trasa::SCHEMA as SCHEMA_TRASY;
+
+/// Hodnota stylu trasy (chybí-li, výchozí ze schématu).
+fn hodnota_trasy(s: &Styl, k: &str) -> String {
+    s.hodnoty.get(k).cloned().unwrap_or_else(|| SCHEMA_TRASY.iter().find(|x| x.klic == k).map_or(String::new(), |x| x.vychozi.to_string()))
+}
+
+/// Nastaví hodnotu stylu trasy (výchozí hodnota schématu se neukládá).
+fn nastav_trasy(s: &mut Styl, k: &str, v: String) {
+    if SCHEMA_TRASY.iter().any(|x| x.klic == k && x.vychozi == v) {
+        s.hodnoty.remove(k);
+    } else {
+        s.hodnoty.insert(k.to_string(), v);
+    }
+}
+
+fn cislo_trasy(s: &Styl, k: &str) -> f64 {
+    hodnota_trasy(s, k).replace(',', ".").trim().parse().unwrap_or(0.0)
+}
+
+fn text_cisla(x: f64) -> String {
+    if (x - x.round()).abs() < 1e-9 { format!("{}", x.round() as i64) } else { format!("{x}") }
+}
+
+fn cislo_pole(ui: &mut egui::Ui, s: &mut Styl, k: &str, rozsah: std::ops::RangeInclusive<f64>, rychlost: f64, pripona: &str) {
+    let mut x = cislo_trasy(s, k);
+    if ui.add(egui::DragValue::new(&mut x).range(rozsah).speed(rychlost).max_decimals(if k.starts_with("desetin") { 0 } else { 2 }).suffix(pripona)).changed() {
+        nastav_trasy(s, k, text_cisla(x));
+    }
+}
+
+fn zaskrt_trasy(ui: &mut egui::Ui, s: &mut Styl, k: &str, popis: &'static str) {
+    let mut b = matches!(hodnota_trasy(s, k).trim(), "1" | "ano" | "true");
+    if ui.checkbox(&mut b, tr(popis)).changed() {
+        nastav_trasy(s, k, if b { "1" } else { "0" }.to_string());
+    }
+}
+
+/// Styl z výsledných hodnot trasy (styl + výjimky).
+fn styl_z_trasy(t: &PrehledTrasy, styly: &[Styl]) -> Styl {
+    let h = trasy::styl::vysledne(SCHEMA_TRASY, styly, &t.styl_id, &t.vyjimky);
+    Styl {
+        id: String::new(),
+        nazev: trf!("Styl z trasy {}", t.jmeno),
+        rodic: None,
+        hodnoty: SCHEMA_TRASY.iter().filter(|k| h.text(k.klic) != k.vychozi).map(|k| (k.klic.to_string(), h.text(k.klic).to_string())).collect(),
+    }
+}
+
+impl Okno {
+    /// Přehled stylů tras.
+    pub(super) fn detail_styly_tras(&mut self, ui: &mut egui::Ui, stav: &StavSpravce) {
+        karta::nadpis_karty(ui, &ikona_trasy(), tr("Styly tras"), |ui| {
+            karta::pilulka(ui, &czi(stav.styly_tras.len()), SEDA);
+        });
+        ui.label(RichText::new(tr("Vzory vzhledu tras v situaci: staničení, popisy, barvy a tloušťky. Změna stylu překreslí všechny trasy, které ho používají.")).color(SEDA));
+        ui.add_space(6.0);
+        if karta::tlacitko(ui, None, tr("+ Nový styl trasy"), true).clicked() {
+            let mut s = stav.styly_tras.first().cloned().unwrap_or_default();
+            s.id.clear();
+            s.nazev = tr("Nový styl trasy").to_string();
+            spravce::posli(Akce::UlozStylTrasy(Box::new(s)));
+        }
+        ui.add_space(8.0);
+        let mut klik = None;
+        for s in &stav.styly_tras {
+            let n = stav.trasy.iter().filter(|t| t.styl_id == s.id).count();
+            let vedlejsi = cislo_trasy(s, "krok_vedlejsi");
+            let hlavni = cislo_trasy(s, "krok_hlavni");
+            let mut popis = trf!("1:{} · staničení {} / {} m · tras {}", text_cisla(cislo_trasy(s, "meritko")), text_cisla(vedlejsi), text_cisla(hlavni), n);
+            if stav.ulozene_styly.contains(&s.id) {
+                popis.push_str(if trasy::trasa::je_vestaveny(&s.id) { tr(" · upravený") } else { tr(" · vlastní") });
+            }
+            if karta::radek_seznamu(ui, &ikona_trasy(), &trasy::preklad::tr_dyn(&s.nazev), &popis, "", SEDA).clicked() {
+                klik = Some(s.id.clone());
+            }
+        }
+        if let Some(id) = klik {
+            self.vyber_uzel(Uzel::StylTrasy(id));
+        }
+    }
+
+    /// Karta stylu trasy: jméno, staničení, popisy, barvy a tloušťky.
+    pub(super) fn karta_stylu_trasy(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, id: &str) {
+        let Some(puvodni) = stav.styly_tras.iter().find(|s| s.id == id).cloned() else {
+            ui.label(RichText::new(tr("Styl trasy už ve výkrese není.")).color(SEDA));
+            return;
+        };
+        if self.uprava_stylu_trasy.as_ref().is_none_or(|s| s.id != id) {
+            self.uprava_stylu_trasy = Some(puvodni.clone());
+        }
+        let vestaveny = trasy::trasa::je_vestaveny(&puvodni.id);
+        let ulozeny = stav.ulozene_styly.contains(&puvodni.id);
+        let pouziva: Vec<String> = stav.trasy.iter().filter(|t| t.styl_id == id).map(|t| t.jmeno.clone()).collect();
+        let (mut ulozit, mut vratit, mut duplikovat, mut smazat) = (false, false, false, false);
+        let Some(s) = self.uprava_stylu_trasy.as_mut() else { return };
+        karta::nadpis_karty(ui, &ikona_trasy(), &trasy::preklad::tr_dyn(&puvodni.nazev), |ui| {
+            if vestaveny {
+                karta::pilulka(ui, if ulozeny { tr("vestavěný · upravený") } else { tr("vestavěný") }, SEDA);
+            } else {
+                karta::pilulka(ui, tr("vlastní"), MODRA);
+            }
+        });
+        ui.label(RichText::new(if pouziva.is_empty() { tr("Žádná trasa tento styl nepoužívá.").to_string() } else { trf!("Používají ho trasy: {}", pouziva.join(", ")) }).color(SEDA));
+        ui.add_space(6.0);
+
+        let mut jmeno = trasy::preklad::tr_dyn(&s.nazev);
+        egui::Grid::new(("styl_trasy_obecne", id)).num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
+            ui.label(tr("Jméno"));
+            if ui.add(egui::TextEdit::singleline(&mut jmeno).desired_width(260.0)).changed() {
+                s.nazev = jmeno.clone();
+            }
+            ui.end_row();
+            ui.label(tr("Měřítko výkresu 1:"));
+            cislo_pole(ui, s, "meritko", 10.0..=100_000.0, 10.0, "");
+            ui.end_row();
+            ui.label(tr("Výška textu"));
+            cislo_pole(ui, s, "vyska_textu", 0.5..=20.0, 0.05, " mm");
+            ui.end_row();
+        });
+
+        ui.add_space(8.0);
+        ui.label(RichText::new(tr("Staničení")).strong());
+        egui::Grid::new(("styl_trasy_stan", id)).num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
+            ui.label(tr("Krok hlavního staničení"));
+            cislo_pole(ui, s, "krok_hlavni", 0.0..=100_000.0, 1.0, " m");
+            ui.end_row();
+            ui.label(tr("Krok vedlejšího staničení"));
+            ui.horizontal(|ui| {
+                cislo_pole(ui, s, "krok_vedlejsi", 0.0..=100_000.0, 1.0, " m");
+                ui.label(RichText::new(tr("0 = nekreslit")).color(SEDA).size(11.0));
+            });
+            ui.end_row();
+            ui.label(tr("Formát"));
+            let akt = trasy::stanice::FormatStanice::z_kodu(&hodnota_trasy(s, "format"));
+            egui::ComboBox::from_id_salt(("format_trasy", id)).selected_text(akt.ukazka()).show_ui(ui, |ui| {
+                for f in trasy::stanice::FormatStanice::VSE {
+                    if ui.selectable_label(f == akt, f.ukazka()).clicked() {
+                        nastav_trasy(s, "format", f.kod().to_string());
+                    }
+                }
+            });
+            ui.end_row();
+            ui.label(tr("Desetinná místa staničení"));
+            cislo_pole(ui, s, "desetin_hlavni", 0.0..=4.0, 0.05, "");
+            ui.end_row();
+            ui.label(tr("Desetinná místa u hlavních bodů"));
+            cislo_pole(ui, s, "desetin_body", 0.0..=4.0, 0.05, "");
+            ui.end_row();
+        });
+        zaskrt_trasy(ui, s, "carka", "Desetinná čárka");
+
+        ui.add_space(8.0);
+        ui.label(RichText::new(tr("Popisy")).strong());
+        zaskrt_trasy(ui, s, "popis_body", "Popisovat hlavní body (ZÚ, KÚ, TK, KT)");
+        zaskrt_trasy(ui, s, "popis_vrcholy", "Popisovat vrcholy (V) a poloměry");
+        ui.horizontal(|ui| {
+            ui.label(tr("Zkratky bodů"));
+            let mut z = hodnota_trasy(s, "zkratky");
+            if ui.add(egui::TextEdit::singleline(&mut z).desired_width(180.0)).on_hover_text(tr("ZÚ,KÚ,TK,KT,V oddělené čárkou")).changed() {
+                nastav_trasy(s, "zkratky", z);
+            }
+        });
+        zaskrt_trasy(ui, s, "polygon", "Kreslit tečnový polygon");
+
+        ui.add_space(8.0);
+        ui.label(RichText::new(tr("Barvy a tloušťky")).strong());
+        egui::Grid::new(("styl_trasy_barvy", id)).num_columns(3).spacing([10.0, 6.0]).show(ui, |ui| {
+            for (cast, popis) in [("osa", "Osa"), ("staniceni", "Staničení"), ("body", "Hlavní body"), ("polygon", "Tečnový polygon")] {
+                ui.label(tr(popis));
+                let kb = format!("barva_{cast}");
+                let kt = format!("tloustka_{cast}");
+                let mut b = cislo_trasy(s, &kb) as i16;
+                if super::vyber_barvy(ui, &format!("{id}_{kb}"), &mut b) {
+                    nastav_trasy(s, &kb, b.to_string());
+                }
+                let mut t = cislo_trasy(s, &kt) as i16;
+                if super::vyber_tloustky(ui, &format!("{id}_{kt}"), &mut t) {
+                    nastav_trasy(s, &kt, t.to_string());
+                }
+                ui.end_row();
+            }
+        });
+
+        ui.add_space(8.0);
+        let zmeneno = *s != puvodni;
+        ui.horizontal_wrapped(|ui| {
+            if ui.add_enabled(zmeneno, egui::Button::new(tr("Uložit styl"))).on_hover_text(tr("uloží styl do výkresu a překreslí trasy, které ho používají")).clicked() {
+                ulozit = true;
+            }
+            if zmeneno && ui.button(tr("Vrátit změny")).clicked() {
+                vratit = true;
+            }
+            if ui.button(tr("Duplikovat")).clicked() {
+                duplikovat = true;
+            }
+            let (popis, smi) = if vestaveny { (tr("Obnovit výchozí"), ulozeny) } else { (tr("Smazat"), true) };
+            if ui.add_enabled(smi, egui::Button::new(popis)).clicked() {
+                smazat = true;
+            }
+        });
+        let s = s.clone();
+        if ulozit {
+            spravce::posli(Akce::UlozStylTrasy(Box::new(s.clone())));
+        }
+        if duplikovat {
+            let mut n = s.clone();
+            n.id.clear();
+            n.nazev = trf!("{} – kopie", trasy::preklad::tr_dyn(&s.nazev));
+            spravce::posli(Akce::UlozStylTrasy(Box::new(n)));
+        }
+        if smazat {
+            spravce::posli(Akce::SmazStylTrasy(puvodni.id.clone()));
+            self.uprava_stylu_trasy = None;
+        }
+        if vratit {
+            self.uprava_stylu_trasy = Some(puvodni);
+        }
     }
 }

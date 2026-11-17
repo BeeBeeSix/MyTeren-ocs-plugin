@@ -25,6 +25,7 @@ pub const H_STYLY: &str = "TER_STYLY";
 const STYL_BODU: &str = "STYL_BODU";
 const STYL_POVRCHU: &str = "STYL_POVRCHU";
 const STYL_PROFILU: &str = "STYL_PROFILU";
+const STYL_TRASY: &str = "STYL_TRASY";
 /// Tvar značky v jednotkách poloměru (r = 1, osa y nahoru).
 #[derive(Clone, Debug, PartialEq)]
 pub enum Tvar {
@@ -600,7 +601,7 @@ fn ulozene(doc: &CadDocument) -> Vec<(Handle, String, Vec<String>)> {
             let r = e.common().extended_data.get_record(APP_POVRCH)?;
             let t = retezce(r);
             let druh = t.first()?.clone();
-            (druh == STYL_BODU || druh == STYL_POVRCHU || druh == STYL_PROFILU).then(|| (e.common().handle, druh, t[1..].to_vec()))
+            (druh == STYL_BODU || druh == STYL_POVRCHU || druh == STYL_PROFILU || druh == STYL_TRASY).then(|| (e.common().handle, druh, t[1..].to_vec()))
         })
         .collect()
 }
@@ -653,6 +654,29 @@ pub fn styly_profilu(doc: &CadDocument) -> Vec<trasy::pohled::StylProfilu> {
         }
     }
     v
+}
+
+/// Styly tras výkresu: vestavěné (případně přepsané) a vlastní. Zároveň je
+/// předá kreslení tras (to je potřebuje i bez staženého výkresu).
+pub fn styly_tras(doc: &CadDocument) -> Vec<trasy::styl::Styl> {
+    let mut v = trasy::trasa::vestavene_ploche();
+    for (_, druh, t) in ulozene(doc) {
+        if druh != STYL_TRASY {
+            continue;
+        }
+        if let Some(s) = trasy::trasa::precti_styl(&t) {
+            match v.iter_mut().find(|x| x.id == s.id) {
+                Some(x) => *x = s,
+                None => v.push(s),
+            }
+        }
+    }
+    crate::tra::objekt::nastav_styly(v.clone());
+    v
+}
+
+pub fn uloz_styl_trasy(v: &mut dyn Vykres, doc: &CadDocument, s: &trasy::styl::Styl) -> Result<(), String> {
+    uloz(v, doc, STYL_TRASY, &s.id, trasy::trasa::zapis_stylu(s))
 }
 
 pub fn uloz_styl_profilu(v: &mut dyn Vykres, doc: &CadDocument, s: &trasy::pohled::StylProfilu) -> Result<(), String> {
@@ -752,6 +776,7 @@ pub fn volne_id(doc: &CadDocument, jmeno: &str) -> String {
         .map(|s| s.id)
         .chain(styly_povrchu(doc).into_iter().map(|s| s.id))
         .chain(styly_profilu(doc).into_iter().map(|s| s.id))
+        .chain(styly_tras(doc).into_iter().map(|s| s.id))
         .map(|s| s.to_uppercase())
         .collect();
     if !obsazene.contains(&zaklad) {

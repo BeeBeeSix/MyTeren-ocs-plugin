@@ -129,6 +129,7 @@ fn data() -> StavSpravce {
         styl_bodu,
         verze: 1,
         styly_profilu: trasy::pohled::StylProfilu::vestavene(),
+        styly_tras: trasy::trasa::vestavene_ploche(),
         trasy: vec![crate::tra::prospektor::PrehledTrasy {
             id: "T1".into(),
             jmeno: "Stoka A".into(),

@@ -25,7 +25,7 @@ use trasy::upravy::{nejblizsi_usek, nejblizsi_vrchol, smaz_vrchol, vloz_vrchol, 
 use trasy::preklad::{tr, tr_dyn};
 use trasy::stanice::{cislo, FormatStanice};
 use trasy::styl::vysledne;
-use trasy::trasa::{vestavene_styly, volne_id, DefiniceTrasy, SCHEMA, STYL_ZAKLAD};
+use trasy::trasa::{volne_id, DefiniceTrasy, SCHEMA, STYL_ZAKLAD};
 use trasy::trf;
 
 use crate::vykres::{self, PresHost, Vykres};
@@ -554,7 +554,7 @@ fn editor_vybrat_cmd(host: &mut dyn HostApi, arg: &str) {
 
 /// Hodnota stylu bez výjimek objektu (pro porovnání, co je výjimka).
 fn hodnota_stylu(styl: &str, klic: &str) -> String {
-    vysledne(SCHEMA, &vestavene_styly(), styl, &BTreeMap::new()).text(klic).to_string()
+    vysledne(SCHEMA, &objekt::styly(), styl, &BTreeMap::new()).text(klic).to_string()
 }
 
 fn cti_cislo(t: &str) -> Option<f64> {
@@ -564,7 +564,7 @@ fn cti_cislo(t: &str) -> Option<f64> {
 fn vlastnosti_cmd(host: &mut dyn HostApi, arg: &str) {
     let Some((t, _doc)) = vybrana_trasa(host, arg, "TRA_VLASTNOSTI") else { return };
     let h = objekt::hodnoty(&t.def);
-    let styly = vestavene_styly();
+    let styly = objekt::styly();
     let i_stylu = styly.iter().position(|s| s.id == t.def.styl).unwrap_or(0);
     let formaty = FormatStanice::VSE;
     let i_formatu = formaty.iter().position(|f| f.kod() == h.text("format")).unwrap_or(0);
@@ -676,7 +676,7 @@ fn vlastnosti_hotovo(host: &mut dyn HostApi, arg: &str) {
         return host.push_error(tr("Trasy: vybraný objekt není trasa."));
     };
     let h = objekt::hodnoty(&t.def);
-    let styly = vestavene_styly();
+    let styly = objekt::styly();
     let formaty = FormatStanice::VSE;
     let vrcholy = t.vrcholy();
     let mut def = t.def.clone();

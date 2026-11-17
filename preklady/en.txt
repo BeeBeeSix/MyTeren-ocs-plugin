@@ -1627,3 +1627,35 @@ Obnovit výchozí	Restore default
 Styl profilu „{}“ uložen. {}	Profile style “{}” saved. {}
 Trasy: styl profilu	Alignments: profile style
 Styly bodů, povrchů a profilů (plugin Terén) – nemazat	Point, surface and profile styles (Terén plugin) – do not delete
++ Nový styl trasy	+ New alignment style
+0 = nekreslit	0 = do not draw
+1:{} · staničení {} / {} m · tras {}	1:{} · stations {} / {} m · alignments {}
+Barvy a tloušťky	Colours and lineweights
+Desetinná místa staničení	Station decimals
+Desetinná místa u hlavních bodů	Decimals at key points
+Desetinná čárka	Decimal comma
+Hlavní body	Key points
+Kreslit tečnový polygon	Draw tangent polygon
+Krok hlavního staničení	Major station interval
+Krok vedlejšího staničení	Minor station interval
+Měřítko výkresu 1:	Drawing scale 1:
+Nový styl trasy	New alignment style
+Osa	Centreline
+Popisovat hlavní body (ZÚ, KÚ, TK, KT)	Label key points (ZÚ, KÚ, TK, KT)
+Popisovat vrcholy (V) a poloměry	Label vertices (V) and radii
+Používají ho trasy: {}	Used by alignments: {}
+Styl trasy	Alignment style
+Styl trasy už ve výkrese není.	The alignment style is no longer in the drawing.
+Styl trasy „{}“ uložen. {}	Alignment style "{}" saved. {}
+Styl z trasy {}	Style from alignment {}
+Styly tras	Alignment styles
+Tečnový polygon	Tangent polygon
+Trasy: styl trasy	Alignments: alignment style
+Vzory vzhledu tras v situaci: staničení, popisy, barvy a tloušťky. Změna stylu překreslí všechny trasy, které ho používají.	Templates for how alignments look in plan: stations, labels, colours and lineweights. Changing a style redraws every alignment that uses it.
+Vzory vzhledu tras: staničení, popisy, barvy a tloušťky	Alignment appearance templates: stations, labels, colours and lineweights
+Výška textu	Text height
+Zkratky bodů	Point abbreviations
+ZÚ,KÚ,TK,KT,V oddělené čárkou	ZÚ,KÚ,TK,KT,V separated by commas
+uloží styl do výkresu a překreslí trasy, které ho používají	saves the style to the drawing and redraws the alignments that use it
+vzhled této trasy (styl a výjimky) jako nový styl trasy ve výkrese	this alignment's appearance (style and overrides) as a new alignment style in the drawing
+Žádná trasa tento styl nepoužívá.	No alignment uses this style.
