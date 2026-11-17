@@ -312,6 +312,7 @@ fn pojmenovany(druh: DruhPasu, nazev: &str, vyska: f64) -> Pas {
 fn v_lomech(mut p: Pas) -> Pas {
     p.krok = 0.0;
     p.lomy = true;
+    p.body_trasy = false;
     p
 }
 
@@ -327,16 +328,16 @@ pub fn sada_sablony(sablona: &str) -> Vec<Pas> {
     use DruhPasu as D;
     match sablona {
         "obecna" => {
-            let mut rozdil = pojmenovany(D::Rozdil, "Rozdíl (výkop − / násyp +)", 9.0);
+            let mut rozdil = pojmenovany(D::Rozdil, "Rozdíl (výkop − / násyp +)", 11.0);
             rozdil = v_lomech(rozdil);
             vec![
                 nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Katastrální území", 5.0) }),
                 nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Parcelní čísla", 5.0) }),
                 nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Druh povrchu", 5.0) }),
-                v_lomech(pojmenovany(D::Niveleta, "Kóta upraveného terénu", 11.0)),
-                v_lomech(pojmenovany(D::Teren, "Kóta stávajícího terénu", 11.0)),
+                v_lomech(pojmenovany(D::Niveleta, "Kóta upraveného terénu", 13.0)),
+                v_lomech(pojmenovany(D::Teren, "Kóta stávajícího terénu", 13.0)),
                 rozdil,
-                v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 11.0)),
+                v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 15.0)),
                 pojmenovany(D::Sklony, "Sklon [‰] – délka [m]", 5.0),
                 Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Druh úpravy", 5.0) },
             ]
@@ -345,11 +346,11 @@ pub fn sada_sablony(sablona: &str) -> Vec<Pas> {
             nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Katastrální území", 5.0) }),
             nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Parcelní čísla", 5.0) }),
             nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Druh povrchu", 5.0) }),
-            nad(pojmenovany(D::Vzdalenosti, "Vzdálenosti šachet", 5.0)),
-            v_lomech(pojmenovany(D::Teren, "Kóta terénu", 11.0)),
-            v_lomech(Pas { zdroj: Zdroj::Teren, zdroj2: Zdroj::Niveleta, ..pojmenovany(D::Rozdil, "Hloubka dna potrubí", 9.0) }),
-            v_lomech(pojmenovany(D::Niveleta, "Kóta dna potrubí", 11.0)),
-            v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 11.0)),
+            nad(v_lomech(pojmenovany(D::Vzdalenosti, "Vzdálenosti šachet", 5.0))),
+            v_lomech(pojmenovany(D::Teren, "Kóta terénu", 13.0)),
+            v_lomech(Pas { zdroj: Zdroj::Teren, zdroj2: Zdroj::Niveleta, ..pojmenovany(D::Rozdil, "Hloubka dna potrubí", 11.0) }),
+            v_lomech(pojmenovany(D::Niveleta, "Kóta dna potrubí", 13.0)),
+            v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 15.0)),
             Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Profil – materiál – délka", 5.0) },
             pojmenovany(D::Sklony, "Sklon [‰] – délka [m]", 5.0),
             Pas { useky: cely("pískové lože tl. 100 mm"), ..pojmenovany(D::Useky, "Uložení", 5.0) },
@@ -357,11 +358,11 @@ pub fn sada_sablony(sablona: &str) -> Vec<Pas> {
         "tok" => vec![
             nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Katastrální území", 5.0) }),
             nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Parcelní čísla", 5.0) }),
-            nad(pojmenovany(D::Vzdalenosti, "Vzdálenosti profilů", 5.0)),
-            v_lomech(pojmenovany(D::Teren, "Kóta dna stávající", 11.0)),
-            v_lomech(pojmenovany(D::Niveleta, "Kóta dna navržená", 11.0)),
-            v_lomech(pojmenovany(D::Rozdil, "Rozdíl dna (výkop − / násyp +)", 9.0)),
-            v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 11.0)),
+            nad(v_lomech(pojmenovany(D::Vzdalenosti, "Vzdálenosti profilů", 5.0))),
+            v_lomech(pojmenovany(D::Teren, "Kóta dna stávající", 13.0)),
+            v_lomech(pojmenovany(D::Niveleta, "Kóta dna navržená", 13.0)),
+            v_lomech(pojmenovany(D::Rozdil, "Rozdíl dna (výkop − / násyp +)", 11.0)),
+            v_lomech(pojmenovany(D::Staniceni, "Staničení [km]", 15.0)),
             pojmenovany(D::Sklony, "Sklon dna [‰] – délka [m]", 5.0),
             Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Opevnění koryta", 5.0) },
         ],

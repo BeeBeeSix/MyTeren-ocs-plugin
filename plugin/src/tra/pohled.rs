@@ -228,7 +228,7 @@ pub fn sestav(doc: &CadDocument, def: &DefinicePohledu, nova: Option<&objekt::Ob
         ent.push(cara([0.0, 0.0], [w, 0.0], H_RAM));
     }
     // srovnávací rovina
-    let sirka_zahlavi = 38.0 * def.meritko / 1000.0;
+    let sirka_zahlavi = 52.0 * def.meritko / 1000.0;
     if def.pasy.is_empty() {
         ent.push(text(
             trf!("S.R. {} m n. m.", cislo(osy.srovnavaci, 2, true)),
@@ -501,10 +501,10 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64) {
             }
         }
         let zahlavi = if pas.nazev.trim().is_empty() { tr(pas.druh.nazev()).to_string() } else { pas.nazev.clone() };
-        ent.push(text(zahlavi, [-k.sirka_zahlavi + 0.8 * h, ym], 0.9 * h, H_PASY, TextHorizontalAlignment::Left, TextVerticalAlignment::Middle));
+        ent.push(text(zahlavi, [-k.sirka_zahlavi + 0.8 * h, ym], 0.8 * h, H_PASY, TextHorizontalAlignment::Left, TextVerticalAlignment::Middle));
         let text_useku = |ent: &mut Vec<EntityType>, a: f64, b: f64, t: String, stred: bool| {
             let (x, z) = if stred { ((a + b) / 2.0, TextHorizontalAlignment::Center) } else { (a + 0.6 * h, TextHorizontalAlignment::Left) };
-            ent.push(text(t, [x, ym], 0.8 * h, H_PASY, z, TextVerticalAlignment::Middle));
+            ent.push(text(t, [x, ym], 0.64 * h, H_PASY, z, TextVerticalAlignment::Middle));
         };
         match pas.druh {
             DruhPasu::Smer => {
@@ -606,7 +606,7 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64) {
                     };
                     let Some(t) = hodnota else { continue };
                     ent.push(cara([x, y0], [x, y1], H_PASY));
-                    ent.push(svisly_text(t, x, y1, 0.85 * h));
+                    ent.push(svisly_text(t, x, y1, 0.64 * h));
                 }
             }
         }
