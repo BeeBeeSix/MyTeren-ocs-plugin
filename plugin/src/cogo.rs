@@ -1229,3 +1229,121 @@ pub fn presun_nosice(v: &mut dyn Vykres, doc: &CadDocument) -> bool {
     }
     zmena
 }
+
+#[cfg(test)]
+mod testy_posunu {
+    use super::*;
+
+    /// Výkres s body hustě vedle sebe (popisy se rozmisťují kolem sousedů).
+    fn vykres(n: usize) -> CadDocument {
+        let mut doc = CadDocument::new();
+        let body: Vec<Bod> = (0..n * n)
+            .map(|i| Bod { cislo: format!("{}", i + 1), x: 1000.0 + (i / n) as f64 * 2.0, y: 2000.0 + (i % n) as f64 * 2.0, z: 300.0, popis: "T".into() })
+            .collect();
+        let ro = Rozlisovac::new(&doc);
+        for e in crate::import::objekty_importu(&body, &ro, 500.0, "test.txt", None, "") {
+            doc.add_entity(e).unwrap();
+        }
+        doc
+    }
+
+    fn posun(e: &mut EntityType, dx: f64, dy: f64) {
+        let p = |v: &mut Vector3| {
+            v.x += dx;
+            v.y += dy;
+        };
+        match e {
+            EntityType::Point(x) => p(&mut x.location),
+            EntityType::Text(t) => {
+                p(&mut t.insertion_point);
+                if let Some(a) = t.alignment_point.as_mut() {
+                    p(a);
+                }
+            }
+            EntityType::Insert(i) => p(&mut i.insert_point),
+            EntityType::Line(l) => {
+                p(&mut l.start);
+                p(&mut l.end);
+            }
+            EntityType::Circle(c) => p(&mut c.center),
+            EntityType::LwPolyline(pl) => pl.vertices.iter_mut().for_each(|v| {
+                v.location.x += dx;
+                v.location.y += dy;
+            }),
+            _ => {}
+        }
+    }
+
+    /// Bod číslo `c` a jeho grafika (stejný výběr jako klik na bod v OCS).
+    fn bod_a_grafika(doc: &CadDocument, c: &str) -> Vec<Handle> {
+        let b = body(doc).into_iter().find(|b| b.bod.cislo == c).unwrap();
+        let mut h = vec![b.handle];
+        h.extend(grafika_bodu(doc, &[[b.bod.x, b.bod.y]]));
+        h
+    }
+
+    fn presun(doc: &mut CadDocument, h: &[Handle], dx: f64, dy: f64) {
+        for x in h {
+            let e = doc.get_entity_mut(*x).unwrap();
+            posun(e, dx, dy);
+        }
+    }
+
+    #[test]
+    fn posun_bodu_i_s_grafikou() {
+        let mut doc = vykres(6);
+        let vybrane = bod_a_grafika(&doc, "15");
+        let pred = vsechna_grafika(&doc).len();
+        presun(&mut doc, &vybrane, 1.5, 0.6);
+        let (posuny, _) = posunuta_grafika(&doc, 500.0, false);
+        let n = nesoulad(&doc, 500.0);
+        eprintln!("vybráno {} objektů, posuny {}, navíc {}, chybí {}", vybrane.len(), posuny.len(), n.navic.len(), n.chybi.len());
+        // stará grafika je navíc, bod bez grafiky chybí
+        assert!(posuny.is_empty());
+        assert_eq!(n.navic.len(), vybrane.len() - 1);
+        assert_eq!(n.chybi.len(), 1);
+        assert_eq!(pred, vsechna_grafika(&doc).len());
+    }
+
+    #[test]
+    fn posun_jen_bodu() {
+        let mut doc = vykres(6);
+        let b = body(&doc).into_iter().find(|b| b.bod.cislo == "15").unwrap();
+        let grafika = grafika_bodu(&doc, &[[b.bod.x, b.bod.y]]);
+        presun(&mut doc, &[b.handle], 1.5, 0.6);
+        let n = nesoulad(&doc, 500.0);
+        // grafika zůstala na starém místě bez bodu → navíc; bod bez grafiky → chybí
+        assert_eq!(n.navic.len(), grafika.len());
+        assert_eq!(n.chybi.len(), 1);
+    }
+
+    #[test]
+    fn posun_jen_grafiky_posune_bod() {
+        let mut doc = vykres(6);
+        let b = body(&doc).into_iter().find(|b| b.bod.cislo == "15").unwrap();
+        let grafika = grafika_bodu(&doc, &[[b.bod.x, b.bod.y]]);
+        presun(&mut doc, &grafika, 1.5, 0.6);
+        let (posuny, _) = posunuta_grafika(&doc, 500.0, false);
+        assert_eq!(posuny.len(), 1);
+        let novy = &posuny[0].1;
+        assert!((novy.x - b.bod.x - 1.5).abs() < 1e-9 && (novy.y - b.bod.y - 0.6).abs() < 1e-9);
+    }
+
+    #[test]
+    fn dva_body_na_stejnem_miste() {
+        // import dvakrát: posun jednoho bodu s grafikou nechá druhý bod i jeho popis na místě
+        let mut doc = vykres(4);
+        let dalsi = vykres(4);
+        for e in dalsi.model_space_entities() {
+            let mut e = e.clone();
+            e.common_mut().handle = Handle::new(0);
+            doc.add_entity(e).unwrap();
+        }
+        let vybrane = bod_a_grafika(&doc, "6");
+        presun(&mut doc, &vybrane, 1.5, 0.6);
+        let n = nesoulad(&doc, 500.0);
+        // druhý bod drží svou grafiku – nic se nemaže kromě posunuté kopie
+        assert!(n.chybi.len() <= 1);
+        assert_eq!(body(&doc).iter().filter(|b| b.bod.cislo == "6").count(), 2);
+    }
+}
