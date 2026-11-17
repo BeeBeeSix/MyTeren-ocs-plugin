@@ -721,7 +721,7 @@ pub fn oprav_nesoulad(v: &mut dyn Vykres, doc: &CadDocument, n: &Nesoulad) -> Re
     zajisti_bloky_znacek(v, doc)?;
     let nove = grafika_rozmistena_r(&polozky, &rucni, &ostatni, m);
     if !nove.is_empty() {
-        priprav_vykres(v)?;
+        priprav_vykres_s(v, doc)?;
         v.pridej(nove)?;
     }
     Ok(())
@@ -924,7 +924,7 @@ pub fn uprav_body(v: &mut dyn Vykres, doc: &CadDocument, zmeny: &[ZmenaBodu], po
     zajisti_bloky_znacek(v, doc)?;
     let nove = grafika_rozmistena_r(&polozky, &rucni, &ostatni, m);
     if !nove.is_empty() {
-        priprav_vykres(v)?;
+        priprav_vykres_s(v, doc)?;
         v.pridej(nove)?;
     }
     Ok(n)
@@ -1008,6 +1008,12 @@ pub fn obnov_grafiku(v: &mut dyn Vykres, doc: &CadDocument) -> Result<usize, Str
 /// vkládat i z interaktivního příkazu).
 pub fn priprav_vykres(v: &mut dyn Vykres) -> Result<(), String> {
     let doc = v.dokument()?;
+    priprav_vykres_s(v, &doc)
+}
+
+/// Jako [`priprav_vykres`] s už staženým snímkem výkresu (hladiny a nastavení
+/// se úpravou bodů nemění, stačí snímek z doby před ní).
+pub fn priprav_vykres_s(v: &mut dyn Vykres, doc: &CadDocument) -> Result<(), String> {
     // značku bodu kreslí styl – vlastní značka bodu
     // Open CADu (PDMODE) by se kreslila přes ni
     if doc.header.point_display_mode != 1 {
