@@ -623,9 +623,14 @@ fn registruj_quad(k: &mut PresKanal) {
 
 /// Ohlásí úchopy bodů (režim posunu bodů úchopem); vrací jejich počet.
 fn obnov_uchopy(k: &mut PresKanal, posledni: &mut Option<u64>) -> usize {
-    use std::hash::{Hash, Hasher};
     let Ok(doc) = k.dokument() else { return 0 };
-    let (g, navic) = crate::uchopy::uchopy(&doc);
+    obnov_uchopy_s(k, &doc, posledni)
+}
+
+/// Jako [`obnov_uchopy`] s už staženým snímkem výkresu.
+fn obnov_uchopy_s(k: &mut PresKanal, doc: &CadDocument, posledni: &mut Option<u64>) -> usize {
+    use std::hash::{Hash, Hasher};
+    let (g, navic) = crate::uchopy::uchopy(doc);
     let mut h = std::collections::hash_map::DefaultHasher::new();
     for x in &g {
         x.grip_id.hash(&mut h);
@@ -843,53 +848,66 @@ impl Pracovnik {
             let okno = sdilene().okno_otevreno.load(Ordering::SeqCst) && Self::aktivni_tab() == Some(tab);
             let Some(mut k) = kanal(tab) else { continue };
             registruj_quad(&mut k);
-            self.hlidej_meritko(tab, &mut k);
-            self.hlidej_body(tab, &mut k);
+            // Jeden snímek výkresu pro všechny kontroly; nový jen tehdy, když
+            // některá kontrola výkres změnila (dřív 5–7 snímků po každé změně).
+            let Ok(mut doc) = k.dokument() else { continue };
+            let znovu = |k: &mut PresKanal, doc: &mut CadDocument, zmena: bool| {
+                if zmena {
+                    if let Ok(d) = k.dokument() {
+                        *doc = d;
+                    }
+                }
+            };
+            let z = self.hlidej_meritko(tab, &mut k, &doc);
+            znovu(&mut k, &mut doc, z);
+            let z = self.hlidej_body(tab, &mut k, &doc);
+            znovu(&mut k, &mut doc, z);
             if crate::uchopy::zapnuto() {
-                obnov_uchopy(&mut k, &mut self.uchopy_hash);
+                obnov_uchopy_s(&mut k, &doc, &mut self.uchopy_hash);
             }
             if nastaveni::akt().povrch_nevybirat && self.oznacene.insert(tab) {
-                if let Ok(doc) = k.dokument() {
-                    oznac_povrchy(&mut k, &doc, true);
-                }
+                oznac_povrchy(&mut k, &doc, true);
             }
             let panel = crate::panel::otevren();
             if !okno && !panel && !self.ma_auto.get(&tab).copied().unwrap_or(true) {
                 continue;
             }
-            self.auto_prepocet(tab, &mut k);
+            let z = self.auto_prepocet(tab, &mut k, &doc);
+            znovu(&mut k, &mut doc, z);
             // panel Vlastnosti bodu: stav aktivního povrchu po změně výkresu
             if panel {
-                if let Ok(doc) = k.dokument() {
-                    k.panel(crate::panel::jen_povrch(&doc));
-                }
+                k.panel(crate::panel::jen_povrch(&doc));
             }
             if okno {
-                self.obnov(&mut k);
+                self.obnov_s(&doc);
             }
         }
     }
 
     /// Změnil uživatel měřítko ve stavovém řádku? Pak přepíše popisy.
-    fn hlidej_meritko(&mut self, tab: u64, k: &mut PresKanal) {
-        let Ok(doc) = k.dokument() else { return };
+    /// Vrací `true`, když výkres změnila.
+    fn hlidej_meritko(&mut self, tab: u64, k: &mut PresKanal, doc: &CadDocument) -> bool {
         let ted = doc.header.current_annotation_scale.clone();
         let predtim = self.meritka.insert(tab, ted.clone());
         let zmena = predtim.is_some_and(|p| p != ted);
-        if zmena && (!cogo::body(&doc).is_empty() || !povrchy::povrchy(&doc).is_empty()) {
+        if zmena && (!cogo::body(doc).is_empty() || !povrchy::povrchy(doc).is_empty()) {
             match po_zmene_meritka(k) {
                 Ok(t) => k.info(&trf!("Terén: {}", t)),
                 Err(e) => k.chyba(&trf!("Terén: {}", e)),
             }
             k.konec_kroku();
+            return true;
         }
+        false
     }
 
     /// Po přesunu, smazání nebo kopírování bodů srovná jejich značky a popisy.
-    fn hlidej_body(&mut self, tab: u64, k: &mut PresKanal) {
-        let Ok(doc) = k.dokument() else { return };
+    /// Vrací `true`, když výkres změnila.
+    fn hlidej_body(&mut self, tab: u64, k: &mut PresKanal, doc: &CadDocument) -> bool {
         if cogo::presun_nosice(k, &doc) {
             k.konec_kroku();
+            // nosiče skupin se přesunuly – další kontroly až nad novým snímkem
+            return true;
         }
         let m = nastaveni::meritko(&doc);
         // posunutá značka nebo popis → posunout bod (popis)
@@ -898,7 +916,7 @@ impl Pracovnik {
             let videno = self.posunute.entry(tab).or_default();
             if otisk.iter().all(|o| videno.contains(o)) {
                 // stejný posun už jednou proveden – nejspíš „Zpět“; nechat být
-                return;
+                return false;
             }
             if videno.len() > 20000 {
                 videno.clear();
@@ -910,17 +928,17 @@ impl Pracovnik {
                 Err(e) => k.chyba(&trf!("Terén: posun bodu: {}", e)),
             }
             k.konec_kroku();
-            return;
+            return true;
         }
         let n = cogo::nesoulad(&doc, m);
         if n.je_prazdny() || n.navic.len() + n.chybi.len() > 2000 {
-            return;
+            return false;
         }
         // stejný (nebo dílčí) nesoulad už jednou opraven – nejspíš „Zpět“
         let videno = self.opravene.entry(tab).or_default();
         let uz = n.navic.iter().all(|h| videno.0.contains(&h.value())) && n.chybi.iter().all(|b| videno.1.contains(&b.handle.value()));
         if uz {
-            return;
+            return false;
         }
         if videno.0.len() + videno.1.len() > 20000 {
             *videno = Default::default();
@@ -933,17 +951,24 @@ impl Pracovnik {
         }
         k.hotovo();
         k.konec_kroku();
+        true
     }
 
     /// Přepočítá zastaralé povrchy s automatickým přepočtem.
-    fn auto_prepocet(&mut self, tab: u64, k: &mut PresKanal) {
-        let Ok(doc) = k.dokument() else { return };
-        let vse = povrchy::povrchy(&doc);
+    /// Vrací `true`, když něco přepočítal.
+    fn auto_prepocet(&mut self, tab: u64, k: &mut PresKanal, doc: &CadDocument) -> bool {
+        let vse = povrchy::povrchy(doc);
         self.ma_auto.insert(tab, vse.iter().any(|z| z.auto));
-        for mut z in vse.into_iter().filter(|z| z.auto) {
-            if povrchy::zastaraly(&doc, &z) {
+        let mut zmena = false;
+        let zastarale: Vec<_> = vse.into_iter().filter(|z| z.auto && povrchy::zastaraly(doc, z)).collect();
+        let jediny = zastarale.len() == 1;
+        for mut z in zastarale {
+            {
+                zmena = true;
                 k.zpet(tr("Automatický přepočet povrchu"));
-                match povrchy::prestav(k, &mut z) {
+                // první (a obvykle jediný) přepočet nad už staženým snímkem
+                let snimek = jediny.then(|| doc.clone());
+                match povrchy::prestav_s(k, &mut z, snimek) {
                     Ok(r) => {
                         povrchy::vypis(k, &z, &r);
                         k.hotovo();
@@ -953,6 +978,7 @@ impl Pracovnik {
                 k.konec_kroku();
             }
         }
+        zmena
     }
 
     fn obnov(&mut self, k: &mut PresKanal) {
@@ -966,6 +992,11 @@ impl Pracovnik {
                 return;
             }
         };
+        self.obnov_s(&doc);
+    }
+
+    /// Obnoví stav Prospektoru z už staženého snímku výkresu.
+    fn obnov_s(&mut self, doc: &CadDocument) {
         let p = prehled(&doc);
         let trasy = crate::tra::prospektor::prehled(&doc);
         if let Some(tab) = Self::aktivni_tab() {
