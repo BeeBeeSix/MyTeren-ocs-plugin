@@ -11,3 +11,4 @@ pub mod stanice;
 pub mod styl;
 pub mod trasa;
 pub mod upravy;
+pub mod vzhled;

@@ -154,6 +154,12 @@ pub struct Pas {
     pub useky: Vec<Usek>,
     /// Text úseků na střed (jinak vlevo).
     pub na_stred: bool,
+    /// Role písma hodnot (`hodnota`, `usek`, `graf`…); prázdné = podle druhu.
+    pub pismo: String,
+    /// Podbarvit pás.
+    pub podbarvit: bool,
+    /// Pás je skrytý (zůstává ve stylu, nekreslí se).
+    pub skryty: bool,
 }
 
 /// Zakóduje text do zápisu pásu (oddělovače `;`, `|`, `=`).
@@ -190,6 +196,20 @@ impl Pas {
             text: String::new(),
             useky: Vec::new(),
             na_stred: false,
+            pismo: String::new(),
+            podbarvit: false,
+            skryty: false,
+        }
+    }
+
+    /// Role písma hodnot pásu (vlastní, jinak podle druhu).
+    pub fn role_pisma(&self) -> &str {
+        if !self.pismo.is_empty() {
+            &self.pismo
+        } else if self.druh.hodnotovy() {
+            "hodnota"
+        } else {
+            "usek"
         }
     }
 
@@ -235,6 +255,15 @@ impl Pas {
         if self.na_stred {
             t += ";s=1";
         }
+        if !self.pismo.is_empty() {
+            t += &format!(";ps={}", kod_textu(&self.pismo));
+        }
+        if self.podbarvit {
+            t += ";pb=1";
+        }
+        if self.skryty {
+            t += ";h=1";
+        }
         t
     }
 
@@ -275,6 +304,9 @@ impl Pas {
                         .collect()
                 }
                 "s" => p.na_stred = v == "1",
+                "ps" => p.pismo = dekod_textu(v),
+                "pb" => p.podbarvit = v == "1",
+                "h" => p.skryty = v == "1",
                 _ => {}
             }
         }

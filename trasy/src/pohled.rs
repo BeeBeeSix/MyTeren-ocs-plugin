@@ -158,15 +158,40 @@ impl DefinicePohledu {
 }
 
 /// Nastavení vzhledu pohledu (klíče stylu; pohled může mít výjimky).
-pub const SCHEMA: [Klic; 8] = [
-    Klic { klic: "cary_pasu", vychozi: "ramecek", popis: "Čáry pásů (rámeček / jen svislice)" },
+/// Výchozí hodnoty odpovídají předloze vzhledu „Moderní“ (viz `vzhled::predloha`).
+pub const SCHEMA: &[Klic] = &[
+    Klic { klic: "cary_pasu", vychozi: "svislice", popis: "Čáry pásů (rámeček / jen svislice)" },
     Klic { klic: "stupnice", vychozi: "vlevo", popis: "Výšková stupnice (vlevo / obě strany / skrýt)" },
-    Klic { klic: "mrizka", vychozi: "1", popis: "Mřížka v grafu" },
-    Klic { klic: "ram", vychozi: "1", popis: "Rámeček grafu" },
+    Klic { klic: "mrizka", vychozi: "0", popis: "Mřížka v grafu" },
+    Klic { klic: "ram", vychozi: "0", popis: "Rámeček grafu" },
     Klic { klic: "staniceni", vychozi: "km", popis: "Formát staničení" },
     Klic { klic: "sklon", vychozi: "promile", popis: "Jednotka sklonu (‰ / %)" },
-    Klic { klic: "pismo", vychozi: "2.5", popis: "Výška písma [mm]" },
     Klic { klic: "sablona", vychozi: "", popis: "Šablona (obor)" },
+    Klic { klic: "predloha", vychozi: "moderni", popis: "Předloha vzhledu" },
+    Klic { klic: "p.nadpis", vychozi: "Bahnschrift;5;1;1;0;", popis: "Písmo nadpisu" },
+    Klic { klic: "p.zahlavi", vychozi: "Bahnschrift;2.5;1;0;0;", popis: "Písmo záhlaví pásů" },
+    Klic { klic: "p.hodnota", vychozi: "Bahnschrift;2;0.9;0;0;", popis: "Písmo hodnot v pásech" },
+    Klic { klic: "p.usek", vychozi: "Bahnschrift;2;1;0;0;", popis: "Písmo textů úseků" },
+    Klic { klic: "p.graf", vychozi: "Bahnschrift;2;1;1;0;", popis: "Písmo popisů v grafu" },
+    Klic { klic: "p.legenda", vychozi: "Bahnschrift;2;1;0;0;", popis: "Písmo legendy a měřítka" },
+    Klic { klic: "tl.tenka", vychozi: "0.13", popis: "Tenká čára [mm]" },
+    Klic { klic: "tl.stredni", vychozi: "0.25", popis: "Střední čára [mm]" },
+    Klic { klic: "tl.silna", vychozi: "0.5", popis: "Silná čára [mm]" },
+    Klic { klic: "c.teren", vychozi: "#5fd35f;stredni", popis: "Čára terénu" },
+    Klic { klic: "c.niveleta", vychozi: "#ff5a4d;silna", popis: "Čára nivelety" },
+    Klic { klic: "c.polygon", vychozi: "#8f97a1;tenka", popis: "Tečnový polygon" },
+    Klic { klic: "c.povrchy", vychozi: "#e05ad8;stredni", popis: "Další povrchy" },
+    Klic { klic: "c.pasy", vychozi: "#8f97a1;tenka", popis: "Čáry pásů" },
+    Klic { klic: "c.mrizka", vychozi: "#5b626c;tenka", popis: "Mřížka a svislice" },
+    Klic { klic: "c.text", vychozi: "", popis: "Barva textů (prázdná = podle hladiny)" },
+    Klic { klic: "podbarvit_zahlavi", vychozi: "1", popis: "Podbarvit sloupec záhlaví" },
+    Klic { klic: "vypln_terenu", vychozi: "plna", popis: "Plocha pod terénem (plna / zadna)" },
+    Klic { klic: "svislice", vychozi: "1", popis: "Svislice z lomových bodů do grafu" },
+    Klic { klic: "legenda", vychozi: "1", popis: "Legenda čar" },
+    Klic { klic: "stitek", vychozi: "1", popis: "Měřítko ve štítku" },
+    Klic { klic: "sirka_zahlavi", vychozi: "52", popis: "Šířka záhlaví [mm]" },
+    Klic { klic: "hustota", vychozi: "1", popis: "Násobek výšky pásů" },
+    Klic { klic: "nadpis", vychozi: "Podélný profil – {trasa}", popis: "Nadpis ({trasa}, {povrch}, {meritko})" },
 ];
 
 /// Šablony podle oboru: id stylu, český název, kód sady pásů.
@@ -436,7 +461,7 @@ mod testy {
     fn sablony_a_nastaveni() {
         let d = DefinicePohledu::novy("P1", "T1", "S");
         let n = nastaveni(&d);
-        assert_eq!((n.text("cary_pasu"), n.ano("mrizka")), ("ramecek", true));
+        assert_eq!((n.text("cary_pasu"), n.ano("mrizka")), ("svislice", false));
         let mut k = DefinicePohledu::podle_sablony("P2", "T1", "S", "KANALIZACE");
         assert_eq!(k.styl, "KANALIZACE");
         assert!(k.pasy.iter().any(|p| p.zahlavi() == "Kóta dna potrubí"));
@@ -454,7 +479,7 @@ mod testy {
         let v = StylProfilu::vestavene();
         assert_eq!(v.len(), SABLONY.len());
         let k = v.iter().find(|s| s.id == "KANALIZACE").unwrap();
-        assert_eq!(k.hodnoty.get("cary_pasu").map(String::as_str), Some("svislice"));
+        assert_eq!(k.hodnoty.get("stupnice").map(String::as_str), Some("skryt"));
         assert_eq!(StylProfilu::precti(&k.zapis()).as_ref(), Some(k));
         // pohled podle stylu bere pásy ze stylu, nastavení se skládá přes styly výkresu
         let mut vlastni = k.clone();

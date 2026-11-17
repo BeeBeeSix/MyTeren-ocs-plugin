@@ -516,268 +516,10 @@ fn menu_pohledu(ui: &mut egui::Ui, t: &PrehledTrasy, p: &PrehledPohledu) {
 
 // ── Editor vzhledu a pásů pohledu a stylu profilu ──────────────────────────
 
-use trasy::pasy::{DruhPasu, Pas, Poloha, Usek, Zdroj};
 use trasy::pohled::{efektivni, nastaveni_s, DefinicePohledu, StylProfilu};
-
-/// Hodnota nastavení bez výjimky (jen ze stylu, u stylu samotného ze schématu).
-fn ze_stylu(d: &DefinicePohledu, styly: &[StylProfilu], klic: &str) -> String {
-    let mut c = d.clone();
-    c.vyjimky.remove(klic);
-    nastaveni_s(&c, styly).text(klic).to_string()
-}
-
-/// Nastaví hodnotu jako výjimku (nebo ji zruší, když je stejná jako ve stylu).
-fn nastav(d: &mut DefinicePohledu, styly: &[StylProfilu], klic: &str, hodnota: &str) {
-    if ze_stylu(d, styly, klic) == hodnota {
-        d.vyjimky.remove(klic);
-    } else {
-        d.vyjimky.insert(klic.to_string(), hodnota.to_string());
-    }
-}
-
-/// Stejné definice bez ohledu na otisk a osy (ty mění až kreslení).
-fn stejne(a: &DefinicePohledu, b: &DefinicePohledu) -> bool {
-    let (mut a, mut b) = (a.clone(), b.clone());
-    a.otisk.clear();
-    b.otisk.clear();
-    a.osy = None;
-    b.osy = None;
-    a == b
-}
-
-fn volba(ui: &mut egui::Ui, d: &mut DefinicePohledu, styly: &[StylProfilu], salt: &str, klic: &str, moznosti: &[(&'static str, &'static str)]) {
-    let akt = nastaveni_s(d, styly).text(klic).to_string();
-    let nazev = moznosti.iter().find(|m| m.0 == akt).map_or(akt.clone(), |m| tr(m.1).to_string());
-    egui::ComboBox::from_id_salt((salt, klic)).selected_text(nazev).width(190.0).show_ui(ui, |ui| {
-        for (k, n) in moznosti {
-            if ui.selectable_label(akt == *k, tr(n)).clicked() {
-                nastav(d, styly, klic, k);
-            }
-        }
-    });
-}
-
-fn zaskrt(ui: &mut egui::Ui, d: &mut DefinicePohledu, styly: &[StylProfilu], klic: &str, popis: &'static str) {
-    let mut b = nastaveni_s(d, styly).ano(klic);
-    if ui.checkbox(&mut b, tr(popis)).changed() {
-        nastav(d, styly, klic, if b { "1" } else { "0" });
-    }
-}
-
-fn nazev_zdroje(z: &Zdroj, povrchy: &[(String, String)]) -> String {
-    match z {
-        Zdroj::Teren => tr("Povrch pohledu").to_string(),
-        Zdroj::Niveleta => tr("Niveleta").to_string(),
-        Zdroj::Povrch(id) => povrchy.iter().find(|p| p.0 == *id).map_or_else(|| id.clone(), |p| p.1.clone()),
-    }
-}
-
-fn vyber_zdroje(ui: &mut egui::Ui, salt: (&str, usize, &str), z: &mut Zdroj, povrchy: &[(String, String)]) {
-    egui::ComboBox::from_id_salt(salt).selected_text(nazev_zdroje(z, povrchy)).width(190.0).show_ui(ui, |ui| {
-        let mut moznosti = vec![Zdroj::Teren, Zdroj::Niveleta];
-        moznosti.extend(povrchy.iter().map(|p| Zdroj::Povrch(p.0.clone())));
-        for m in moznosti {
-            let n = nazev_zdroje(&m, povrchy);
-            if ui.selectable_label(*z == m, n).clicked() {
-                *z = m;
-            }
-        }
-    });
-}
-
-fn detail_pasu(ui: &mut egui::Ui, salt: &str, i: usize, pas: &mut Pas, povrchy: &[(String, String)]) {
-    egui::Frame::group(ui.style()).show(ui, |ui| {
-        egui::Grid::new((salt, i, "detail")).num_columns(2).spacing([10.0, 5.0]).show(ui, |ui| {
-            ui.label(tr("Co pás ukazuje"));
-            egui::ComboBox::from_id_salt((salt, i, "druh")).selected_text(tr(pas.druh.nazev())).width(190.0).show_ui(ui, |ui| {
-                for d in DruhPasu::VSE {
-                    if ui.selectable_label(pas.druh == d, tr(d.nazev())).clicked() && pas.druh != d {
-                        let novy = Pas::novy(d);
-                        pas.druh = d;
-                        pas.zdroj = novy.zdroj;
-                        pas.zdroj2 = novy.zdroj2;
-                    }
-                }
-            });
-            ui.end_row();
-            ui.label(tr("Umístění"));
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut pas.poloha, Poloha::Pod, tr("pod grafem"));
-                ui.radio_value(&mut pas.poloha, Poloha::Nad, tr("nad grafem"));
-            });
-            ui.end_row();
-            if matches!(pas.druh, DruhPasu::Kota | DruhPasu::Rozdil) {
-                ui.label(if pas.druh == DruhPasu::Rozdil { tr("Výška A") } else { tr("Z čeho číst výšku") });
-                vyber_zdroje(ui, (salt, i, "z1"), &mut pas.zdroj, povrchy);
-                ui.end_row();
-            }
-            if pas.druh == DruhPasu::Rozdil {
-                ui.label(tr("minus výška B"));
-                vyber_zdroje(ui, (salt, i, "z2"), &mut pas.zdroj2, povrchy);
-                ui.end_row();
-            }
-            if pas.druh.hodnotovy() || pas.druh == DruhPasu::Vzdalenosti {
-                ui.label(tr("Hodnoty"));
-                ui.horizontal(|ui| {
-                    ui.label(tr("po"));
-                    ui.add(egui::DragValue::new(&mut pas.krok).range(0.0..=1000.0).speed(1.0).suffix(" m"))
-                        .on_hover_text(tr("0 = bez pravidelného kroku"));
-                    ui.checkbox(&mut pas.lomy, tr("v lomových bodech"));
-                    ui.checkbox(&mut pas.body_trasy, tr("v hlavních bodech trasy"));
-                });
-                ui.end_row();
-            }
-            if pas.druh.hodnotovy() || pas.druh == DruhPasu::Sklony {
-                ui.label(tr("Desetinná místa"));
-                ui.add(egui::DragValue::new(&mut pas.desetin).range(0..=4));
-                ui.end_row();
-            }
-            if pas.druh == DruhPasu::Text {
-                ui.label(tr("Text"));
-                ui.add(egui::TextEdit::singleline(&mut pas.text).desired_width(220.0));
-                ui.end_row();
-            }
-            if pas.druh.textovy() {
-                ui.label("");
-                ui.checkbox(&mut pas.na_stred, tr("text na střed úseku (jinak vlevo)"));
-                ui.end_row();
-            }
-        });
-        if pas.druh == DruhPasu::Useky {
-            ui.add_space(4.0);
-            ui.label(RichText::new(tr("Úseky (staničení od – do, text)")).color(SEDA));
-            let mut smazat_usek = None;
-            for (j, u) in pas.useky.iter_mut().enumerate() {
-                ui.horizontal(|ui| {
-                    ui.add(egui::DragValue::new(&mut u.od).speed(1.0).max_decimals(2).suffix(" m"));
-                    ui.label("–");
-                    // „do“ úseku přes celou trasu se zobrazí jako konec
-                    ui.add(egui::DragValue::new(&mut u.do_).speed(1.0).max_decimals(2).suffix(" m").custom_formatter(|v, _| {
-                        if v >= 1e8 { tr("konec").to_string() } else { cz(v, 2) }
-                    }));
-                    ui.add(egui::TextEdit::singleline(&mut u.text).desired_width(170.0));
-                    if ui.small_button("×").on_hover_text(tr("odebrat úsek")).clicked() {
-                        smazat_usek = Some(j);
-                    }
-                });
-            }
-            if let Some(j) = smazat_usek {
-                pas.useky.remove(j);
-            }
-            if ui.small_button(tr("+ úsek")).clicked() {
-                let od = pas.useky.last().map_or(0.0, |u| if u.do_ >= 1e8 { u.od } else { u.do_ });
-                pas.useky.push(Usek { od, do_: 1e9, text: String::new() });
-            }
-        }
-    });
-}
-
-/// Nastavení vzhledu (bez volby stylu): měřítko, převýšení, čáry, stupnice, formáty.
-fn editor_nastaveni(ui: &mut egui::Ui, salt: &str, d: &mut DefinicePohledu, styly: &[StylProfilu], popis_meritka: &'static str) {
-    egui::Grid::new(("nastaveni_profilu", salt)).num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
-        ui.label(tr(popis_meritka));
-        ui.add(egui::DragValue::new(&mut d.meritko).range(10.0..=100000.0).speed(10.0).max_decimals(0));
-        ui.end_row();
-        ui.label(tr("Převýšení (výšky ×)"));
-        ui.add(egui::DragValue::new(&mut d.prevyseni).range(0.5..=100.0).speed(0.5).max_decimals(1));
-        ui.end_row();
-        ui.label(tr("Čáry pásů"));
-        volba(ui, d, styly, salt, "cary_pasu", &[("svislice", "jen svislice"), ("ramecek", "rámeček a vodorovné čáry")]);
-        ui.end_row();
-        ui.label(tr("Výšková stupnice"));
-        volba(ui, d, styly, salt, "stupnice", &[("vlevo", "vlevo"), ("obe", "vlevo i vpravo"), ("skryt", "skrýt")]);
-        ui.end_row();
-        ui.label(tr("Formát staničení"));
-        volba(ui, d, styly, salt, "staniceni", &[("km", "0,040 00 (km)"), ("plus", "0+040.00"), ("m", "40.00 (m)")]);
-        ui.end_row();
-        ui.label(tr("Sklon"));
-        volba(ui, d, styly, salt, "sklon", &[("promile", "‰"), ("procento", "%")]);
-        ui.end_row();
-        ui.label(tr("Výška písma"));
-        let mut pismo = nastaveni_s(d, styly).cislo("pismo");
-        if ui.add(egui::DragValue::new(&mut pismo).range(1.0..=10.0).speed(0.1).max_decimals(1).suffix(" mm")).changed() {
-            nastav(d, styly, "pismo", &format!("{pismo}"));
-        }
-        ui.end_row();
-        ui.label("");
-        ui.horizontal(|ui| {
-            zaskrt(ui, d, styly, "mrizka", "Mřížka");
-            zaskrt(ui, d, styly, "ram", "Rámeček grafu");
-        });
-        ui.end_row();
-    });
-}
-
-/// Seznam pásů s úpravami. Vrací `true`, když se pásy změnily.
-fn editor_pasu(ui: &mut egui::Ui, salt: &str, pasy: &mut Vec<Pas>, povrchy: &[(String, String)], otevreny: &mut Option<usize>) -> bool {
-    let pred = pasy.clone();
-    ui.label(RichText::new(tr("název · výška · pořadí · ⚙ co pás ukazuje")).color(SEDA).size(11.0));
-    let mut presun: Option<(usize, isize)> = None;
-    let mut odebrat: Option<usize> = None;
-    let n = pasy.len();
-    for (i, pas) in pasy.iter_mut().enumerate() {
-        ui.horizontal(|ui| {
-            ui.label(RichText::new(if pas.poloha == Poloha::Nad { tr("nad") } else { tr("pod") }).color(SEDA).size(11.0))
-                .on_hover_text(tr("umístění vůči grafu"));
-            let mut nazev = if pas.nazev.trim().is_empty() { tr(pas.druh.nazev()).to_string() } else { pas.nazev.clone() };
-            if ui.add(egui::TextEdit::singleline(&mut nazev).desired_width(200.0)).changed() {
-                pas.nazev = nazev;
-            }
-            ui.add(egui::DragValue::new(&mut pas.vyska).range(3.0..=60.0).speed(0.5).max_decimals(1).suffix(" mm"));
-            if ui.add_enabled(i > 0, egui::Button::new("⬆").small()).on_hover_text(tr("výš")).clicked() {
-                presun = Some((i, -1));
-            }
-            if ui.add_enabled(i + 1 < n, egui::Button::new("⬇").small()).on_hover_text(tr("níž")).clicked() {
-                presun = Some((i, 1));
-            }
-            let zap = *otevreny == Some(i);
-            if ui.selectable_label(zap, "⚙").on_hover_text(tr("co pás ukazuje")).clicked() {
-                *otevreny = if zap { None } else { Some(i) };
-            }
-            if ui.small_button("×").on_hover_text(tr("odebrat pás")).clicked() {
-                odebrat = Some(i);
-            }
-        });
-        if *otevreny == Some(i) {
-            detail_pasu(ui, salt, i, pas, povrchy);
-        }
-    }
-    if let Some((i, smer)) = presun {
-        let j = (i as isize + smer) as usize;
-        pasy.swap(i, j);
-        if *otevreny == Some(i) {
-            *otevreny = Some(j);
-        }
-    }
-    if let Some(i) = odebrat {
-        pasy.remove(i);
-        *otevreny = None;
-    }
-    ui.menu_button(tr("+ Přidat pás"), |ui| {
-        for druh in DruhPasu::VSE {
-            if ui.button(tr(druh.nazev())).clicked() {
-                pasy.push(Pas::novy(druh));
-                *otevreny = Some(pasy.len() - 1);
-                ui.close();
-            }
-        }
-    });
-    *pasy != pred
-}
 
 fn jmeno_stylu(styly: &[StylProfilu], id: &str) -> String {
     styly.iter().find(|s| s.id == id).map_or_else(|| id.to_string(), |s| trasy::preklad::tr_dyn(&s.jmeno))
-}
-
-/// Styl profilu jako definice pro editor (nastavení = „výjimky“ nad schématem).
-fn definice_stylu(s: &StylProfilu) -> DefinicePohledu {
-    let mut d = DefinicePohledu::novy("", "", "");
-    d.styl = String::new();
-    d.vyjimky = s.hodnoty.clone();
-    d.pasy = s.pasy.clone();
-    d.meritko = s.meritko;
-    d.prevyseni = s.prevyseni;
-    d
 }
 
 /// Nastavení pohledu převedené na styl (všechny hodnoty odlišné od schématu).
@@ -791,97 +533,48 @@ fn styl_z_definice(d: &DefinicePohledu, styly: &[StylProfilu], id: &str, jmeno: 
     StylProfilu { id: id.into(), jmeno: jmeno.into(), hodnoty, pasy: d.pasy.clone(), meritko: d.meritko, prevyseni: d.prevyseni }
 }
 
+/// Název předlohy vzhledu podle nastavení.
+fn nazev_predlohy(d: &DefinicePohledu, styly: &[StylProfilu]) -> String {
+    let k = nastaveni_s(d, styly).text("predloha").to_string();
+    trasy::vzhled::PREDLOHY.iter().find(|p| p.0 == k).map_or(k, |p| tr(p.1).to_string())
+}
+
 impl Okno {
-    /// Sekce „Vzhled a pásy“ v kartě pohledu: styl, výjimky nastavení, pásy.
+    /// Sekce „Vzhled a pásy“ v kartě pohledu: přehled a tlačítko editoru.
     pub(super) fn editor_pohledu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, p: &PrehledPohledu) {
         let styly = &stav.styly_profilu;
-        let zaklad = efektivni(&p.def, styly);
-        if self.uprava_pohledu.as_ref().is_none_or(|(id, _)| *id != p.id) {
-            self.uprava_pohledu = Some((p.id.clone(), zaklad.clone()));
-            self.otevreny_pas = None;
-        }
-        let povrchy: Vec<(String, String)> = stav.povrchy.iter().map(|z| (z.id.clone(), z.jmeno.clone())).collect();
-        let salt = p.id.as_str();
-        let mut otevreny = self.otevreny_pas;
-        let (mut pouzit, mut vratit, mut novy_styl) = (false, false, false);
-        let Some((_, d)) = self.uprava_pohledu.as_mut() else { return };
-        egui::CollapsingHeader::new(RichText::new(tr("Vzhled a pásy")).strong()).id_salt(("vzhled_pohledu", salt)).default_open(true).show(ui, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(tr("Styl profilu"));
-                egui::ComboBox::from_id_salt(("styl_pohledu", salt)).selected_text(jmeno_stylu(styly, &d.styl)).width(220.0).show_ui(ui, |ui| {
-                    for s in styly {
-                        if ui.selectable_label(d.styl == s.id, trasy::preklad::tr_dyn(&s.jmeno)).clicked() && d.styl != s.id {
-                            d.styl = s.id.clone();
-                            d.vyjimky.clear();
-                            d.pasy = s.pasy.clone();
-                            d.pasy_ze_stylu = true;
-                            otevreny = None;
-                        }
-                    }
-                })
-                .response
-                .on_hover_text(tr("Změna stylu nahradí pásy a zruší výjimky pohledu."));
-            });
-            if !d.vyjimky.is_empty() {
-                ui.horizontal(|ui| {
-                    ui.label(RichText::new(trf!("výjimky tohoto pohledu: {}", d.vyjimky.len())).color(ORANZOVA).size(11.0));
-                    if ui.small_button(tr("zrušit výjimky")).clicked() {
-                        d.vyjimky.clear();
-                    }
-                });
-            }
-            editor_nastaveni(ui, salt, d, styly, "Měřítko délek 1:");
-
-            ui.add_space(8.0);
-            ui.horizontal(|ui| {
-                ui.label(RichText::new(tr("Pásy")).strong());
-                if d.pasy_ze_stylu {
-                    ui.label(RichText::new(trf!("podle stylu „{}“ – úprava je udělá vlastními", jmeno_stylu(styly, &d.styl))).color(SEDA).size(11.0));
-                } else {
-                    ui.label(RichText::new(tr("vlastní pásy tohoto pohledu")).color(ORANZOVA).size(11.0));
-                    if let Some(s) = styly.iter().find(|s| s.id == d.styl) {
-                        if ui.small_button(tr("vrátit pásy ze stylu")).clicked() {
-                            d.pasy = s.pasy.clone();
-                            d.pasy_ze_stylu = true;
-                            otevreny = None;
-                        }
-                    }
-                }
-            });
-            if editor_pasu(ui, salt, &mut d.pasy, &povrchy, &mut otevreny) {
-                d.pasy_ze_stylu = false;
-            }
-
-            ui.add_space(8.0);
-            let zmeneno = !stejne(d, &zaklad);
-            ui.horizontal(|ui| {
-                if ui.add_enabled(zmeneno, egui::Button::new(tr("Použít"))).on_hover_text(tr("překreslí pohled ve výkrese (Ctrl+Z vrátí)")).clicked() {
-                    pouzit = true;
-                }
-                if zmeneno && ui.button(tr("Vrátit změny")).clicked() {
-                    vratit = true;
-                }
-                if ui.button(tr("Uložit jako nový styl…")).on_hover_text(tr("nastavení a pásy tohoto pohledu jako nový styl profilu ve výkrese")).clicked() {
-                    novy_styl = true;
-                }
-            });
+        let d = efektivni(&p.def, styly);
+        ui.label(RichText::new(tr("Vzhled a pásy")).strong());
+        ui.horizontal_wrapped(|ui| {
+            karta::kpi(ui, &jmeno_stylu(styly, &d.styl), tr("styl profilu"));
+            karta::kpi(ui, &nazev_predlohy(&d, styly), tr("vzhled"));
+            karta::kpi(ui, &czi(d.pasy.iter().filter(|x| !x.skryty).count()), tr("pásů"));
         });
-        if pouzit {
-            if let Some((_, d)) = &self.uprava_pohledu {
-                spravce::posli(Akce::PohledUpravit(p.insert, Box::new(d.clone())));
-            }
+        if !p.def.vyjimky.is_empty() {
+            ui.label(RichText::new(trf!("výjimky tohoto pohledu: {}", p.def.vyjimky.len())).color(ORANZOVA).size(11.0));
         }
-        if novy_styl {
-            if let Some((_, d)) = &self.uprava_pohledu {
-                let s = styl_z_definice(d, styly, "", &trf!("Styl z pohledu {}", p.id));
+        if !p.def.pasy_ze_stylu {
+            ui.label(RichText::new(tr("vlastní pásy tohoto pohledu")).color(ORANZOVA).size(11.0));
+        }
+        ui.add_space(4.0);
+        ui.horizontal_wrapped(|ui| {
+            if karta::tlacitko(ui, Some(ik!("tra_vlastnosti")), tr("Upravit vzhled…"), true)
+                .on_hover_text(tr("otevře editor vzhledu s živým náhledem – jen tento pohled"))
+                .clicked()
+            {
+                self.editor_profilu = super::editor_profilu::EditorProfilu::pro_pohled(stav, &p.id);
+            }
+            if karta::tlacitko(ui, None, tr("Upravit styl…"), false).on_hover_text(tr("otevře editor stylu – změna platí pro všechny pohledy se stylem")).clicked() {
+                self.editor_profilu = super::editor_profilu::EditorProfilu::pro_styl(stav, &d.styl);
+            }
+            if karta::tlacitko(ui, None, tr("Uložit jako nový styl…"), false)
+                .on_hover_text(tr("nastavení a pásy tohoto pohledu jako nový styl profilu ve výkrese"))
+                .clicked()
+            {
+                let s = styl_z_definice(&d, styly, "", &trf!("Styl z pohledu {}", p.id));
                 spravce::posli(Akce::UlozStylProfilu(Box::new(s)));
             }
-        }
-        if vratit {
-            self.uprava_pohledu = Some((p.id.clone(), zaklad));
-            otevreny = None;
-        }
-        self.otevreny_pas = otevreny;
+        });
     }
 
     /// Přehled stylů profilů.
@@ -916,24 +609,16 @@ impl Okno {
         }
     }
 
-    /// Karta stylu profilu: jméno, výchozí měřítko, nastavení a pásy.
+    /// Karta stylu profilu: přehled, editor, duplikovat, smazat.
     pub(super) fn karta_stylu_profilu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, id: &str) {
-        let Some(puvodni) = stav.styly_profilu.iter().find(|s| s.id == id).cloned() else {
+        let Some(s) = stav.styly_profilu.iter().find(|s| s.id == id).cloned() else {
             ui.label(RichText::new(tr("Styl profilu už ve výkrese není.")).color(SEDA));
             return;
         };
-        if self.uprava_stylu_profilu.as_ref().is_none_or(|s| s.id != id) {
-            self.uprava_stylu_profilu = Some(puvodni.clone());
-            self.otevreny_pas_stylu = None;
-        }
         let pouziva: Vec<String> = stav.trasy.iter().flat_map(|t| t.pohledy.iter().filter(|p| p.def.styl == id).map(move |p| format!("{} ({})", p.id, t.jmeno))).collect();
-        let ulozeny = stav.ulozene_styly.contains(&puvodni.id);
-        let povrchy: Vec<(String, String)> = stav.povrchy.iter().map(|z| (z.id.clone(), z.jmeno.clone())).collect();
-        let mut otevreny = self.otevreny_pas_stylu;
-        let (mut ulozit, mut vratit, mut duplikovat, mut smazat) = (false, false, false, false);
-        let Some(s) = self.uprava_stylu_profilu.as_mut() else { return };
-        karta::nadpis_karty(ui, &ikona_pohledu(), &trasy::preklad::tr_dyn(&puvodni.jmeno), |ui| {
-            if puvodni.je_vestaveny() {
+        let ulozeny = stav.ulozene_styly.contains(&s.id);
+        karta::nadpis_karty(ui, &ikona_pohledu(), &trasy::preklad::tr_dyn(&s.jmeno), |ui| {
+            if s.je_vestaveny() {
                 karta::pilulka(ui, if ulozeny { tr("vestavěný · upravený") } else { tr("vestavěný") }, SEDA);
             } else {
                 karta::pilulka(ui, tr("vlastní"), MODRA);
@@ -941,42 +626,34 @@ impl Okno {
         });
         ui.label(RichText::new(if pouziva.is_empty() { tr("Žádný pohled tento styl nepoužívá.").to_string() } else { trf!("Používají ho pohledy: {}", pouziva.join(", ")) }).color(SEDA));
         ui.add_space(6.0);
-        egui::Grid::new(("jmeno_stylu_profilu", id)).num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
-            ui.label(tr("Jméno"));
-            ui.add(egui::TextEdit::singleline(&mut s.jmeno).desired_width(260.0));
-            ui.end_row();
-        });
-        let mut d = definice_stylu(s);
-        editor_nastaveni(ui, id, &mut d, &stav.styly_profilu, "Výchozí měřítko 1:");
-        ui.add_space(8.0);
-        ui.label(RichText::new(tr("Pásy")).strong());
-        editor_pasu(ui, id, &mut d.pasy, &povrchy, &mut otevreny);
-        s.hodnoty = d.vyjimky;
-        s.pasy = d.pasy;
-        s.meritko = d.meritko;
-        s.prevyseni = d.prevyseni;
-
-        ui.add_space(8.0);
-        let zmeneno = *s != puvodni;
+        let mut d = DefinicePohledu::novy("", "", "");
+        d.styl = String::new();
+        d.vyjimky = s.hodnoty.clone();
         ui.horizontal_wrapped(|ui| {
-            if ui.add_enabled(zmeneno, egui::Button::new(tr("Uložit styl"))).on_hover_text(tr("uloží styl do výkresu a překreslí pohledy, které ho používají")).clicked() {
-                ulozit = true;
+            karta::kpi(ui, &nazev_predlohy(&d, &[]), tr("vzhled"));
+            karta::kpi(ui, &czi(s.pasy.iter().filter(|x| !x.skryty).count()), tr("pásů"));
+            karta::kpi(ui, &format!("1:{}", cz(s.meritko, 0)), tr("výchozí měřítko"));
+            karta::kpi(ui, &format!("{}×", cz(s.prevyseni, 1)), tr("převýšení"));
+        });
+        ui.add_space(4.0);
+        for p in s.pasy.iter().filter(|x| !x.skryty) {
+            let nazev = if p.nazev.trim().is_empty() { tr(p.druh.nazev()).to_string() } else { p.nazev.clone() };
+            ui.label(RichText::new(format!("{} · {}", if p.poloha == trasy::pasy::Poloha::Nad { tr("nad") } else { tr("pod") }, nazev)).color(SEDA).size(11.5));
+        }
+        ui.add_space(8.0);
+        let (mut duplikovat, mut smazat) = (false, false);
+        ui.horizontal_wrapped(|ui| {
+            if karta::tlacitko(ui, Some(ik!("tra_vlastnosti")), tr("Upravit vzhled…"), true).on_hover_text(tr("otevře editor stylu s živým náhledem")).clicked() {
+                self.editor_profilu = super::editor_profilu::EditorProfilu::pro_styl(stav, id);
             }
-            if zmeneno && ui.button(tr("Vrátit změny")).clicked() {
-                vratit = true;
-            }
-            if ui.button(tr("Duplikovat")).clicked() {
+            if karta::tlacitko(ui, None, tr("Duplikovat"), false).clicked() {
                 duplikovat = true;
             }
-            let (popis, smi) = if puvodni.je_vestaveny() { (tr("Obnovit výchozí"), ulozeny) } else { (tr("Smazat"), true) };
-            if ui.add_enabled(smi, egui::Button::new(popis)).clicked() {
+            let (popis, smi) = if s.je_vestaveny() { (tr("Obnovit výchozí"), ulozeny) } else { (tr("Smazat"), true) };
+            if smi && karta::tlacitko(ui, None, popis, false).clicked() {
                 smazat = true;
             }
         });
-        let s = s.clone();
-        if ulozit {
-            spravce::posli(Akce::UlozStylProfilu(Box::new(s.clone())));
-        }
         if duplikovat {
             let mut n = s.clone();
             n.id.clear();
@@ -984,14 +661,8 @@ impl Okno {
             spravce::posli(Akce::UlozStylProfilu(Box::new(n)));
         }
         if smazat {
-            spravce::posli(Akce::SmazStylProfilu(puvodni.id.clone()));
-            self.uprava_stylu_profilu = None;
+            spravce::posli(Akce::SmazStylProfilu(s.id.clone()));
         }
-        if vratit {
-            self.uprava_stylu_profilu = Some(puvodni);
-            otevreny = None;
-        }
-        self.otevreny_pas_stylu = otevreny;
     }
 }
 

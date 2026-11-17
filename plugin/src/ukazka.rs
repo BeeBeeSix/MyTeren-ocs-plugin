@@ -129,6 +129,11 @@ fn data() -> StavSpravce {
         styl_bodu,
         verze: 1,
         styly_profilu: trasy::pohled::StylProfilu::vestavene(),
+        podklady: Some(std::sync::Arc::new(crate::spravce::PodkladyEditoru {
+            pohled: "P1".into(),
+            def: trasy::pohled::DefinicePohledu::podle_sablony("P1", "T1", "st", "KANALIZACE"),
+            vysledek: Ok(crate::okno::ukazkove_podklady()),
+        })),
         styly_tras: trasy::trasa::vestavene_ploche(),
         trasy: vec![crate::tra::prospektor::PrehledTrasy {
             id: "T1".into(),

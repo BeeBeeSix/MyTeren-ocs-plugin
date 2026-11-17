@@ -23,6 +23,9 @@ use crate::nastaveni;
 use crate::povrchy::{cislo_cz, DruhPolozky, TypObjektu, HRANY, INTERVALY, TYPY_OBJEKTU};
 #[cfg(feature = "ukazka")]
 mod foto;
+mod editor_profilu;
+#[cfg(feature = "ukazka")]
+pub use editor_profilu::ukazkove_podklady;
 mod import_nahled;
 #[doc(hidden)]
 pub use import_nahled::ukazka as ukazka_importu;
@@ -440,16 +443,10 @@ struct Okno {
     nove_jmeno_povrchu: String,
     /// Rozepsané vlastnosti trasy: (id trasy, jméno, počáteční staničení, styl).
     jmeno_trasy: (String, String, f64, String),
-    /// Rozpracovaná úprava vzhledu a pásů pohledu profilu (id pohledu, definice).
-    uprava_pohledu: Option<(String, ::trasy::pohled::DefinicePohledu)>,
-    /// Pás s rozbaleným nastavením v editoru pohledu.
-    otevreny_pas: Option<usize>,
-    /// Rozpracovaná úprava stylu profilu.
-    uprava_stylu_profilu: Option<::trasy::pohled::StylProfilu>,
+    /// Otevřený editor vzhledu profilu (vlastní okno).
+    editor_profilu: Option<editor_profilu::EditorProfilu>,
     /// Rozpracovaná úprava stylu trasy.
     uprava_stylu_trasy: Option<::trasy::styl::Styl>,
-    /// Pás s rozbaleným nastavením v editoru stylu profilu.
-    otevreny_pas_stylu: Option<usize>,
     /// Povrch, jehož větev se má ve stromu rozbalit.
     rozbalit: Option<String>,
     // styly
@@ -646,6 +643,12 @@ impl eframe::App for Okno {
         self.okno_importu(&ctx, &stav);
         self.okno_pruvodce(&ctx, &stav);
         self.okno_napovedy(&ctx);
+        if let Some(e) = self.editor_profilu.as_mut() {
+            e.okno(&ctx, &stav);
+            if !e.otevreno {
+                self.editor_profilu = None;
+            }
+        }
         if self.verze != stav.verze {
             self.nacti_buffery(&stav);
             self.verze = stav.verze;
@@ -776,7 +779,6 @@ impl Okno {
                 self.vyber_uzel(Uzel::StylyPovrchu);
             }
             Skok::StylProfilu(id) => {
-                self.uprava_stylu_profilu = None;
                 self.vyber_uzel(Uzel::StylProfilu(id.clone()));
             }
             Skok::StylyProfilu => {

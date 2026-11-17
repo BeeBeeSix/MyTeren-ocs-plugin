@@ -153,8 +153,18 @@ pub struct StavSpravce {
     pub vyber_pohledy: Vec<String>,
     /// Načtené sítě povrchů pro prohlížeč 3D.
     pub site3d: Arc<Vec<Sit3D>>,
+    /// Podklady pohledu profilu pro náhled v editoru vzhledu.
+    pub podklady: Option<Arc<PodkladyEditoru>>,
     /// Zvyšuje se při každé změně – okno podle toho překresluje.
     pub verze: u64,
+}
+
+/// Data pohledu pro živý náhled editoru vzhledu profilu.
+#[derive(Debug, Clone)]
+pub struct PodkladyEditoru {
+    pub pohled: String,
+    pub def: trasy::pohled::DefinicePohledu,
+    pub vysledek: Result<crate::tra::pohled::Podklady, String>,
 }
 
 /// Síť povrchu pro prohlížeč 3D (souřadnice vůči společnému počátku).
@@ -323,6 +333,8 @@ pub enum Akce {
     SrovnatBody(bool),
     /// Načte sítě povrchů pro prohlížeč 3D.
     Nacti3D(Vec<String>),
+    /// Načte podklady pohledu (id) pro náhled editoru vzhledu.
+    PodkladyPohledu(String),
     /// Povrchy nejdou / jdou vybrat kliknutím.
     PovrchyNevybirat(bool),
     /// Převzít výběr z výkresu (body → tabulka, objekt povrchu → strom).
@@ -1049,7 +1061,7 @@ impl Pracovnik {
 
     fn akce_hlavni(&mut self, mut k: PresKanal, a: Akce) {
         uprav_stav(|s| s.pracuji = true);
-        let drzet = !matches!(a, Akce::Obnovit | Akce::Nacti3D(_) | Akce::Ukazat(..) | Akce::UkazatBody(_) | Akce::VyberZVykresu | Akce::BodyZVykresu(..));
+        let drzet = !matches!(a, Akce::Obnovit | Akce::Nacti3D(_) | Akce::PodkladyPohledu(_) | Akce::Ukazat(..) | Akce::UkazatBody(_) | Akce::VyberZVykresu | Akce::BodyZVykresu(..));
         let (body, povrchy_id) = {
             let st = zamek(&sdilene().stav);
             (st.vyber_body.clone(), st.vyber_povrchy.clone())
@@ -1649,6 +1661,15 @@ impl Pracovnik {
                 cogo::oprav_nesoulad(k, &doc, &n)?;
                 k.hotovo();
                 Ok(Some(trf!("Odstraněno {} objektů grafiky, dokresleno {} bodů", n.navic.len(), n.chybi.len())))
+            }
+            Akce::PodkladyPohledu(id) => {
+                let doc = k.dokument()?;
+                let p = crate::tra::pohled::pohledy(&doc).into_iter().find(|p| p.def.id == id).ok_or_else(|| trf!("pohled {} už ve výkrese není", id))?;
+                let styly = styly::styly_profilu(&doc);
+                let ef = trasy::pohled::efektivni(&p.def, &styly);
+                let vysledek = crate::tra::pohled::podklady(&doc, &ef, None, true);
+                uprav_stav(|s| s.podklady = Some(Arc::new(PodkladyEditoru { pohled: id.clone(), def: p.def.clone(), vysledek })));
+                Ok(None)
             }
             Akce::Nacti3D(idy) => {
                 let doc = k.dokument()?;

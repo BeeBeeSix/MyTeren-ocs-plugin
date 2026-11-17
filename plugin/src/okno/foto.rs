@@ -42,6 +42,11 @@ impl Foto {
             ("20_pohled_profilu", Uzel::Pohled("P1".into())),
             ("21_styly_profilu", Uzel::StylyProfilu),
             ("22_styl_profilu", Uzel::StylProfilu("KANALIZACE".into())),
+            ("23_editor_styl", Uzel::StylProfilu("KANALIZACE".into())),
+            ("24_editor_pismo", Uzel::StylProfilu("KANALIZACE".into())),
+            ("25_editor_klasicky_papir", Uzel::StylProfilu("KANALIZACE".into())),
+            ("26_editor_pohled", Uzel::Pohled("P1".into())),
+            ("27_editor_zoom", Uzel::StylProfilu("KANALIZACE".into())),
             ("23_styly_tras", Uzel::StylyTras),
             ("24_styl_trasy", Uzel::StylTrasy("SITUACE_500".into())),
         ];
@@ -89,8 +94,23 @@ impl Okno {
             let u = f.kroky[f.i].1.clone();
             let zal = f.kroky[f.i].2;
             f.snimek = 1;
+            let jmeno = f.kroky[f.i].0;
             self.vyber_uzel(u);
             self.zalozka_stylu = zal;
+            if let Some(krok) = jmeno.strip_prefix("2").and_then(|j| j.split_once("_editor")).map(|x| x.0) {
+                let stav = crate::spravce::stav();
+                ctx.set_embed_viewports(true);
+                self.editor_profilu = if jmeno.ends_with("pohled") {
+                    super::editor_profilu::EditorProfilu::pro_pohled(&stav, "P1")
+                } else {
+                    super::editor_profilu::EditorProfilu::pro_styl(&stav, "KANALIZACE")
+                };
+                if let Some(e) = self.editor_profilu.as_mut() {
+                    e.ukazka_krok(krok, &stav);
+                }
+            } else {
+                self.editor_profilu = None;
+            }
             return;
         }
         f.snimek += 1;
