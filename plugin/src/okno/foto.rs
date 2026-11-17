@@ -39,6 +39,7 @@ impl Foto {
             ("17_styl_strom", Uzel::StylBodu("STROM_L".into())),
             ("18_styl_strom_pouziti", Uzel::StylBodu("STROM_L".into())),
             ("19_styl_nezobrazovat", Uzel::StylBodu(crate::styly::SKRYT.into())),
+            ("20_pohled_profilu", Uzel::Pohled("P1".into())),
         ];
         let zalozka = |n: &str| if n.contains("popis") { 1 } else if n.contains("pouziti") { 2 } else { 0 };
         let kroky = kroky.into_iter().map(|(n, u)| (n, u, zalozka(n))).collect();

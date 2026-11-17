@@ -48,6 +48,12 @@ fn cti(t: &str) -> Option<f64> {
     t.trim().replace(',', ".").parse().ok()
 }
 
+impl Default for DefinicePohledu {
+    fn default() -> Self {
+        Self::novy("", "", "")
+    }
+}
+
 impl DefinicePohledu {
     pub fn novy(id: &str, trasa: &str, povrch: &str) -> Self {
         Self {

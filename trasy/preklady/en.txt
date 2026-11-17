@@ -249,3 +249,5 @@ Kóta	Elevation
 Vzdálenosti	Distances
 Text	Text
 Úseky s textem	Text segments
+Úprava pohledu profilu	Profile view edit
+Pohled profilu {} upraven	Profile view {} updated

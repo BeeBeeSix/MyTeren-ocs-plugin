@@ -1541,3 +1541,61 @@ Pohled je vybraný ve výkrese – na pásu karet Terén klikněte na Niveleta a
 Na pásu karet Terén klikněte na Nový bod › Ruční bod a klikněte do výkresu nebo zadejte x,y.	On the Terén ribbon tab click New point › Manual point, then click in the drawing or enter x,y.
 Na pásu karet Terén klikněte na Nový bod › Bod na povrchu a klikejte do výkresu.	On the Terén ribbon tab click New point › Point on surface, then click in the drawing.
 Nový bod se zadává ve výkrese tlačítkem Nový bod na pásu karet Terén (klik nebo souřadnice)	New points are entered in the drawing with the New point button on the Terén ribbon tab (click or coordinates)
+Vzhled a pásy	Appearance and bands
+Šablona	Template
+Změna šablony nahradí pásy i nastavení pohledu.	Changing the template replaces the bands and view settings.
+Měřítko délek 1:	Horizontal scale 1:
+Převýšení (výšky ×)	Vertical exaggeration (×)
+Čáry pásů	Band lines
+jen svislice	vertical lines only
+rámeček a vodorovné čáry	frame and horizontal lines
+Výšková stupnice	Elevation scale
+vlevo	left
+vlevo i vpravo	left and right
+skrýt	hide
+Formát staničení	Station format
+Sklon	Grade
+Mřížka	Grid
+Rámeček grafu	Graph frame
+Pásy	Bands
+název · výška · pořadí · ⚙ co pás ukazuje	name · height · order · ⚙ band content
+nad	above
+pod	below
+umístění vůči grafu	position relative to the graph
+výš	up
+níž	down
+co pás ukazuje	band content
+odebrat pás	remove band
++ Přidat pás	+ Add band
+překreslí pohled ve výkrese (Ctrl+Z vrátí)	redraws the view in the drawing (Ctrl+Z undoes)
+Co pás ukazuje	Band content
+Umístění	Position
+pod grafem	below the graph
+nad grafem	above the graph
+Výška A	Elevation A
+Z čeho číst výšku	Elevation source
+minus výška B	minus elevation B
+Hodnoty	Values
+po	every
+0 = bez pravidelného kroku	0 = no regular interval
+v lomových bodech	at break points
+v hlavních bodech trasy	at alignment key points
+Desetinná místa	Decimals
+Text	Text
+text na střed úseku (jinak vlevo)	center text in segment (otherwise left)
+Úseky (staničení od – do, text)	Segments (station from – to, text)
+konec	end
+odebrat úsek	remove segment
++ úsek	+ segment
+Povrch pohledu	View surface
+Niveleta	Profile grade line
+Trasy: úprava pohledu profilu	Alignments: editing profile view
+Staničení	Station
+Výška terénu	Ground elevation
+Výška nivelety	Design elevation
+Rozdíl (hloubka)	Difference (depth)
+Směrové poměry	Horizontal geometry
+Sklony nivelety	Design grades
+Kóta	Elevation
+Vzdálenosti	Distances
+Úseky s textem	Text segments

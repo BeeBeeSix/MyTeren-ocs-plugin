@@ -448,6 +448,8 @@ impl Okno {
                 self.vyber_uzel(Uzel::Trasa(t.id.clone()));
             }
         });
+        ui.add_space(10.0);
+        self.editor_pohledu(ui, stav, &p);
     }
 }
 
@@ -503,5 +505,303 @@ fn menu_pohledu(ui: &mut egui::Ui, t: &PrehledTrasy, p: &PrehledPohledu) {
     if ui.button(RichText::new(tr("Smazat pohled")).color(CERVENA)).clicked() {
         smazat(trf!("Pohled profilu {} je smazaný.", p.id), Akce::PohledSmazat(p.insert));
         ui.close();
+    }
+}
+
+// ── Editor vzhledu a pásů pohledu ───────────────────────────────────────────
+
+use trasy::pasy::{sada_sablony, vychozi_sada, DruhPasu, Pas, Poloha, Usek, Zdroj};
+use trasy::pohled::{nastaveni, DefinicePohledu, SABLONY};
+
+/// Hodnota nastavení bez výjimky pohledu (jen ze šablony).
+fn ze_sablony(d: &DefinicePohledu, klic: &str) -> String {
+    let mut c = d.clone();
+    c.vyjimky.remove(klic);
+    nastaveni(&c).text(klic).to_string()
+}
+
+/// Nastaví hodnotu jako výjimku pohledu (nebo ji zruší, když je stejná jako šablona).
+fn nastav(d: &mut DefinicePohledu, klic: &str, hodnota: &str) {
+    if ze_sablony(d, klic) == hodnota {
+        d.vyjimky.remove(klic);
+    } else {
+        d.vyjimky.insert(klic.to_string(), hodnota.to_string());
+    }
+}
+
+/// Stejné definice bez ohledu na otisk a osy (ty mění až kreslení).
+fn stejne(a: &DefinicePohledu, b: &DefinicePohledu) -> bool {
+    let (mut a, mut b) = (a.clone(), b.clone());
+    a.otisk.clear();
+    b.otisk.clear();
+    a.osy = None;
+    b.osy = None;
+    a == b
+}
+
+fn volba(ui: &mut egui::Ui, d: &mut DefinicePohledu, salt: &str, klic: &str, moznosti: &[(&'static str, &'static str)]) {
+    let akt = nastaveni(d).text(klic).to_string();
+    let nazev = moznosti.iter().find(|m| m.0 == akt).map_or(akt.clone(), |m| tr(m.1).to_string());
+    egui::ComboBox::from_id_salt((salt, klic)).selected_text(nazev).width(190.0).show_ui(ui, |ui| {
+        for (k, n) in moznosti {
+            if ui.selectable_label(akt == *k, tr(n)).clicked() {
+                nastav(d, klic, k);
+            }
+        }
+    });
+}
+
+fn zaskrt(ui: &mut egui::Ui, d: &mut DefinicePohledu, klic: &str, popis: &'static str) {
+    let mut b = nastaveni(d).ano(klic);
+    if ui.checkbox(&mut b, tr(popis)).changed() {
+        nastav(d, klic, if b { "1" } else { "0" });
+    }
+}
+
+fn nazev_zdroje(z: &Zdroj, povrchy: &[(String, String)]) -> String {
+    match z {
+        Zdroj::Teren => tr("Povrch pohledu").to_string(),
+        Zdroj::Niveleta => tr("Niveleta").to_string(),
+        Zdroj::Povrch(id) => povrchy.iter().find(|p| p.0 == *id).map_or_else(|| id.clone(), |p| p.1.clone()),
+    }
+}
+
+fn vyber_zdroje(ui: &mut egui::Ui, salt: (&str, usize, &str), z: &mut Zdroj, povrchy: &[(String, String)]) {
+    egui::ComboBox::from_id_salt(salt).selected_text(nazev_zdroje(z, povrchy)).width(190.0).show_ui(ui, |ui| {
+        let mut moznosti = vec![Zdroj::Teren, Zdroj::Niveleta];
+        moznosti.extend(povrchy.iter().map(|p| Zdroj::Povrch(p.0.clone())));
+        for m in moznosti {
+            let n = nazev_zdroje(&m, povrchy);
+            if ui.selectable_label(*z == m, n).clicked() {
+                *z = m;
+            }
+        }
+    });
+}
+
+fn detail_pasu(ui: &mut egui::Ui, salt: &str, i: usize, pas: &mut Pas, povrchy: &[(String, String)]) {
+    egui::Frame::group(ui.style()).show(ui, |ui| {
+        egui::Grid::new((salt, i, "detail")).num_columns(2).spacing([10.0, 5.0]).show(ui, |ui| {
+            ui.label(tr("Co pás ukazuje"));
+            egui::ComboBox::from_id_salt((salt, i, "druh")).selected_text(tr(pas.druh.nazev())).width(190.0).show_ui(ui, |ui| {
+                for d in DruhPasu::VSE {
+                    if ui.selectable_label(pas.druh == d, tr(d.nazev())).clicked() && pas.druh != d {
+                        let novy = Pas::novy(d);
+                        pas.druh = d;
+                        pas.zdroj = novy.zdroj;
+                        pas.zdroj2 = novy.zdroj2;
+                    }
+                }
+            });
+            ui.end_row();
+            ui.label(tr("Umístění"));
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut pas.poloha, Poloha::Pod, tr("pod grafem"));
+                ui.radio_value(&mut pas.poloha, Poloha::Nad, tr("nad grafem"));
+            });
+            ui.end_row();
+            if matches!(pas.druh, DruhPasu::Kota | DruhPasu::Rozdil) {
+                ui.label(if pas.druh == DruhPasu::Rozdil { tr("Výška A") } else { tr("Z čeho číst výšku") });
+                vyber_zdroje(ui, (salt, i, "z1"), &mut pas.zdroj, povrchy);
+                ui.end_row();
+            }
+            if pas.druh == DruhPasu::Rozdil {
+                ui.label(tr("minus výška B"));
+                vyber_zdroje(ui, (salt, i, "z2"), &mut pas.zdroj2, povrchy);
+                ui.end_row();
+            }
+            if pas.druh.hodnotovy() || pas.druh == DruhPasu::Vzdalenosti {
+                ui.label(tr("Hodnoty"));
+                ui.horizontal(|ui| {
+                    ui.label(tr("po"));
+                    ui.add(egui::DragValue::new(&mut pas.krok).range(0.0..=1000.0).speed(1.0).suffix(" m"))
+                        .on_hover_text(tr("0 = bez pravidelného kroku"));
+                    ui.checkbox(&mut pas.lomy, tr("v lomových bodech"));
+                    ui.checkbox(&mut pas.body_trasy, tr("v hlavních bodech trasy"));
+                });
+                ui.end_row();
+            }
+            if pas.druh.hodnotovy() || pas.druh == DruhPasu::Sklony {
+                ui.label(tr("Desetinná místa"));
+                ui.add(egui::DragValue::new(&mut pas.desetin).range(0..=4));
+                ui.end_row();
+            }
+            if pas.druh == DruhPasu::Text {
+                ui.label(tr("Text"));
+                ui.add(egui::TextEdit::singleline(&mut pas.text).desired_width(220.0));
+                ui.end_row();
+            }
+            if pas.druh.textovy() {
+                ui.label("");
+                ui.checkbox(&mut pas.na_stred, tr("text na střed úseku (jinak vlevo)"));
+                ui.end_row();
+            }
+        });
+        if pas.druh == DruhPasu::Useky {
+            ui.add_space(4.0);
+            ui.label(RichText::new(tr("Úseky (staničení od – do, text)")).color(SEDA));
+            let mut smazat_usek = None;
+            for (j, u) in pas.useky.iter_mut().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.add(egui::DragValue::new(&mut u.od).speed(1.0).max_decimals(2).suffix(" m"));
+                    ui.label("–");
+                    // „do“ úseku přes celou trasu se zobrazí jako konec
+                    ui.add(egui::DragValue::new(&mut u.do_).speed(1.0).max_decimals(2).suffix(" m").custom_formatter(|v, _| {
+                        if v >= 1e8 { tr("konec").to_string() } else { cz(v, 2) }
+                    }));
+                    ui.add(egui::TextEdit::singleline(&mut u.text).desired_width(170.0));
+                    if ui.small_button("×").on_hover_text(tr("odebrat úsek")).clicked() {
+                        smazat_usek = Some(j);
+                    }
+                });
+            }
+            if let Some(j) = smazat_usek {
+                pas.useky.remove(j);
+            }
+            if ui.small_button(tr("+ úsek")).clicked() {
+                let od = pas.useky.last().map_or(0.0, |u| if u.do_ >= 1e8 { u.od } else { u.do_ });
+                pas.useky.push(Usek { od, do_: 1e9, text: String::new() });
+            }
+        }
+    });
+}
+
+impl Okno {
+    /// Sekce „Vzhled a pásy“ v kartě pohledu: šablona, měřítko, nastavení, pásy.
+    pub(super) fn editor_pohledu(&mut self, ui: &mut egui::Ui, stav: &StavSpravce, p: &PrehledPohledu) {
+        if self.uprava_pohledu.as_ref().is_none_or(|(id, _)| *id != p.id) {
+            self.uprava_pohledu = Some((p.id.clone(), p.def.clone()));
+            self.otevreny_pas = None;
+        }
+        let povrchy: Vec<(String, String)> = stav.povrchy.iter().map(|z| (z.id.clone(), z.jmeno.clone())).collect();
+        let salt = p.id.as_str();
+        let mut otevreny = self.otevreny_pas;
+        let mut pouzit = false;
+        let mut vratit = false;
+        let Some((_, d)) = self.uprava_pohledu.as_mut() else { return };
+        egui::CollapsingHeader::new(RichText::new(tr("Vzhled a pásy")).strong()).id_salt(("vzhled_pohledu", salt)).default_open(true).show(ui, |ui| {
+            egui::Grid::new(("nastaveni_pohledu", salt)).num_columns(2).spacing([10.0, 6.0]).show(ui, |ui| {
+                ui.label(tr("Šablona"));
+                let akt = SABLONY.iter().find(|s| s.0 == d.styl).map_or_else(|| d.styl.clone(), |s| trasy::preklad::tr_dyn(s.1));
+                egui::ComboBox::from_id_salt(("sablona", salt)).selected_text(akt).width(190.0).show_ui(ui, |ui| {
+                    for (sid, nazev, sada) in SABLONY {
+                        if ui.selectable_label(d.styl == sid, trasy::preklad::tr_dyn(nazev)).clicked() && d.styl != sid {
+                            d.styl = sid.to_string();
+                            d.vyjimky.clear();
+                            d.pasy = if sada.is_empty() { vychozi_sada() } else { sada_sablony(sada) };
+                            otevreny = None;
+                        }
+                    }
+                })
+                .response
+                .on_hover_text(tr("Změna šablony nahradí pásy i nastavení pohledu."));
+                ui.end_row();
+                ui.label(tr("Měřítko délek 1:"));
+                ui.add(egui::DragValue::new(&mut d.meritko).range(10.0..=100000.0).speed(10.0).max_decimals(0));
+                ui.end_row();
+                ui.label(tr("Převýšení (výšky ×)"));
+                ui.add(egui::DragValue::new(&mut d.prevyseni).range(0.5..=100.0).speed(0.5).max_decimals(1));
+                ui.end_row();
+                ui.label(tr("Čáry pásů"));
+                volba(ui, d, salt, "cary_pasu", &[("svislice", "jen svislice"), ("ramecek", "rámeček a vodorovné čáry")]);
+                ui.end_row();
+                ui.label(tr("Výšková stupnice"));
+                volba(ui, d, salt, "stupnice", &[("vlevo", "vlevo"), ("obe", "vlevo i vpravo"), ("skryt", "skrýt")]);
+                ui.end_row();
+                ui.label(tr("Formát staničení"));
+                volba(ui, d, salt, "staniceni", &[("km", "0,040 00 (km)"), ("plus", "0+040.00"), ("m", "40.00 (m)")]);
+                ui.end_row();
+                ui.label(tr("Sklon"));
+                volba(ui, d, salt, "sklon", &[("promile", "‰"), ("procento", "%")]);
+                ui.end_row();
+                ui.label(tr("Výška písma"));
+                let mut pismo = nastaveni(d).cislo("pismo");
+                if ui.add(egui::DragValue::new(&mut pismo).range(1.0..=10.0).speed(0.1).max_decimals(1).suffix(" mm")).changed() {
+                    nastav(d, "pismo", &format!("{pismo}"));
+                }
+                ui.end_row();
+                ui.label("");
+                ui.horizontal(|ui| {
+                    zaskrt(ui, d, "mrizka", "Mřížka");
+                    zaskrt(ui, d, "ram", "Rámeček grafu");
+                });
+                ui.end_row();
+            });
+
+            ui.add_space(8.0);
+            ui.label(RichText::new(tr("Pásy")).strong());
+            ui.label(RichText::new(tr("název · výška · pořadí · ⚙ co pás ukazuje")).color(SEDA).size(11.0));
+            let mut presun: Option<(usize, isize)> = None;
+            let mut odebrat: Option<usize> = None;
+            let n = d.pasy.len();
+            for (i, pas) in d.pasy.iter_mut().enumerate() {
+                ui.horizontal(|ui| {
+                    ui.label(RichText::new(if pas.poloha == Poloha::Nad { tr("nad") } else { tr("pod") }).color(SEDA).size(11.0))
+                        .on_hover_text(tr("umístění vůči grafu"));
+                    let mut nazev = if pas.nazev.trim().is_empty() { tr(pas.druh.nazev()).to_string() } else { pas.nazev.clone() };
+                    if ui.add(egui::TextEdit::singleline(&mut nazev).desired_width(200.0)).changed() {
+                        pas.nazev = nazev;
+                    }
+                    ui.add(egui::DragValue::new(&mut pas.vyska).range(3.0..=60.0).speed(0.5).max_decimals(1).suffix(" mm"));
+                    if ui.add_enabled(i > 0, egui::Button::new("⬆").small()).on_hover_text(tr("výš")).clicked() {
+                        presun = Some((i, -1));
+                    }
+                    if ui.add_enabled(i + 1 < n, egui::Button::new("⬇").small()).on_hover_text(tr("níž")).clicked() {
+                        presun = Some((i, 1));
+                    }
+                    let zap = otevreny == Some(i);
+                    if ui.selectable_label(zap, "⚙").on_hover_text(tr("co pás ukazuje")).clicked() {
+                        otevreny = if zap { None } else { Some(i) };
+                    }
+                    if ui.small_button("×").on_hover_text(tr("odebrat pás")).clicked() {
+                        odebrat = Some(i);
+                    }
+                });
+                if otevreny == Some(i) {
+                    detail_pasu(ui, salt, i, pas, &povrchy);
+                }
+            }
+            if let Some((i, smer)) = presun {
+                let j = (i as isize + smer) as usize;
+                d.pasy.swap(i, j);
+                if otevreny == Some(i) {
+                    otevreny = Some(j);
+                }
+            }
+            if let Some(i) = odebrat {
+                d.pasy.remove(i);
+                otevreny = None;
+            }
+            ui.menu_button(tr("+ Přidat pás"), |ui| {
+                for druh in DruhPasu::VSE {
+                    if ui.button(tr(druh.nazev())).clicked() {
+                        d.pasy.push(Pas::novy(druh));
+                        otevreny = Some(d.pasy.len() - 1);
+                        ui.close();
+                    }
+                }
+            });
+
+            ui.add_space(8.0);
+            let zmeneno = !stejne(d, &p.def);
+            ui.horizontal(|ui| {
+                if ui.add_enabled(zmeneno, egui::Button::new(tr("Použít"))).on_hover_text(tr("překreslí pohled ve výkrese (Ctrl+Z vrátí)")).clicked() {
+                    pouzit = true;
+                }
+                if zmeneno && ui.button(tr("Vrátit změny")).clicked() {
+                    vratit = true;
+                }
+            });
+        });
+        if pouzit {
+            if let Some((_, d)) = &self.uprava_pohledu {
+                spravce::posli(Akce::PohledUpravit(p.insert, Box::new(d.clone())));
+            }
+        }
+        if vratit {
+            self.uprava_pohledu = Some((p.id.clone(), p.def.clone()));
+            otevreny = None;
+        }
+        self.otevreny_pas = otevreny;
     }
 }

@@ -926,6 +926,7 @@ impl BuiltinPlugin for TerenPlugin {
         Box::new(TerenModule)
     }
     fn on_load(&mut self, host: &mut dyn HostApi) {
+        zaznam_padu();
         if let Some(s) = host.plugin_request_sender() {
             spravce::registruj_kanal(host.tab_id(), s);
         }
@@ -1277,4 +1278,30 @@ fn proved(v: &mut dyn Vykres, a: spravce::Akce) {
 /// Spustí interaktivní příkaz Terénu (hlídaný – viz `vykres::PRIKAZY`).
 fn spust(host: &mut dyn HostApi, c: Box<dyn ocs_plugin_api::host::InteractiveCommand>) {
     host.start_interactive(vykres::hlidany(c));
+}
+
+/// Pád (panic) v kterémkoli vlákně pluginu se zapíše do `%TEMP%	eren_pady.log`
+/// – okno Prospektoru jinak jen zůstane prázdné a není poznat proč.
+fn zaznam_padu() {
+    static JEDNOU: std::sync::Once = std::sync::Once::new();
+    JEDNOU.call_once(|| {
+        let puvodni = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let vlakno = std::thread::current().name().unwrap_or("?").to_string();
+            let zprava = format!(
+                "[{}] vlákno {}: {}
+{}
+",
+                std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0, |d| d.as_secs()),
+                vlakno,
+                info,
+                std::backtrace::Backtrace::force_capture()
+            );
+            if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(std::env::temp_dir().join("teren_pady.log")) {
+                use std::io::Write;
+                let _ = f.write_all(zprava.as_bytes());
+            }
+            puvodni(info);
+        }));
+    });
 }

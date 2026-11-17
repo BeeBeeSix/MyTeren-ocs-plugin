@@ -342,6 +342,8 @@ pub enum Akce {
     PohledSmazat(Handle),
     /// Překreslit pohled (`None` = všechny zastaralé).
     PohledyPrekreslit(Option<Handle>),
+    /// Uloží upravený vzhled a pásy pohledu a překreslí ho.
+    PohledUpravit(Handle, Box<trasy::pohled::DefinicePohledu>),
     /// Vybere objekty ve výkrese a poradí, které tlačítko na pásu karet
     /// použít (příkaz pluginu Prospektor spustit neumí).
     Navod(Vec<Handle>, String),
@@ -1283,6 +1285,7 @@ impl Pracovnik {
             Akce::TrasaSmazat(h) => crate::tra::prospektor::smaz_trasu(k, h).map(Some),
             Akce::PohledSmazat(h) => crate::tra::prospektor::smaz_pohled(k, h).map(Some),
             Akce::PohledyPrekreslit(h) => crate::tra::prospektor::prekresli(k, h).map(Some),
+            Akce::PohledUpravit(h, d) => crate::tra::prospektor::uprav_pohled(k, h, &d).map(Some),
             Akce::Ukazat(stred, r, handly) => {
                 let r = (r * 1.4).max(15.0);
                 let _ = k.prikaz(&format!(
@@ -2048,6 +2051,7 @@ fn nazev_kroku(a: &Akce) -> &'static str {
         Akce::TrasaSmazat(_) => tr("Trasy: smazání trasy"),
         Akce::PohledSmazat(_) => tr("Trasy: smazání pohledu profilu"),
         Akce::PohledyPrekreslit(_) => tr("Trasy: překreslení pohledů"),
+        Akce::PohledUpravit(..) => tr("Trasy: úprava pohledu profilu"),
         _ => tr("Terén"),
     }
 }

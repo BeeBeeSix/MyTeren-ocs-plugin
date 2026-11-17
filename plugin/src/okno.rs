@@ -436,6 +436,10 @@ struct Okno {
     nove_jmeno_povrchu: String,
     /// Rozepsané vlastnosti trasy: (id trasy, jméno, počáteční staničení, styl).
     jmeno_trasy: (String, String, f64, String),
+    /// Rozpracovaná úprava vzhledu a pásů pohledu profilu (id pohledu, definice).
+    uprava_pohledu: Option<(String, ::trasy::pohled::DefinicePohledu)>,
+    /// Pás s rozbaleným nastavením v editoru pohledu.
+    otevreny_pas: Option<usize>,
     /// Povrch, jehož větev se má ve stromu rozbalit.
     rozbalit: Option<String>,
     // styly
@@ -532,7 +536,7 @@ fn ukaz_hlasku_smazani(ctx: &egui::Context) {
                 ui.horizontal(|ui| {
                     ui.label(RichText::new(text).strong());
                     ui.label(RichText::new(tr("Vrátíte to Ctrl+Z ve výkrese.")).color(SEDA));
-                    if ui.small_button("✕").clicked() {
+                    if ui.small_button("×").clicked() {
                         zavrit = true;
                     }
                 });
@@ -1505,7 +1509,7 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
         if r.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Escape)) {
             self.hledat.clear();
         }
-        if !self.hledat.is_empty() && ui.small_button("✕").on_hover_text(tr("Zrušit hledání")).clicked() {
+        if !self.hledat.is_empty() && ui.small_button("×").on_hover_text(tr("Zrušit hledání")).clicked() {
             self.hledat.clear();
         }
     }
@@ -1824,7 +1828,7 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
             spravce::posli(Akce::PopisyNaMisto(vybrane.clone()));
         }
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            if ui.small_button("✕").on_hover_text(tr("Zrušit výběr")).clicked() {
+            if ui.small_button("×").on_hover_text(tr("Zrušit výběr")).clicked() {
                 self.vybrane_body.clear();
                 self.nacti_edit_bodu(stav);
             }
@@ -2884,7 +2888,7 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
                 }
             });
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui.small_button("✕").on_hover_text(tr("Zrušit výběr")).clicked() {
+                if ui.small_button("×").on_hover_text(tr("Zrušit výběr")).clicked() {
                     self.vybrane_povrchy.clear();
                 }
             });

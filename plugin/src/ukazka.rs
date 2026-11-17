@@ -128,6 +128,29 @@ fn data() -> StavSpravce {
         styly_povrchu,
         styl_bodu,
         verze: 1,
+        trasy: vec![crate::tra::prospektor::PrehledTrasy {
+            id: "T1".into(),
+            jmeno: "Stoka A".into(),
+            insert: Handle::new(0x5000),
+            styl: "Situace 1:500".into(),
+            styl_id: "SITUACE_500".into(),
+            vrcholu: 4,
+            oblouku: 2,
+            min_r: Some(100.0),
+            delka: 330.2,
+            pohledy: vec![crate::tra::prospektor::PrehledPohledu {
+                id: "P1".into(),
+                insert: Handle::new(0x5001),
+                povrch: "Stávající terén".into(),
+                rozsah: Some((0.0, 330.2)),
+                meritko: 500.0,
+                prevyseni: 10.0,
+                pasu: 11,
+                def: trasy::pohled::DefinicePohledu::podle_sablony("P1", "T1", "st", "KANALIZACE"),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }],
         ..Default::default()
     }
 }

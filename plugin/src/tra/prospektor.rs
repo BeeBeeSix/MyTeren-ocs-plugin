@@ -31,6 +31,8 @@ pub struct PrehledPohledu {
     pub meritko: f64,
     pub prevyseni: f64,
     pub pasu: usize,
+    /// Celá definice (pro editor vzhledu a pásů).
+    pub def: trasy::pohled::DefinicePohledu,
     /// Trasa nebo povrch se od posledního kreslení změnily.
     pub zastaraly: bool,
     /// Kam přiblížit: střed a poloměr.
@@ -140,6 +142,7 @@ pub fn prehled(doc: &CadDocument) -> Vec<PrehledTrasy> {
                         meritko: p.def.meritko,
                         prevyseni: p.def.prevyseni,
                         pasu: p.def.pasy.len(),
+                        def: p.def.clone(),
                         zastaraly: pohled::otisk(doc, &p.def) != p.def.otisk,
                         stred,
                         polomer,
@@ -268,4 +271,23 @@ pub fn prekresli(v: &mut dyn Vykres, jen: Option<Handle>) -> Result<String, Stri
     }
     v.hotovo();
     Ok(trasy::trf!("Překresleno pohledů profilu: {}", n))
+}
+
+/// Uloží upravený vzhled a pásy pohledu a pohled překreslí (jeden krok Zpět).
+pub fn uprav_pohled(v: &mut dyn Vykres, insert: Handle, def: &trasy::pohled::DefinicePohledu) -> Result<String, String> {
+    let doc = v.dokument()?;
+    let p = pohled::pohledy(&doc).into_iter().find(|p| p.insert == insert).ok_or_else(|| tr_dyn("pohled už ve výkrese není"))?;
+    let mut def = def.clone();
+    def.id = p.def.id.clone();
+    def.trasa = p.def.trasa.clone();
+    if !def.meritko.is_finite() || def.meritko < 10.0 {
+        def.meritko = 1000.0;
+    }
+    if !def.prevyseni.is_finite() || def.prevyseni <= 0.0 {
+        def.prevyseni = 10.0;
+    }
+    v.zpet(&tr_dyn("Úprava pohledu profilu"));
+    pohled::uloz(v, &doc, Some(&p), &def, p.vlozeni)?;
+    v.hotovo();
+    Ok(trasy::trf!("Pohled profilu {} upraven", def.id))
 }
