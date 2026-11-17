@@ -1040,6 +1040,29 @@ pub fn prestav_s(v: &mut dyn Vykres, z: &mut ZaznamPovrchu, doc: Option<CadDocum
     for m in crate::sit::site(&povrch) {
         ent.push(crate::sit::entita(m, &hladina_site, styly::barva(st.barva_tin), styly::tloustka(-1)));
     }
+    if st.tin {
+        // Hrany na spojnicích a hranicích jsou v síti skryté (jinak by
+        // překryly čáry v modelu). Do bloku se kreslí jako čáry na hladině
+        // TIN v barvě hladiny spojnic, hranic nebo úprav – trojúhelníky
+        // jsou tak celé, i když hladiny spojnic a hranic nejsou zapnuté.
+        let barva_hladiny = |jmeno: &str, vychozi: i16| {
+            doc.layers
+                .iter()
+                .find(|l| l.name.eq_ignore_ascii_case(jmeno))
+                .map(|l| l.color.clone())
+                .unwrap_or(Color::from_index(vychozi))
+        };
+        let (b_hranice, b_spojnice, b_upravy) = (barva_hladiny(&h.hranice, 5), barva_hladiny(&h.spojnice, 1), barva_hladiny(&h.upravy, 6));
+        for (druh, a, b) in crate::sit::povinne_cary(&povrch, def) {
+            let mut e = na_hladine(EntityType::Line(Line::from_points(Vector3::new(a[0], a[1], a[2]), Vector3::new(b[0], b[1], b[2]))), &h.tin);
+            e.common_mut().color = match druh {
+                crate::sit::DruhHrany::Hranice => b_hranice.clone(),
+                crate::sit::DruhHrany::Spojnice => b_spojnice.clone(),
+                crate::sit::DruhHrany::Uprava => b_upravy.clone(),
+            };
+            ent.push(e);
+        }
+    }
     let (interval, hlavni) = st.interval.unwrap_or((z.interval, z.hlavni));
     let vrst = if st.vrstevnice {
         vrstevnice(&povrch, &NastaveniVrstevnic { interval, hlavni })

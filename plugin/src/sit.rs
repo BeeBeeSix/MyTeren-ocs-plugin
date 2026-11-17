@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use ocs_plugin_api::host::codec::entities::polyface_mesh::{PolyfaceFace, PolyfaceMesh, PolyfaceVertex};
 use ocs_plugin_api::host::EntityType;
 
-use teren::povrch::Povrch;
+use teren::povrch::{Definice, Povrch};
 
 /// Nejvíc vrcholů i ploch v jednom dílu sítě (limit formátu je 32 767).
 pub const MAX_NA_DIL: usize = 32_000;
@@ -127,6 +127,57 @@ pub fn trojuhelniky(m: &PolyfaceMesh, svet: impl Fn(&ocs_plugin_api::host::codec
     out
 }
 
+/// Odkud pochází povinná hrana povrchu.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DruhHrany {
+    Hranice,
+    Spojnice,
+    /// Hrana přidaná úpravou povrchu.
+    Uprava,
+}
+
+/// Povinné hrany povrchu (skryté v síti) jako úsečky v globálních
+/// souřadnicích s určením, zda leží na hranici, spojnici, nebo vznikly
+/// úpravou. Kreslí se do bloku povrchu, aby trojúhelníky byly vidět celé
+/// i bez čar spojnic a hranic v modelu.
+pub fn povinne_cary(p: &Povrch, def: &Definice) -> Vec<(DruhHrany, [f64; 3], [f64; 3])> {
+    // vzdálenost bodu od úsečky v půdorysu
+    fn vzd(q: [f64; 2], a: [f64; 2], b: [f64; 2]) -> f64 {
+        let (dx, dy) = (b[0] - a[0], b[1] - a[1]);
+        let l2 = dx * dx + dy * dy;
+        let t = if l2 > 0.0 { (((q[0] - a[0]) * dx + (q[1] - a[1]) * dy) / l2).clamp(0.0, 1.0) } else { 0.0 };
+        (q[0] - a[0] - t * dx).hypot(q[1] - a[1] - t * dy)
+    }
+    // hrana leží na lomené čáře, když oba konce i střed leží na stejném úseku
+    fn na_care(c: &[[f64; 2]], uzavrena: bool, a: [f64; 2], b: [f64; 2]) -> bool {
+        let s = [(a[0] + b[0]) / 2.0, (a[1] + b[1]) / 2.0];
+        let n = c.len();
+        let useku = if uzavrena { n } else { n.saturating_sub(1) };
+        (0..useku).any(|i| {
+            let (u, w) = (c[i], c[(i + 1) % n]);
+            [a, b, s].iter().all(|&q| vzd(q, u, w) < 1e-3)
+        })
+    }
+    let spojnice: Vec<Vec<[f64; 2]>> = def.spojnice.iter().map(|c| c.iter().map(|q| [q[0], q[1]]).collect()).collect();
+    let mut hrany: Vec<(usize, usize)> = p.povinne_hrany.iter().copied().collect();
+    hrany.sort_unstable();
+    hrany
+        .into_iter()
+        .map(|(i, j)| {
+            let (a, b) = (p.globalni(i), p.globalni(j));
+            let (a2, b2) = ([a.0, a.1], [b.0, b.1]);
+            let druh = if def.hranice.iter().chain(&def.diry).any(|c| na_care(c, true, a2, b2)) {
+                DruhHrany::Hranice
+            } else if spojnice.iter().any(|c| na_care(c, false, a2, b2)) {
+                DruhHrany::Spojnice
+            } else {
+                DruhHrany::Uprava
+            };
+            (druh, [a.0, a.1, a.2], [b.0, b.1, b.2])
+        })
+        .collect()
+}
+
 /// Hmotnost entity pro dávkování vkládání (limit 64 MB na zprávu pluginu).
 pub fn vaha(e: &EntityType) -> usize {
     match e {
@@ -171,5 +222,15 @@ mod testy {
         let skrytych: usize = s.iter().flat_map(|m| &m.faces).map(|f| [f.index1, f.index2, f.index3].iter().filter(|i| **i < 0).count()).sum();
         // každá povinná hrana uvnitř má dva trojúhelníky, na kraji jeden
         assert!(skrytych >= p.povinne_hrany.len());
+    }
+
+    #[test]
+    fn skryte_hrany_se_kresli_jako_cary_spojnic() {
+        let sp = vec![vec![[0.0, 0.0, 300.0], [10.0, 10.0, 301.0]]];
+        let p = povrch(6, sp.clone());
+        let def = Definice { spojnice: sp, ..Default::default() };
+        let cary = povinne_cary(&p, &def);
+        assert_eq!(cary.len(), p.povinne_hrany.len());
+        assert!(cary.iter().all(|c| c.0 == DruhHrany::Spojnice));
     }
 }
