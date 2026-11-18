@@ -31,6 +31,12 @@ const HLIDAT_OD: u64 = 32 * 1024 * 1024;
 /// Velikost posledního staženého snímku výkresu (bajty, odhad).
 static POSLEDNI_SNIMEK: AtomicU64 = AtomicU64::new(0);
 
+/// Poslední stažený snímek výkresu byl velký – další stažení stojí znatelný
+/// čas a může narazit na limit zprávy (tam, kde se mu dá vyhnout, nestahovat).
+pub fn velky_vykres() -> bool {
+    POSLEDNI_SNIMEK.load(Poradi::Relaxed) > HLIDAT_OD
+}
+
 /// Velikost objektu ve zprávě.
 fn velikost(e: &EntityType) -> u64 {
     bincode::serialized_size(e).unwrap_or(0)

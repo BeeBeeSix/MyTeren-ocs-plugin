@@ -435,8 +435,10 @@ fn uloz(host: &mut dyn HostApi, t: &Tah, v: Vec<Vrchol>) {
     }
     // obnovu po vlastní úpravě dělá tato funkce sama (bez kopie výkresu)
     VLASTNI_UPRAVA.store(true, Ordering::SeqCst);
-    // s pohledy je potřeba výkres (povrch) – stáhnout ho před krokem Zpět
-    let doc = crate::tra::pohled::ma_pohledy().then(|| host.document().clone());
+    // Výkres stáhnout před krokem Zpět: s pohledy je potřeba (povrch) a bez
+    // nich umožní přepsat blok trasy na místě (snímek + transakce místo ~11
+    // požadavků). U velkého výkresu bez pohledů radši postaru bez snímku.
+    let doc = (crate::tra::pohled::ma_pohledy() || !crate::vykres::velky_vykres()).then(|| host.document().clone());
     host.begin_undo_group(tr("Úprava trasy"));
     let mut nova = None;
     {
