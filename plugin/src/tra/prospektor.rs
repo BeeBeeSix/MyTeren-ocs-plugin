@@ -283,8 +283,8 @@ pub fn uprav_pohled(v: &mut dyn Vykres, insert: Handle, def: &trasy::pohled::Def
         def.prevyseni = 10.0;
     }
     v.zpet(&tr_dyn("Úprava pohledu profilu"));
+    // uloz si překreslení i „výkres změněn“ zařídí sám (na místě i postaru)
     pohled::uloz(v, &doc, Some(&p), &def, p.vlozeni)?;
-    v.hotovo();
     Ok(trasy::trf!("Pohled profilu {} upraven", def.id))
 }
 

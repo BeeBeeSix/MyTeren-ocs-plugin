@@ -1659,3 +1659,4 @@ ZÚ,KÚ,TK,KT,V oddělené čárkou	ZÚ,KÚ,TK,KT,V separated by commas
 uloží styl do výkresu a překreslí trasy, které ho používají	saves the style to the drawing and redraws the alignments that use it
 vzhled této trasy (styl a výjimky) jako nový styl trasy ve výkrese	this alignment's appearance (style and overrides) as a new alignment style in the drawing
 Žádná trasa tento styl nepoužívá.	No alignment uses this style.
+pohled převezme vzhled i pásy vybraného stylu; vlastní úpravy tohoto pohledu se zruší (vrátí je Ctrl+Z)	the view takes the look and bands of the selected style; this view's own changes are dropped (Ctrl+Z brings them back)

@@ -545,8 +545,29 @@ impl Okno {
         let styly = &stav.styly_profilu;
         let d = efektivni(&p.def, styly);
         ui.label(RichText::new(tr("Vzhled a pásy")).strong());
+        // výběr stylu profilu – pohled převezme styl celý (nastavení i pásy)
+        ui.horizontal(|ui| {
+            ui.label(tr("Styl profilu"));
+            let mut vybrany = d.styl.clone();
+            egui::ComboBox::from_id_salt(("styl_pohledu", p.id.as_str()))
+                .selected_text(jmeno_stylu(styly, &d.styl))
+                .width(220.0)
+                .show_ui(ui, |ui| {
+                    for s in styly {
+                        ui.selectable_value(&mut vybrany, s.id.clone(), trasy::preklad::tr_dyn(&s.jmeno));
+                    }
+                })
+                .response
+                .on_hover_text(tr("pohled převezme vzhled i pásy vybraného stylu; vlastní úpravy tohoto pohledu se zruší (vrátí je Ctrl+Z)"));
+            if vybrany != d.styl {
+                let mut nova = p.def.clone();
+                nova.styl = vybrany;
+                nova.vyjimky.clear();
+                nova.pasy_ze_stylu = true;
+                spravce::posli(Akce::PohledUpravit(p.insert, Box::new(nova)));
+            }
+        });
         ui.horizontal_wrapped(|ui| {
-            karta::kpi(ui, &jmeno_stylu(styly, &d.styl), tr("styl profilu"));
             karta::kpi(ui, &nazev_predlohy(&d, styly), tr("vzhled"));
             karta::kpi(ui, &czi(d.pasy.iter().filter(|x| !x.skryty).count()), tr("pásů"));
         });
