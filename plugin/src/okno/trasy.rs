@@ -693,7 +693,7 @@ impl Okno {
         ui.label(RichText::new(tr("Vzory pro pohledy podélných profilů: vzhled a sada pásů. Změna stylu překreslí všechny pohledy, které ho používají.")).color(SEDA));
         ui.add_space(6.0);
         if karta::tlacitko(ui, None, tr("+ Nový styl profilu"), true).clicked() {
-            let mut s = stav.styly_profilu.iter().find(|s| s.id == "OBECNA").cloned().unwrap_or_else(|| StylProfilu::vestavene()[0].clone());
+            let mut s = stav.styly_profilu.iter().find(|s| s.id == "JEDNODUCHY").cloned().unwrap_or_else(|| StylProfilu::vestavene()[0].clone());
             s.id.clear();
             s.jmeno = tr("Nový styl profilu").to_string();
             spravce::posli(Akce::UlozStylProfilu(Box::new(s)));

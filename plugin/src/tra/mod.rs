@@ -819,7 +819,7 @@ fn pohled_cmd(host: &mut dyn HostApi) {
         Some((trasy.iter().map(|t| t.def.id.clone()).collect(), povrchy.iter().map(|p| p.id.clone()).collect()));
     let styly = crate::styly::styly_profilu(&doc);
     let posledni = POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner()).clone();
-    let posledni = if posledni.is_empty() { "OBECNA".to_string() } else { posledni };
+    let posledni = if posledni.is_empty() { "JEDNODUCHY".to_string() } else { posledni };
     let i_sablony = styly.iter().position(|x| x.id == posledni).unwrap_or(0);
     let d = DialogDef::new(tr("Nový podélný profil"))
         .with_control(DialogControl::Choice {
