@@ -942,8 +942,9 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
                 };
                 // rozestup ≈ výška svislého textu, ať se hodnoty nepřekrývají
                 let mut mista = mista_bez_kolizi(pas, osy.od, osy.do_, &lomy, &body, 1.4 * ht);
-                if k.vykres {
-                    // výkresový režim: z míst těsně u sebe jen první (texty se nepřepisují)
+                {
+                    // z míst těsně u sebe jen první (svislé texty se nepřepisují,
+                    // žádné zdvojené svislice)
                     let mut posledni = f64::NEG_INFINITY;
                     mista.retain(|&s| {
                         let ok = s - posledni >= 1.4 * ht;
