@@ -110,6 +110,63 @@ pub trait Vykres {
     fn jen_zobrazeni(&mut self, h: Handle, ano: bool) -> bool;
 }
 
+/// Nejvíc objektů, které se při přepisu bloku na místě smí mazat nebo
+/// přidávat po jednom; nad tím je rychlejší blok postavit znovu.
+const NA_MISTE_NEJVIC: usize = 8;
+
+/// Zapíše záznam XDATA do objektu (nahradí záznam téže aplikace).
+pub fn nastav_zaznam(e: &mut EntityType, r: ExtendedDataRecord) {
+    let xd = &mut e.common_mut().extended_data;
+    xd.remove_record(&r.application_name);
+    xd.add_record(r);
+}
+
+/// Přepíše obsah existujícího bloku na místě: nové objekty převezmou handle
+/// členů bloku stejného druhu a hladiny a spolu s upraveným vložením (`vlozeni`,
+/// stejný handle – poloha, XDATA) se zapíšou jednou transakcí. OCS pak samo
+/// překreslí všechna vložení bloku. Zbylé členy se smažou, chybějící přidají
+/// po jednom (jen pár – jinak se vrátí `false` a volající blok postaví znovu
+/// postaru). `false` také když blok chybí nebo OCS transakci odmítne; v obou
+/// případech se výkres nezměnil.
+pub fn prepis_blok(v: &mut dyn Vykres, doc: &CadDocument, blok: &str, nove: Vec<EntityType>, vlozeni: EntityType, popis: &str) -> Result<bool, String> {
+    let Some(zaznam) = doc.block_records.iter().find(|b| b.name.eq_ignore_ascii_case(blok)) else { return Ok(false) };
+    let clenove: Vec<Handle> = zaznam
+        .entity_handles
+        .iter()
+        .copied()
+        .filter(|h| !matches!(doc.get_entity(*h), None | Some(EntityType::Block(_)) | Some(EntityType::BlockEnd(_))))
+        .collect();
+    let (mut sparovane, pridat, smazat) = crate::cogo::sparuj(doc, &clenove, nove);
+    ladeni(&format!("blok {blok}: spárováno {}, přidat {}, smazat {}", sparovane.len(), pridat.len(), smazat.len()));
+    if pridat.len() + smazat.len() > NA_MISTE_NEJVIC {
+        ladeni(&format!("blok {blok}: postaru (moc změn)"));
+        return Ok(false);
+    }
+    sparovane.push(vlozeni);
+    if let Err(e) = v.transakce(popis, sparovane) {
+        ladeni(&format!("blok {blok}: postaru, transakce odmítnuta: {e}"));
+        return Ok(false);
+    }
+    for h in smazat {
+        v.odeber(h);
+    }
+    for e in pridat {
+        v.tabulka(TableOperation::BlockEntityAdd { block: zaznam.name.clone(), entity: e })?;
+    }
+    Ok(true)
+}
+
+/// Řádek do ladicího záznamu (proměnná prostředí `TEREN_LADENI` = soubor).
+pub fn ladeni(zprava: &str) {
+    if let Some(soubor) = std::env::var_os("TEREN_LADENI") {
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(soubor) {
+            use std::io::Write;
+            let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0.0, |d| d.as_secs_f64());
+            let _ = writeln!(f, "{t:.3} # {zprava}");
+        }
+    }
+}
+
 /// Výkres přes `HostApi` (příkaz spuštěný tlačítkem).
 pub struct PresHost<'a>(pub &'a mut dyn HostApi);
 

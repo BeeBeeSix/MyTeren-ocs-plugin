@@ -582,6 +582,32 @@ pub fn uloz_s(
 ) -> Result<(Handle, Sestaveny), String> {
     let s = sestav(doc, def, nova)?;
     zajisti_hladiny(v, doc, &s.styly_textu);
+    let mut def_ulozena = def.clone();
+    def_ulozena.otisk = otisk_s(doc, &def_ulozena, nova);
+    def_ulozena.osy = Some([s.osy.od, s.osy.do_, s.osy.srovnavaci, s.osy.horni, s.osy.prevyseni]);
+    let zaznam_pohledu = || {
+        let mut r = ExtendedDataRecord::new(APP);
+        for x in def_ulozena.zapis() {
+            r.add_value(XDataValue::String(x));
+        }
+        r
+    };
+    // existující pohled: obsah bloku i vložení jednou transakcí
+    if let Some(st) = stary {
+        if let Some(EntityType::Insert(staré)) = doc.get_entity(st.insert) {
+            let mut ins = EntityType::Insert(staré.clone());
+            if let EntityType::Insert(i) = &mut ins {
+                i.insert_point = v3(vlozeni);
+            }
+            crate::vykres::nastav_zaznam(&mut ins, zaznam_pohledu());
+            crate::vykres::nastav_zaznam(&mut ins, crate::povrchy::zaznam_tridy("POHLED"));
+            if crate::vykres::prepis_blok(v, doc, &st.blok, s.objekty.clone(), ins, tr("Podélný profil"))? {
+                MA_POHLEDY.store(true, std::sync::atomic::Ordering::SeqCst);
+                v.zmeneno();
+                return Ok((st.insert, s));
+            }
+        }
+    }
     let blok = format!("TRA_POHLED_{}", def.id);
     let docasny = format!("{blok}_NOVY");
     if doc.block_records.iter().any(|b| b.name.eq_ignore_ascii_case(&docasny)) {
@@ -609,15 +635,8 @@ pub fn uloz_s(
     let mut ins = Insert::new(jmeno, v3(vlozeni));
     ins.common.layer = H_POHLED.into();
     let insert = v.pridej_jednu(EntityType::Insert(ins))?;
-    let mut def = def.clone();
-    def.otisk = otisk_s(doc, &def, nova);
-    def.osy = Some([s.osy.od, s.osy.do_, s.osy.srovnavaci, s.osy.horni, s.osy.prevyseni]);
     MA_POHLEDY.store(true, std::sync::atomic::Ordering::SeqCst);
-    let mut r = ExtendedDataRecord::new(APP);
-    for x in def.zapis() {
-        r.add_value(XDataValue::String(x));
-    }
-    if !v.zapis_xdata(insert, r) {
+    if !v.zapis_xdata(insert, zaznam_pohledu()) {
         return Err(tr("nepodařilo se uložit definici pohledu").into());
     }
     v.zapis_xdata(insert, crate::povrchy::zaznam_tridy("POHLED"));

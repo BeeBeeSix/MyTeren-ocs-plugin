@@ -757,7 +757,15 @@ pub fn sparuj(doc: &CadDocument, stare: &[Handle], nove: Vec<EntityType>) -> (Ve
     fn klic(e: &EntityType) -> Option<(std::mem::Discriminant<EntityType>, String)> {
         let ok = match e {
             EntityType::Insert(i) => i.attributes.is_empty(),
-            EntityType::Text(_) | EntityType::Line(_) | EntityType::Circle(_) | EntityType::LwPolyline(_) | EntityType::Point(_) => true,
+            EntityType::Text(_)
+            | EntityType::MText(_)
+            | EntityType::Line(_)
+            | EntityType::Circle(_)
+            | EntityType::Arc(_)
+            | EntityType::LwPolyline(_)
+            | EntityType::Point(_)
+            | EntityType::Hatch(_)
+            | EntityType::Solid(_) => true,
             _ => false,
         };
         ok.then(|| (std::mem::discriminant(e), e.common().layer.to_uppercase()))

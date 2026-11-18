@@ -358,6 +358,26 @@ pub fn uloz(v: &mut dyn Vykres, doc: Option<&CadDocument>, stara: Option<&Objekt
         zajisti_hladiny(v, doc);
     }
 
+    // existující trasa: obsah bloku i vložení jednou transakcí
+    if let (Some(d), Some(s)) = (doc, stara) {
+        if let Some(EntityType::Insert(staré)) = d.get_entity(s.insert) {
+            let mut ins = EntityType::Insert(staré.clone());
+            if let EntityType::Insert(i) = &mut ins {
+                i.insert_point = v3(zaklad);
+            }
+            crate::vykres::nastav_zaznam(&mut ins, zaznam(&def));
+            crate::vykres::nastav_zaznam(&mut ins, zaznam_tridy());
+            if crate::vykres::prepis_blok(v, d, &s.blok, ent.clone(), ins, tr("Úprava trasy"))? {
+                v.zmeneno();
+                if crate::tra::pohled::ma_pohledy() {
+                    let nova = ObjektTrasy { insert: s.insert, blok: s.blok.clone(), def: def.clone(), vlozeni: zaklad, otoceni: 0.0, meritko_jine: false };
+                    crate::tra::pohled::prekresli_zastarale(v, d, Some(&def.id), Some(&nova));
+                }
+                return Ok(s.insert);
+            }
+        }
+    }
+
     let blok = format!("TRA_TRASA_{}", def.id);
     let docasny = format!("{blok}_NOVY");
     if doc.is_none_or(|d| d.block_records.iter().any(|b| b.name.eq_ignore_ascii_case(&docasny))) {
