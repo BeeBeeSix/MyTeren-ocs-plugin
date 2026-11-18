@@ -160,6 +160,11 @@ mod testy {
             let nast = nastaveni_s(&d, &[]);
             let (ent, _, _) = super::super::pohled::kresli(&pk, &d, &nast);
             std::fs::write(slozka.join(format!("{}.svg", s.id)), super::svg(&ent, d.meritko / 1000.0)).unwrap();
+            // varianta bez svislic v pásech (čísla v ose)
+            d.vyjimky.insert("svislice_pasu".into(), "0".into());
+            let nast = nastaveni_s(&d, &[]);
+            let (ent, _, _) = super::super::pohled::kresli(&pk, &d, &nast);
+            std::fs::write(slozka.join(format!("{}_bez_svislic.svg", s.id)), super::svg(&ent, d.meritko / 1000.0)).unwrap();
         }
     }
 }

@@ -187,6 +187,7 @@ pub const SCHEMA: &[Klic] = &[
     Klic { klic: "podbarvit_zahlavi", vychozi: "1", popis: "Podbarvit sloupec záhlaví" },
     Klic { klic: "vypln_terenu", vychozi: "plna", popis: "Plocha pod terénem (plna / zadna)" },
     Klic { klic: "svislice", vychozi: "1", popis: "Svislice z lomových bodů do grafu" },
+    Klic { klic: "svislice_pasu", vychozi: "1", popis: "Svislice v pásech s hodnotami (vypnuto = čísla v ose staničení)" },
     Klic { klic: "legenda", vychozi: "1", popis: "Legenda čar" },
     Klic { klic: "stitek", vychozi: "1", popis: "Měřítko ve štítku" },
     Klic { klic: "sirka_zahlavi", vychozi: "52", popis: "Šířka záhlaví [mm]" },

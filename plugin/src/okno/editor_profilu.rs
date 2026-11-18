@@ -1121,6 +1121,7 @@ impl EditorProfilu {
                 self.nastav(stav, "cary_pasu", x);
             }
         });
+        self.zaskrt(ui, stav, "svislice_pasu", tr("Svislice v pásech s hodnotami"));
         self.zaskrt(ui, stav, "podbarvit_zahlavi", tr("Podbarvit sloupec záhlaví"));
         self.cislo(ui, stav, "sirka_zahlavi", tr("Šířka záhlaví"), 10.0..=150.0, " mm");
         self.cislo(ui, stav, "hustota", tr("Výška pásů ×"), 0.5..=2.0, "");

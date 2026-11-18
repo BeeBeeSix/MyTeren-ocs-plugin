@@ -574,6 +574,7 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
         sirka_zahlavi,
         svislice,
         vykres,
+        svislice_pasu: nast.ano("svislice_pasu"),
         svislice_vykresu: Default::default(),
         fmt,
         procenta: nast.text("sklon") == "procento",
@@ -755,6 +756,8 @@ struct KontextPasu<'a> {
     svislice: bool,
     /// Výkresový režim: záhlaví bez čar, velkými písmeny.
     vykres: bool,
+    /// Svislice v pásech s hodnotami; bez nich jsou čísla v ose staničení.
+    svislice_pasu: bool,
     /// Výkresový režim: místa hodnot (svislice se kreslí souvisle až po pásech).
     svislice_vykresu: std::cell::RefCell<Vec<f64>>,
     fmt: FormatStanice,
@@ -976,6 +979,16 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
                         _ => None,
                     };
                     let Some(t) = hodnota else { continue };
+                    if !k.svislice_pasu {
+                        // bez svislic: číslo přesně v ose staničení (u staničení
+                        // ve výkresovém režimu visí od osy dolů)
+                        if k.vykres && druh == DruhPasu::Staniceni {
+                            ent.push(pero.text(&role, t, [x, y0 - 1.0 * m], TextHorizontalAlignment::Right, TextVerticalAlignment::Middle, std::f64::consts::FRAC_PI_2, H_PASY));
+                        } else {
+                            ent.push(pero.text(&role, t, [x, ym], TextHorizontalAlignment::Center, TextVerticalAlignment::Middle, std::f64::consts::FRAC_PI_2, H_PASY));
+                        }
+                        continue;
+                    }
                     if k.vykres {
                         // výkresový režim: svislice souvisle přes všechny pásy (viz níže),
                         // číslo na střed pásu

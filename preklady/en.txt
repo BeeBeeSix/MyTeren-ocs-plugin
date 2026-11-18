@@ -1803,3 +1803,4 @@ ISOCPEUR, záhlaví velkými písmeny bez rámečků, hodnoty u svislic, textov�
 Moderní	Modern
 Klasický	Classic
 Kompaktní	Compact
+Svislice v pásech s hodnotami	Verticals in value bands
