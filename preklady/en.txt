@@ -1660,3 +1660,22 @@ uloží styl do výkresu a překreslí trasy, které ho používají	saves the s
 vzhled této trasy (styl a výjimky) jako nový styl trasy ve výkrese	this alignment's appearance (style and overrides) as a new alignment style in the drawing
 Žádná trasa tento styl nepoužívá.	No alignment uses this style.
 pohled převezme vzhled i pásy vybraného stylu; vlastní úpravy tohoto pohledu se zruší (vrátí je Ctrl+Z)	the view takes the look and bands of the selected style; this view's own changes are dropped (Ctrl+Z brings them back)
+Terén: přepočet povrchů a profilů hned po každé změně.	Terrain: surfaces and profiles are recalculated right after each change.
+Terén: přepočet povrchů a profilů až po dokončení úprav (po chvíli klidu).	Terrain: surfaces and profiles are recalculated when you finish editing (after a short pause).
+Terén: přepočet povrchů a profilů pozastaven – přepočítáte ho tlačítkem Přepočítat teď.	Terrain: recalculation of surfaces and profiles is paused – use Recalculate now.
+Terén: přepočítávám zastaralé povrchy a profily…	Terrain: recalculating outdated surfaces and profiles…
+Přepočet: po dokončení úprav	Recalculate: when editing is done
+Přepočet: hned po každé změně	Recalculate: right after each change
+Přepočet: pozastavit	Recalculate: pause
+Přepočítat teď	Recalculate now
+Přepočet	Recalculation
+hned	immediately
+po dokončení úprav	when editing is done
+pozastaven	paused
+povrchy nebo profily čekají na přepočet – klik je přepočítá hned	surfaces or profiles are waiting to be recalculated – click to recalculate now
+po dokončení úprav (po chvíli klidu)	when editing is done (after a short pause)
+hned po každé změně	right after each change
+pozastavit	pause
+Kdy se přepočítají povrchy a podélné profily po změně výkresu	When surfaces and longitudinal profiles are recalculated after a drawing change
+čeká na přepočet	waiting for recalculation
+● čeká na přepočet	● waiting for recalculation

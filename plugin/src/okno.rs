@@ -1490,6 +1490,7 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
                         spravce::posli(Akce::VyberZVykresu);
                     }
                     self.aktivni_v_liste(ui, stav, uzke);
+                    self.prepocet_v_liste(ui, uzke);
                 }
                 if stav.pracuji {
                     ui.spinner();
@@ -1498,6 +1499,44 @@ klik = přehled výkresu a postup „Jak na to“", stav.vykres));
         });
         if uzke && self.rezim != Rezim::Pohled3D {
             ui.horizontal(|ui| self.pole_hledani(ui, (ui.available_width() - 40.0).max(100.0)));
+        }
+    }
+
+    /// Režim přepočtu povrchů a profilů v horní liště; když něco čeká,
+    /// tlačítko „Přepočítat“.
+    fn prepocet_v_liste(&mut self, ui: &mut egui::Ui, uzke: bool) {
+        use crate::prepocet::{self, Rezim};
+        let ted = prepocet::rezim();
+        let nazev = |r: Rezim| match r {
+            Rezim::Automaticky => tr("hned"),
+            Rezim::PoDokonceni => tr("po dokončení úprav"),
+            Rezim::Pozastaveno => tr("pozastaven"),
+        };
+        if prepocet::ceka_neco()
+            && ui
+                .add(egui::Button::new(RichText::new(tr("⟳ Přepočítat")).color(ORANZOVA)))
+                .on_hover_text(tr("povrchy nebo profily čekají na přepočet – klik je přepočítá hned"))
+                .clicked()
+        {
+            prepocet::pozadej();
+        }
+        let mut vybrany = ted;
+        egui::ComboBox::from_id_salt("rezim_prepoctu")
+            .selected_text(if ted == Rezim::Pozastaveno { RichText::new(nazev(ted)).color(ORANZOVA) } else { RichText::new(nazev(ted)) })
+            .width(if uzke { 90.0 } else { 140.0 })
+            .show_ui(ui, |ui| {
+                ui.selectable_value(&mut vybrany, Rezim::PoDokonceni, tr("po dokončení úprav (po chvíli klidu)"));
+                ui.selectable_value(&mut vybrany, Rezim::Automaticky, tr("hned po každé změně"));
+                ui.selectable_value(&mut vybrany, Rezim::Pozastaveno, tr("pozastavit"));
+            })
+            .response
+            .on_hover_text(tr("Kdy se přepočítají povrchy a podélné profily po změně výkresu"));
+        if vybrany != ted {
+            prepocet::nastav(vybrany);
+            nastaveni::zmen(|n| n.prepocet = vybrany.klic().into());
+        }
+        if !uzke {
+            ui.label(RichText::new(tr("Přepočet")).color(SEDA));
         }
     }
 

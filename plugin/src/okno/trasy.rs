@@ -353,7 +353,7 @@ impl Okno {
             ui.label(RichText::new(tr("Trasa zatím nemá podélný profil.")).color(SEDA));
         }
         for p in &t.pohledy {
-            let (st, barva) = if p.zastaraly { (tr("zastaralý"), ORANZOVA) } else { (tr("aktuální"), ZELENA) };
+            let (st, barva) = if p.zastaraly { (stitek_zastaraleho(false), ORANZOVA) } else { (tr("aktuální"), ZELENA) };
             let popis = popis_pohledu(p);
             let r = karta::radek_seznamu(ui, &ikona_pohledu(), &nazev_pohledu(p), &popis, st, barva);
             if r.clicked() {
@@ -407,7 +407,7 @@ impl Okno {
             return;
         };
         karta::nadpis_karty(ui, &ikona_pohledu(), &trf!("Podélný profil {}", p.id), |ui| {
-            let (st, barva) = if p.zastaraly { (tr("● zastaralý"), ORANZOVA) } else { (tr("● aktuální"), ZELENA) };
+            let (st, barva) = if p.zastaraly { (stitek_zastaraleho(true), ORANZOVA) } else { (tr("● aktuální"), ZELENA) };
             karta::pilulka(ui, st, barva);
             if stav.vyber_pohledy.contains(&p.id) {
                 karta::pilulka(ui, tr("vybraný ve výkrese"), MODRA);
@@ -517,6 +517,17 @@ fn menu_pohledu(ui: &mut egui::Ui, t: &PrehledTrasy, p: &PrehledPohledu) {
 // ── Editor vzhledu a pásů pohledu a stylu profilu ──────────────────────────
 
 use trasy::pohled::{efektivni, nastaveni_s, DefinicePohledu, StylProfilu};
+
+/// Štítek zastaralého pohledu: při odloženém přepočtu „čeká na přepočet“.
+fn stitek_zastaraleho(tecka: bool) -> &'static str {
+    let ceka = crate::prepocet::rezim() != crate::prepocet::Rezim::Automaticky;
+    match (ceka, tecka) {
+        (true, false) => tr("čeká na přepočet"),
+        (true, true) => tr("● čeká na přepočet"),
+        (false, false) => tr("zastaralý"),
+        (false, true) => tr("● zastaralý"),
+    }
+}
 
 fn jmeno_stylu(styly: &[StylProfilu], id: &str) -> String {
     styly.iter().find(|s| s.id == id).map_or_else(|| id.to_string(), |s| trasy::preklad::tr_dyn(&s.jmeno))

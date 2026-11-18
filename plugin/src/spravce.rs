@@ -687,6 +687,37 @@ impl Pracovnik {
             self.vyhodnot_odlozene();
             self.vyhodnot_vyber();
             self.vyhodnot_zmeny();
+            self.vyhodnot_prepocet();
+        }
+    }
+
+    /// Odložený přepočet povrchů a pohledů (režim „po dokončení úprav“ po
+    /// chvíli klidu, nebo „Přepočítat teď“). Ne během příkazu ani když se
+    /// výkres právě mění.
+    fn vyhodnot_prepocet(&mut self) {
+        if !crate::prepocet::je_cas() {
+            return;
+        }
+        let Some(tab) = Self::aktivni_tab() else { return };
+        if self.bezi(tab) || self.cekajici.contains_key(&tab) || crate::uchopy::TAHNE.load(Ordering::SeqCst) {
+            return;
+        }
+        let Some(mut k) = kanal(tab) else { return };
+        let _povoleno = crate::prepocet::Povoleni::zacni();
+        let Ok(doc) = k.dokument() else { return };
+        let z = self.auto_prepocet(tab, &mut k, &doc);
+        let doc = if z { k.dokument().unwrap_or(doc) } else { doc };
+        let pohledy = crate::tra::pohled::pohledy(&doc);
+        if pohledy.iter().any(|p| crate::tra::pohled::otisk(&doc, &p.def) != p.def.otisk) {
+            k.zacatek_kroku(tr("Přepočet podélného profilu"));
+            let n = crate::tra::pohled::prekresli_zastarale(&mut k, &doc, None, None);
+            k.konec_kroku();
+            if n > 0 {
+                k.info(&trf!("Trasy: přepočítáno pohledů: {}.", n));
+            }
+        }
+        if sdilene().okno_otevreno.load(Ordering::SeqCst) {
+            self.obnov(&mut k);
         }
     }
 
@@ -961,6 +992,11 @@ impl Pracovnik {
         self.ma_auto.insert(tab, vse.iter().any(|z| z.auto));
         let mut zmena = false;
         let zastarale: Vec<_> = vse.into_iter().filter(|z| z.auto && povrchy::zastaraly(doc, z)).collect();
+        // režim „po dokončení úprav“ / pozastaveno: přepočítá se později
+        if !zastarale.is_empty() && !crate::prepocet::smi() {
+            crate::prepocet::odloz();
+            return false;
+        }
         let jediny = zastarale.len() == 1;
         for mut z in zastarale {
             {

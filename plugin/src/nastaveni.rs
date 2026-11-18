@@ -99,6 +99,8 @@ pub struct Nastaveni {
     pub import_priblizit: bool,
     /// Naposledy importované soubory (nejnovější první).
     pub posledni_soubory: Vec<String>,
+    /// Režim přepočtu povrchů a pohledů (klíč `prepocet::Rezim`).
+    pub prepocet: String,
 }
 
 pub const BARVY_3D: [[u8; 3]; 5] = [[240, 220, 60], [90, 200, 255], [150, 80, 30], [240, 165, 60], [15, 15, 15]];
@@ -130,6 +132,7 @@ impl Default for Nastaveni {
             import_duplicity: "preskocit".into(),
             import_priblizit: true,
             posledni_soubory: Vec::new(),
+            prepocet: "po_dokonceni".into(),
         }
     }
 }
@@ -209,6 +212,8 @@ fn nacti() -> Nastaveni {
             "posledni_import" => n.import_posledni = SablonaImportu::precti(v),
             "import_duplicity" => n.import_duplicity = v.to_string(),
             "import_priblizit" => n.import_priblizit = v != "0",
+            // pozastavení se po restartu neobnovuje – zapomenutá pauza by mátla
+            "prepocet" => n.prepocet = if v == "auto" { "auto".into() } else { "po_dokonceni".into() },
             "posledni_soubor" if n.posledni_soubory.len() < POSLEDNICH => n.posledni_soubory.push(v.to_string()),
             "barvy_3d" => {
                 for (i, c) in v.split(';').take(5).enumerate() {
@@ -266,6 +271,8 @@ fn uloz(n: &Nastaveni) {
     text.push_str(&format!("import_duplicity = {}
 import_priblizit = {}
 ", n.import_duplicity, n.import_priblizit as u8)); // i18n:ne
+    text.push_str(&format!("prepocet = {}
+", n.prepocet)); // i18n:ne
     for s in &n.posledni_soubory {
         text.push_str(&format!("posledni_soubor = {}
 ", s)); // i18n:ne

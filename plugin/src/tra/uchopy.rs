@@ -205,6 +205,8 @@ fn uloz_niveletu(host: &mut dyn HostApi, t: &TahNivelety, v: Vec<VrcholNivelety>
     let pary = {
         let mut w = PresHostPrimo(host);
         objekt::uloz_definici(&mut w, t.trasa.insert, &def);
+        // niveleta je vidět jen v pohledu – překreslit hned i při odloženém přepočtu
+        let _hned = crate::prepocet::Vynuceni::zacni();
         let pary = crate::tra::pohled::prekresli_zastarale_h(&mut w, &t.doc, Some(&def.id), Some(&nova));
         w.hotovo();
         pary
@@ -553,7 +555,10 @@ fn spust_obnovu(tab: u64) {
                 // v Terénu, přesun trasy běžným příkazem, Zpět…)
                 if crate::tra::pohled::ma_pohledy() || !crate::tra::pohled::pohledy(&doc).is_empty() {
                     let zastarale = crate::tra::pohled::pohledy(&doc).iter().any(|p| crate::tra::pohled::otisk(&doc, &p.def) != p.def.otisk);
-                    if zastarale {
+                    if zastarale && !crate::prepocet::smi() {
+                        // odložený přepočet – provede ho správce po chvíli klidu
+                        crate::prepocet::odloz();
+                    } else if zastarale {
                         k.zacatek_kroku(tr("Přepočet podélného profilu"));
                         let n = crate::tra::pohled::prekresli_zastarale(&mut k, &doc, None, None);
                         k.konec_kroku();

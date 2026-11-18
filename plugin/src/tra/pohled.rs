@@ -81,11 +81,15 @@ pub fn prekresli_zastarale_h(
 ) -> Vec<(Handle, Handle)> {
     let vse = pohledy(doc);
     MA_POHLEDY.store(!vse.is_empty(), std::sync::atomic::Ordering::SeqCst);
+    let zastarale: Vec<ObjektPohledu> =
+        vse.into_iter().filter(|p| !jen_trasa.is_some_and(|id| id != p.def.trasa) && otisk_s(doc, &p.def, nova) != p.def.otisk).collect();
+    // režim „po dokončení úprav“ / pozastaveno: jen poznamenat, přepočítá se později
+    if !zastarale.is_empty() && !crate::prepocet::smi() {
+        crate::prepocet::odloz();
+        return Vec::new();
+    }
     let mut out = Vec::new();
-    for p in vse {
-        if jen_trasa.is_some_and(|id| id != p.def.trasa) || otisk_s(doc, &p.def, nova) == p.def.otisk {
-            continue;
-        }
+    for p in zastarale {
         match uloz_s(v, doc, Some(&p), &p.def, p.vlozeni, nova) {
             Ok((h, _)) => out.push((p.insert, h)),
             Err(e) => v.chyba(&trf!("Trasy: pohled {}: {}", p.def.id, e)),

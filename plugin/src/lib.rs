@@ -13,6 +13,7 @@ mod nastaveni;
 mod okno;
 mod panel;
 mod povrchy;
+mod prepocet;
 mod sit;
 mod spravce;
 mod styly;
@@ -927,6 +928,7 @@ impl BuiltinPlugin for TerenPlugin {
         Box::new(TerenModule)
     }
     fn on_load(&mut self, host: &mut dyn HostApi) {
+        prepocet::nastav(prepocet::Rezim::z_klice(&nastaveni::akt().prepocet).unwrap_or(prepocet::Rezim::PoDokonceni));
         zaznam_padu();
         if let Some(s) = host.plugin_request_sender() {
             spravce::registruj_kanal(host.tab_id(), s);
@@ -1178,6 +1180,25 @@ impl TerenPlugin {
             "TER_ODEBRAT_BOD" => spust_editaci(host, DruhEditace::OdebratBod),
             "TER_UCHOPY_ZAP" | "TER_UCHOPY_VYP" => {
                 spravce::posli(spravce::Akce::Uchopy(Some(nazev == "TER_UCHOPY_ZAP")));
+            }
+            "TER_PREPOCET_AUTO" | "TER_PREPOCET_PO" | "TER_PREPOCET_PAUZA" => {
+                let r = match nazev.as_str() {
+                    "TER_PREPOCET_AUTO" => prepocet::Rezim::Automaticky,
+                    "TER_PREPOCET_PO" => prepocet::Rezim::PoDokonceni,
+                    _ => prepocet::Rezim::Pozastaveno,
+                };
+                prepocet::nastav(r);
+                nastaveni::zmen(|n| n.prepocet = r.klic().into());
+                host.push_info(match r {
+                    prepocet::Rezim::Automaticky => tr("Terén: přepočet povrchů a profilů hned po každé změně."),
+                    prepocet::Rezim::PoDokonceni => tr("Terén: přepočet povrchů a profilů až po dokončení úprav (po chvíli klidu)."),
+                    prepocet::Rezim::Pozastaveno => tr("Terén: přepočet povrchů a profilů pozastaven – přepočítáte ho tlačítkem Přepočítat teď."),
+                });
+                spravce::posli(spravce::Akce::Obnovit);
+            }
+            "TER_PREPOCET_TED" => {
+                prepocet::pozadej();
+                host.push_info(tr("Terén: přepočítávám zastaralé povrchy a profily…"));
             }
             "TER_POVRCH_KLIK_ZAP" | "TER_POVRCH_KLIK_VYP" => {
                 spravce::posli(spravce::Akce::PovrchyNevybirat(nazev == "TER_POVRCH_KLIK_VYP"));

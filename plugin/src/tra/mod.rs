@@ -85,9 +85,26 @@ pub fn skupiny() -> Vec<RibbonGroup> {
                 RibbonItem::LabeledTool(tool("TRA_NIVELETA_TABULKA", tr("Vrcholy nivelety"), ikona!("tra_vlastnosti"))),
                 RibbonItem::LabeledTool(tool("TRA_NIVELETA_SMAZAT", tr("Smazat vrchol nivelety"), ikona!("tra_smazat"))),
                 RibbonItem::LabeledTool(tool("TRA_PREPOCITAT", tr("Překreslit trasy a profily"), ikona!("tra_prepocitat"))),
+                prepocet_nabidka(),
             ],
         },
     ]
+}
+
+/// Nabídka režimu přepočtu povrchů a profilů. OCS kreslí na tlačítku
+/// naposledy zvolenou položku – výchozí je režim z nastavení.
+fn prepocet_nabidka() -> RibbonItem {
+    let mut items = vec![
+        ("TER_PREPOCET_PO", tr("Přepočet: po dokončení úprav"), ikona!("ter_prepocet_po")),
+        ("TER_PREPOCET_AUTO", tr("Přepočet: hned po každé změně"), ikona!("ter_prepocet_auto")),
+        ("TER_PREPOCET_PAUZA", tr("Přepočet: pozastavit"), ikona!("ter_prepocet_pauza")),
+        ("TER_PREPOCET_TED", tr("Přepočítat teď"), ikona!("tra_prepocitat")),
+    ];
+    if crate::nastaveni::akt().prepocet == "auto" {
+        items.swap(0, 1);
+    }
+    let default = items[0].0;
+    RibbonItem::LabeledDropdown { id: "TER_DD_PREPOCET", label: tr("Přepočet"), icon: ikona!("ter_prepocet_po"), items, default }
 }
 
 // ── Pomocné ─────────────────────────────────────────────────────────────────
@@ -966,6 +983,8 @@ fn niveleta_hotovo(host: &mut dyn HostApi) {
         return v.chyba(tr("Trasy: niveletu se nepodařilo uložit."));
     }
     let nova = ObjektTrasy { def: def.clone(), ..t.clone() };
+    // niveleta je vidět jen v pohledu – překreslit hned i při odloženém přepočtu
+    let _hned = crate::prepocet::Vynuceni::zacni();
     let n = pohled::prekresli_zastarale(&mut v, &doc, Some(&t.def.id), Some(&nova));
     v.hotovo();
     v.info(&trf!("Trasy: niveleta trasy {} uložena ({} vrcholů), překresleno pohledů: {}.", t.def.jmeno, def.nivelety[0].vrcholy.len(), n));
@@ -991,6 +1010,7 @@ fn uloz_niveletu_cmd(
         return Err(tr("niveletu se nepodařilo uložit").into());
     }
     let nova = ObjektTrasy { def, ..t.clone() };
+    let _hned = crate::prepocet::Vynuceni::zacni();
     let n = pohled::prekresli_zastarale(v, doc, Some(&t.def.id), Some(&nova));
     v.hotovo();
     Ok(n)
