@@ -254,3 +254,13 @@ Pohled profilu {} upraven	Profile view {} updated
 Styl profilu	Profile style
 Překresleno tras: {}	Alignments redrawn: {}
 Styl trasy	Alignment style
+Překreslit trasy a profily	Redraw alignments and profiles
+Přepočet	Recalculation
+Přepočet: hned po každé změně	Recalculate: right after each change
+Přepočet: po dokončení úprav	Recalculate: when editing is done
+Přepočet: pozastavit	Recalculate: pause
+Přepočítat teď	Recalculate now
+Vrcholy trasy	Alignment vertices
+Úchopy tras zap/vyp	Alignment grips on/off
+Terén – {}	Terrain – {}
+Bod {} výška {:.2}	Point {} elevation {:.2}

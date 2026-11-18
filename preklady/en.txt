@@ -1679,3 +1679,119 @@ pozastavit	pause
 Kdy se přepočítají povrchy a podélné profily po změně výkresu	When surfaces and longitudinal profiles are recalculated after a drawing change
 čeká na přepočet	waiting for recalculation
 ● čeká na přepočet	● waiting for recalculation
+   přetáhněte sem pás	   drag a band here
+ mm vlastní	 mm custom
+Barva textů	Text colour
+Des. místa	Decimals
+Délky 1:	Lengths 1:
+Formáty	Formats
+Graf	Graph
+Graf, mřížka a stupnice	Graph, grid and scale
+Jen svislice	Verticals only
+Každá role písma se ve výkrese stane textovým stylem TER_PP_… s písmem TrueType. Změna platí pro všechny pásy, které roli používají.	Each text role becomes a TER_PP_… text style with a TrueType font in the drawing. A change applies to all bands that use the role.
+Kde psát hodnoty	Where to write values
+Kurzíva	Italic
+Legenda	Legend
+Legenda vypíše čáry grafu (terén, niveleta, další povrchy) v jejich barvě.	The legend lists the graph lines (terrain, vertical alignment, other surfaces) in their colours.
+Legenda čar	Line legend
+M 1:{} / 1:{} · převýšení {}×	S 1:{} / 1:{} · exaggeration {}×
+Měřítko ve štítku	Scale in the label
+Mřížka a stupnice	Grid and scale
+Na střed	Centre
+Na šířku	Fit width
+Nad grafem	Above the graph
+Nadpis	Title
+Nadpis a měřítko	Title and scale
+Načítám pohled z výkresu…	Loading the view from the drawing…
+Neuložené změny	Unsaved changes
+Nic	Nothing
+Nový pás	New band
+Obsah	Content
+Obě	Both
+Odebrat pás	Remove band
+Papír	Paper
+Po intervalu	By interval
+Pod grafem	Below the graph
+Pod profilem	Below the profile
+Pod terénem	Below the terrain
+Podbarvit pás	Shade the band
+Podbarvit sloupec záhlaví	Shade the header column
+Poloha	Position
+Použít na pohled	Apply to the view
+Pozadí OCS	OCS background
+Pás	Band
+Pásy nad grafem	Bands above the graph
+Pásy pod grafem	Bands below the graph
+Písma	Fonts
+Písmo	Font
+Písmo není v tomto počítači nainstalované – OCS použije náhradní.	The font is not installed on this computer – OCS will use a substitute.
+Převýšení	Exaggeration
+Rámeček	Frame
+Skrýt	Hide
+Skrýt pás (zůstane ve stylu)	Hide band (stays in the style)
+Struktura	Structure
+Styl písma	Font style
+Svislice z lomových bodů do grafu	Verticals from break points into the graph
+Tloušťka	Weight
+Tloušťky čar	Line weights
+Tučné	Bold
+Typ	Type
+Tónování	Tint
+Tři tloušťky pro celý profil; čáry je jen odkazují.	Three weights for the whole profile; lines only refer to them.
+U stylu je měřítko výchozí pro nové pohledy; náhled ho použije.	In a style the scale is the default for new views; the preview uses it.
+Uložit a překreslit	Save and redraw
+Upravujete jen tento pohled: změny nastavení jsou výjimky ze stylu, ostatní pohledy zůstanou beze změny.	You are editing this view only: changes are exceptions to the style, other views stay unchanged.
+Velikost a tvar	Size and shape
+Vlevo	Left
+Vyberte část profilu v náhledu nebo vlevo ve struktuře.	Select a part of the profile in the preview or in the structure on the left.
+Vyberte, co má pás ukazovat	Choose what the band shows
+Vzhled profilu má neuložené změny.	The profile appearance has unsaved changes.
+Vzhled profilu – pohled {}	Profile appearance – view {}
+Vzhled profilu – styl {}	Profile appearance – style {}
+Výšk. stupnice	Elevation scale
+Výška je na papíře – v modelu se násobí měřítkem (1:{} = {} m). Řada pro výkresy: 1,8 · 2,5 · 3,5 · 5 · 7 mm.	Height is on paper – in the model it is multiplied by the scale (1:{} = {} m). Drawing series: 1.8 · 2.5 · 3.5 · 5 · 7 mm.
+Výška pásů ×	Band height ×
+Výšky vycházejí v měřítku 1:{}.	Heights are at scale 1:{}.
+Zahodit	Discard
+Zarovnání	Alignment
+Zavřít	Close
+Znovu	Redo
+Znovu (Ctrl+Y)	Redo (Ctrl+Y)
+Zobrazit legendu pod profilem	Show the legend below the profile
+Zpět (Ctrl+Z)	Undo (Ctrl+Z)
+Zpět do editoru	Back to the editor
+Zástupné texty: {trasa}, {povrch}, {meritko}. Prázdný nadpis se nekreslí.	Placeholders: {trasa} (alignment), {povrch} (surface), {meritko} (scale). An empty title is not drawn.
+bez neuložených změn	no unsaved changes
+hlavní body trasy	main alignment points
+jméno stylu	style name
+klik = výběr · táhni modrý úchyt = výška pásu · kolečko = lupa · pravé tlačítko = posun	click = select · drag the blue handle = band height · wheel = zoom · right button = pan
+lomové body	break points
+minus B	minus B
+pohledů: {}	views: {}
+rozměr {} × {} mm	size {} × {} mm
+vlastní 1:	custom 1:
+vlastní barva	custom colour
+vlastní pásy	custom bands
+výjimky: {}	exceptions: {}
+{} mm – tloušťky změníte v kartě Čáry a barvy.	{} mm – change the weights on the Lines and colours tab.
+Úseky (od – do, text)	Sections (from – to, text)
+Čte z	Reads from
+Čára	Line
+Čáry	Lines
+Čáry a barvy	Lines and colours
+Řez	Section
+Šířka	Width
+Šířka záhlaví	Header width
+„Podle hladiny“ = bílá na obrazovce, černá při tisku.	“By layer” = white on screen, black when printed.
+• neuložené změny	• unsaved changes
+Upravit styl…	Edit style…
+Upravit vzhled…	Edit appearance…
+otevře editor stylu s živým náhledem	opens the style editor with a live preview
+otevře editor stylu – změna platí pro všechny pohledy se stylem	opens the style editor – a change applies to all views with the style
+otevře editor vzhledu s živým náhledem – jen tento pohled	opens the appearance editor with a live preview – this view only
+vzhled	appearance
+výchozí měřítko	default scale
+Přepočet podélného profilu	Longitudinal profile recalculation
+Trasy: přepočítáno pohledů: {}.	Alignments: views recalculated: {}.
+pohled {} už ve výkrese není	view {} is no longer in the drawing
+výkres je na přenos do Terénu příliš velký (asi {} MB, Open CAD Studio přenese nejvýš 64 MB) – rozdělte body do více výkresů nebo zmenšete povrch	the drawing is too large to transfer to Terrain (about {} MB, Open CAD Studio transfers at most 64 MB) – split the points into several drawings or make the surface smaller
