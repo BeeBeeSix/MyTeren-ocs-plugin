@@ -238,6 +238,7 @@ impl DefinicePohledu {
             d.styl = sid.to_string();
             d.pasy = if sada.is_empty() { vychozi_sada() } else { sada_sablony(sada) };
             d.pasy_ze_stylu = true;
+            d.prevyseni = 1.0;
         }
         d
     }
@@ -286,7 +287,8 @@ impl StylProfilu {
                     hodnoty,
                     pasy: if sada.is_empty() { vychozi_sada() } else { sada_sablony(sada) },
                     meritko: 1000.0,
-                    prevyseni: 10.0,
+                    // jako ruční výkresy: výšky ve stejném měřítku jako délky
+                    prevyseni: 1.0,
                 }
             })
             .collect()
