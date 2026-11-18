@@ -430,7 +430,9 @@ impl Okno {
             }
             karta::kpi(ui, &format!("1:{}", cz(p.meritko, 0)), tr("měřítko délek"));
             karta::kpi(ui, &format!("{}×", cz(p.prevyseni, 0)), tr("převýšení"));
-            karta::kpi(ui, &czi(p.pasu), tr("pásů"));
+            // pásy podle stylu (p.pasu je jen záloha uložená v pohledu)
+            let pasu = efektivni(&p.def, &stav.styly_profilu).pasy.iter().filter(|x| !x.skryty).count();
+            karta::kpi(ui, &czi(pasu), tr("pásů"));
         });
         ui.add_space(6.0);
         ui.horizontal_wrapped(|ui| {
@@ -580,6 +582,45 @@ impl Okno {
                     nova.vyjimky.insert("povrch_upraveny".into(), u);
                 }
                 nova.pasy_ze_stylu = true;
+                spravce::posli(Akce::PohledUpravit(p.insert, Box::new(nova)));
+            }
+        });
+        // měřítko délek a převýšení
+        ui.horizontal(|ui| {
+            const MERITKA: [f64; 8] = [100.0, 200.0, 250.0, 500.0, 1000.0, 2000.0, 2500.0, 5000.0];
+            const PREVYSENI: [f64; 7] = [1.0, 2.0, 2.5, 5.0, 10.0, 20.0, 50.0];
+            let mut meritko = p.def.meritko;
+            let mut prevyseni = p.def.prevyseni;
+            ui.label(tr("Měřítko 1:"));
+            egui::ComboBox::from_id_salt(("meritko_pohledu", p.id.as_str()))
+                .selected_text(cz(meritko, 0))
+                .width(70.0)
+                .show_ui(ui, |ui| {
+                    for m in MERITKA {
+                        ui.selectable_value(&mut meritko, m, cz(m, 0));
+                    }
+                });
+            ui.add(egui::DragValue::new(&mut meritko).range(10.0..=100_000.0).speed(0.0).max_decimals(0))
+                .on_hover_text(tr("vlastní měřítko délek"));
+            ui.add_space(10.0);
+            ui.label(tr("Převýšení"));
+            egui::ComboBox::from_id_salt(("prevyseni_pohledu", p.id.as_str()))
+                .selected_text(format!("{}×", cz(prevyseni, 1)))
+                .width(60.0)
+                .show_ui(ui, |ui| {
+                    for v in PREVYSENI {
+                        ui.selectable_value(&mut prevyseni, v, format!("{}×", cz(v, 1)));
+                    }
+                });
+            ui.add(egui::DragValue::new(&mut prevyseni).range(0.1..=200.0).speed(0.0).max_decimals(1).suffix("×"))
+                .on_hover_text(tr("vlastní převýšení (měřítko výšek = měřítko délek / převýšení)"));
+            ui.label(RichText::new(trf!("výšky 1:{}", cz(meritko / prevyseni.max(0.1), 0))).color(SEDA));
+            // ulož jen hotovou změnu (ne každý krok tažení hodnoty)
+            let zmena = (meritko - p.def.meritko).abs() > 1e-9 || (prevyseni - p.def.prevyseni).abs() > 1e-9;
+            if zmena && !ui.ctx().input(|i| i.pointer.any_down()) {
+                let mut nova = p.def.clone();
+                nova.meritko = meritko;
+                nova.prevyseni = prevyseni;
                 spravce::posli(Akce::PohledUpravit(p.insert, Box::new(nova)));
             }
         });
