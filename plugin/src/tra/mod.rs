@@ -8,6 +8,8 @@
 pub mod editor;
 pub mod objekt;
 pub mod pohled;
+#[cfg(test)]
+mod pohled_svg;
 pub mod povrchy;
 pub mod prikazy;
 pub mod prospektor;

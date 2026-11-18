@@ -1116,7 +1116,7 @@ impl EditorProfilu {
         pole(ui, tr("Čáry pásů"), |ui| {
             let akt = self.hodnota(stav, "cary_pasu");
             let mut v = None;
-            segment(ui, &[("svislice", tr("Jen svislice")), ("ramecek", tr("Rámeček"))], &akt, |x| v = Some(x));
+            segment(ui, &[("svislice", tr("Jen svislice")), ("ramecek", tr("Rámeček")), ("vykres", tr("Výkresové"))], &akt, |x| v = Some(x));
             if let Some(x) = v {
                 self.nastav(stav, "cary_pasu", x);
             }
@@ -1807,13 +1807,14 @@ fn nazev_zdroje(z: &Zdroj, povrchy: &[(String, String)]) -> String {
     match z {
         Zdroj::Teren => tr("Povrch pohledu").to_string(),
         Zdroj::Niveleta => tr("Niveleta").to_string(),
+        Zdroj::Upraveny => tr("Upravený terén").to_string(),
         Zdroj::Povrch(id) => povrchy.iter().find(|p| p.0 == *id).map_or_else(|| id.clone(), |p| p.1.clone()),
     }
 }
 
 fn vyber_zdroje(ui: &mut egui::Ui, salt: (&str, usize), z: &mut Zdroj, povrchy: &[(String, String)]) {
     egui::ComboBox::from_id_salt(salt).selected_text(nazev_zdroje(z, povrchy)).width(ui.available_width()).show_ui(ui, |ui| {
-        let mut moznosti = vec![Zdroj::Teren, Zdroj::Niveleta];
+        let mut moznosti = vec![Zdroj::Teren, Zdroj::Upraveny, Zdroj::Niveleta];
         moznosti.extend(povrchy.iter().map(|p| Zdroj::Povrch(p.0.clone())));
         for m in moznosti {
             let n = nazev_zdroje(&m, povrchy);
@@ -1887,6 +1888,7 @@ pub fn ukazkove_podklady() -> Podklady {
         dalsi: vec![("NAVRH".into(), vec![jiny])],
         povrchy: vec![("TEREN".into(), "Stávající terén".into()), ("NAVRH".into(), "Zaměření 2019".into())],
         niveleta: Some(niveleta),
+        upraveny: Some("NAVRH".into()),
         od: 0.0,
         do_: l,
         zmin,

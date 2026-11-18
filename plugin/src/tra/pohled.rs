@@ -60,7 +60,30 @@ pub fn otisk_s(doc: &CadDocument, def: &DefinicePohledu, nova: Option<&objekt::O
     let p = p.map_or("-".to_string(), |p| format!("{:X}@{:.3},{:.3}", p.insert.value(), p.vlozeni[0], p.vlozeni[1]));
     // styl profilu: jeho změna překreslí všechny pohledy, které ho používají
     let s = crate::styly::styly_profilu(doc).into_iter().find(|s| s.id == def.styl).map_or("-".to_string(), |s| s.otisk());
-    format!("{t};{p};{s}")
+    // další povrchy, ze kterých pásy čtou (upravený terén…) – jen když nějaké jsou,
+    // ať se otisk starších pohledů nemění
+    let vse = povrchy::povrchy(doc);
+    let mut dalsi: Vec<String> = Vec::new();
+    for pas in &def.pasy {
+        for z in [&pas.zdroj, &pas.zdroj2] {
+            let id = match z {
+                Zdroj::Povrch(id) => Some(id.clone()),
+                Zdroj::Upraveny => upraveny_povrch(&vse, def),
+                _ => None,
+            };
+            if let Some(x) = id.and_then(|id| vse.iter().find(|p| p.id == id)) {
+                let o = format!("{:X}", x.insert.value());
+                if !dalsi.contains(&o) {
+                    dalsi.push(o);
+                }
+            }
+        }
+    }
+    if dalsi.is_empty() {
+        format!("{t};{p};{s}")
+    } else {
+        format!("{t};{p};{s};{}", dalsi.join(","))
+    }
 }
 
 /// Překreslí pohledy, jejichž trasa nebo povrch se od posledního kreslení
@@ -158,11 +181,49 @@ pub struct Podklady {
     /// Jména povrchů výkresu (id, jméno) – pro legendu a editor.
     pub povrchy: Vec<(String, String)>,
     pub niveleta: Option<trasy::niveleta::Niveleta>,
+    /// Id povrchu „upravený terén“ (pásy se zdrojem `Zdroj::Upraveny`).
+    pub upraveny: Option<String>,
     pub od: f64,
     pub do_: f64,
     pub zmin: f64,
     pub zmax: f64,
     pub trojuhelniku: usize,
+}
+
+/// Velká písmena kromě jednotek v hranatých závorkách („Staničení [m]“ →
+/// „STANIČENÍ [m]“, „Sklon [‰]“ → „SKLON [‰]“).
+pub fn velka_mimo_jednotky(t: &str) -> String {
+    let mut v = String::with_capacity(t.len());
+    let mut v_zavorce = false;
+    for c in t.chars() {
+        match c {
+            '[' => v_zavorce = true,
+            ']' => v_zavorce = false,
+            _ => {}
+        }
+        if v_zavorce {
+            v.push(c);
+        } else {
+            v.extend(c.to_uppercase());
+        }
+    }
+    v
+}
+
+/// Povrch „upravený terén“ pohledu: nastavený (`povrch_upraveny`), jinak
+/// první další povrch, přednostně se jménem „upravený“ / „návrh“.
+fn upraveny_povrch(vse: &[povrchy::PovrchTerenu], def: &DefinicePohledu) -> Option<String> {
+    if let Some(id) = def.vyjimky.get("povrch_upraveny").filter(|id| !id.trim().is_empty()) {
+        if vse.iter().any(|p| p.id == *id) {
+            return Some(id.clone());
+        }
+    }
+    let jine: Vec<_> = vse.iter().filter(|p| p.id != def.povrch).collect();
+    let jmeno = |p: &&&povrchy::PovrchTerenu| {
+        let j = p.jmeno.to_lowercase();
+        ["uprav", "návrh", "navrh", "design"].iter().any(|x| j.contains(x))
+    };
+    jine.iter().find(jmeno).or(jine.first()).map(|p| p.id.clone())
 }
 
 /// Načte z výkresu, co pohled potřebuje. `vsechny` = profily všech povrchů
@@ -194,11 +255,14 @@ pub fn podklady(doc: &CadDocument, def: &DefinicePohledu, nova: Option<&objekt::
             }
         }
     }
+    let upraveny = upraveny_povrch(&vse, def);
     let mut chci: Vec<String> = Vec::new();
     for p in &def.pasy {
         for z in [&p.zdroj, &p.zdroj2] {
-            if let Zdroj::Povrch(id) = z {
-                chci.push(id.clone());
+            match z {
+                Zdroj::Povrch(id) => chci.push(id.clone()),
+                Zdroj::Upraveny => chci.extend(upraveny.clone()),
+                _ => {}
             }
         }
     }
@@ -220,6 +284,7 @@ pub fn podklady(doc: &CadDocument, def: &DefinicePohledu, nova: Option<&objekt::
         useky,
         dalsi,
         povrchy: vse.iter().map(|p| (p.id.clone(), p.jmeno.clone())).collect(),
+        upraveny,
         niveleta,
         od,
         do_,
@@ -353,11 +418,31 @@ impl Pero<'_> {
 
 /// Nakreslí pohled z podkladů: objekty, rozvržení (pro editor) a osy.
 pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<EntityType>, Rozvrzeni, Osy) {
+    // pásy s „upraveným terénem“ čtou z konkrétního povrchu
+    let def_upr;
+    let def = if def.pasy.iter().any(|p| p.zdroj == Zdroj::Upraveny || p.zdroj2 == Zdroj::Upraveny) {
+        let mut d = def.clone();
+        for p in &mut d.pasy {
+            for z in [&mut p.zdroj, &mut p.zdroj2] {
+                if *z == Zdroj::Upraveny {
+                    if let Some(id) = &pk.upraveny {
+                        *z = Zdroj::Povrch(id.clone());
+                    }
+                }
+            }
+        }
+        def_upr = d;
+        &def_upr
+    } else {
+        def
+    };
     let osy = Osy::rozvrhni(pk.od, pk.do_, pk.zmin, pk.zmax, def);
     let vz = Vzhled::z(nast);
     let m = def.meritko / 1000.0;
     let pero = Pero { vz: &vz, m };
-    let svislice = nast.text("cary_pasu") == "svislice";
+    // výkresový režim: záhlaví bez rámečků, hodnoty u svislic (jinak jako „jen svislice“)
+    let vykres = nast.text("cary_pasu") == "vykres";
+    let svislice = nast.text("cary_pasu") == "svislice" || vykres;
     let fmt = FormatStanice::z_kodu(nast.text("staniceni"));
     let sablona = nast.text("sablona").to_string();
     let hg = pero.vyska("graf");
@@ -424,7 +509,11 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
     }
     // srovnávací rovina
     let sr = trf!("S.R. {} m n. m.", cislo(osy.srovnavaci, 2, true));
-    if pasy_vid.is_empty() {
+    if vykres && !pasy_vid.is_empty() {
+        // záhlaví „SROVNÁVACÍ ROVINA“ a hodnota nad osou na začátku grafu
+        ent.push(pero.text("zahlavi", tr("Srovnávací rovina").to_uppercase(), [-sirka_zahlavi + 2.0 * m, 0.8 * m], TextHorizontalAlignment::Left, TextVerticalAlignment::Bottom, 0.0, H_PASY));
+        ent.push(pero.text("hodnota", trf!("{} m n. m.", cislo(osy.srovnavaci, 2, true)), [0.8 * m, 0.8 * m], TextHorizontalAlignment::Left, TextVerticalAlignment::Bottom, 0.0, H_PASY));
+    } else if pasy_vid.is_empty() {
         ent.push(pero.text("legenda", sr, [0.0, -2.0 * hg], TextHorizontalAlignment::Left, TextVerticalAlignment::Top, 0.0, H_POPIS));
     } else {
         ent.push(pero.text("legenda", sr, [-sirka_zahlavi + 0.8 * hg, 0.6 * hg], TextHorizontalAlignment::Left, TextVerticalAlignment::Bottom, 0.0, H_POPIS));
@@ -484,6 +573,7 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
         pero: &pero,
         sirka_zahlavi,
         svislice,
+        vykres,
         fmt,
         procenta: nast.text("sklon") == "procento",
         lomy_z_nivelety,
@@ -662,6 +752,8 @@ struct KontextPasu<'a> {
     sirka_zahlavi: f64,
     /// Jen svislice (bez rámečků a vodorovných čar u hodnotových pásů).
     svislice: bool,
+    /// Výkresový režim: záhlaví bez čar, velkými písmeny.
+    vykres: bool,
     fmt: FormatStanice,
     procenta: bool,
     /// Lomové body = vrcholy nivelety (šachty, profily toku).
@@ -703,7 +795,7 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
             Zdroj::Teren => Some(k.useky),
             Zdroj::Povrch(id) if *id == k.def.povrch => Some(k.useky),
             Zdroj::Povrch(id) => k.dalsi.iter().find(|x| x.0 == *id).map(|x| &x.1[..]),
-            Zdroj::Niveleta => None,
+            Zdroj::Niveleta | Zdroj::Upraveny => None,
         }
     };
     let vyska = |z: &Zdroj, s: f64| -> Option<f64> {
@@ -741,7 +833,9 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
             ent.extend(pero.obdelnik(0.0, y1, w, y0, Some([128, 128, 128]), 0.9, H_PASY));
         }
         // záhlaví a rámeček řádku (jen v režimu s rámečky)
-        if !k.svislice {
+        if k.vykres {
+            // výkresový režim: záhlaví bez čar
+        } else if !k.svislice {
             for (a, b) in [
                 ([-k.sirka_zahlavi, y0], [w, y0]),
                 ([-k.sirka_zahlavi, y1], [w, y1]),
@@ -757,6 +851,11 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
             cara(ent, [0.0, y0], [0.0, y1]);
         }
         let zahlavi = if pas.nazev.trim().is_empty() { tr(pas.druh.nazev()).to_string() } else { pas.nazev.clone() };
+        let zahlavi = if k.vykres { velka_mimo_jednotky(&zahlavi) } else { zahlavi };
+        // výkresový režim: osa staničení
+        if k.vykres && pas.druh == DruhPasu::Staniceni {
+            cara(ent, [0.0, y0], [w, y0]);
+        }
         ent.push(pero.text("zahlavi", zahlavi, [-k.sirka_zahlavi + 2.0 * m, ym], TextHorizontalAlignment::Left, TextVerticalAlignment::Middle, 0.0, H_PASY));
         let text_useku = |ent: &mut Vec<EntityType>, a: f64, b: f64, t: String, stred: bool| {
             let (x, z) = if stred { ((a + b) / 2.0, TextHorizontalAlignment::Center) } else { (a + 1.5 * m, TextHorizontalAlignment::Left) };
@@ -864,6 +963,11 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
                     cara(ent, [x, y0], [x, y1]);
                     // svislý text vlevo od čáry (u začátku napravo – vlevo je záhlaví)
                     let dx = if x < 1.5 * ht { 1.25 * ht } else { -0.3 * ht };
+                    if k.vykres && druh == DruhPasu::Staniceni {
+                        // výkresový režim: staničení visí dolů od osy
+                        ent.push(pero.text(&role, t, [x + dx, y0 - 1.0 * m], TextHorizontalAlignment::Right, TextVerticalAlignment::Bottom, std::f64::consts::FRAC_PI_2, H_PASY));
+                        continue;
+                    }
                     ent.push(pero.text(&role, t, [x + dx, y1 + 1.2 * m], TextHorizontalAlignment::Left, TextVerticalAlignment::Bottom, std::f64::consts::FRAC_PI_2, H_PASY));
                 }
             }
@@ -877,7 +981,7 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
     let mezera = 4.0 * m;
     let vyska_nad = if nad.is_empty() { 0.0 } else { nad.iter().map(|(_, p)| vyska_pasu(p)).sum::<f64>() + mezera };
     let mut y0 = osy.vyska() + vyska_nad;
-    if !nad.is_empty() {
+    if !nad.is_empty() && !k.vykres {
         cara(&mut ent, [-k.sirka_zahlavi, y0], [w, y0]);
     }
     for (i, p) in nad {
@@ -887,7 +991,7 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
         y0 = y1;
     }
     let mut y0 = 0.0;
-    if !pod.is_empty() {
+    if !pod.is_empty() && !k.vykres {
         cara(&mut ent, [-k.sirka_zahlavi, 0.0], [0.0, 0.0]);
     }
     for (i, p) in pod {
@@ -896,8 +1000,18 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
         rozvrzeni.pasy.push((i, y0, y1));
         y0 = y1;
     }
-    if y0 < 0.0 && k.svislice {
+    if y0 < 0.0 && k.svislice && !k.vykres {
         cara(&mut ent, [0.0, y0], [w, y0]);
     }
     (ent, vyska_nad, rozvrzeni)
+}
+
+#[cfg(test)]
+mod testy {
+    #[test]
+    fn velka_pismena_bez_jednotek() {
+        assert_eq!(super::velka_mimo_jednotky("Staničení [m]"), "STANIČENÍ [m]");
+        assert_eq!(super::velka_mimo_jednotky("Profil [mm] – materiál – délka [m]"), "PROFIL [mm] – MATERIÁL – DÉLKA [m]");
+        assert_eq!(super::velka_mimo_jednotky("Kóta terénu"), "KÓTA TERÉNU");
+    }
 }

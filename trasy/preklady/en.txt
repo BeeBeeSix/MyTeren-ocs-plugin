@@ -264,3 +264,12 @@ Vrcholy trasy	Alignment vertices
 Úchopy tras zap/vyp	Alignment grips on/off
 Terén – {}	Terrain – {}
 Bod {} výška {:.2}	Point {} elevation {:.2}
+Srovnávací rovina	Datum
+{} m n. m.	{} m a.s.l.
+Jednoduchý – terén a pozemky	Simple – ground and land
+Kóta upraveného terénu	Modified ground level
+Kóta původního terénu	Original ground level
+Druh pozemku	Land type
+Staničení [m]	Chainage [m]
+Profil [mm] – materiál – délka [m]	Size [mm] – material – length [m]
+Podélný profil: {trasa}	Longitudinal profile: {trasa}

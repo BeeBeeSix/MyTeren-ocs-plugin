@@ -573,11 +573,45 @@ impl Okno {
             if vybrany != d.styl {
                 let mut nova = p.def.clone();
                 nova.styl = vybrany;
+                // vlastní úpravy pohledu se zruší, volba upraveného terénu zůstane
+                let upr = nova.vyjimky.get("povrch_upraveny").cloned();
                 nova.vyjimky.clear();
+                if let Some(u) = upr {
+                    nova.vyjimky.insert("povrch_upraveny".into(), u);
+                }
                 nova.pasy_ze_stylu = true;
                 spravce::posli(Akce::PohledUpravit(p.insert, Box::new(nova)));
             }
         });
+        // povrch „upravený terén“ (pásy a čára upraveného terénu)
+        if stav.povrchy.len() > 1 {
+            ui.horizontal(|ui| {
+                ui.label(tr("Upravený terén"));
+                let akt = p.def.vyjimky.get("povrch_upraveny").cloned().unwrap_or_default();
+                let jmeno = |id: &str| stav.povrchy.iter().find(|x| x.id == id).map_or_else(|| tr("automaticky").to_string(), |x| x.jmeno.clone());
+                let mut vybrany = akt.clone();
+                egui::ComboBox::from_id_salt(("upraveny_teren", p.id.as_str()))
+                    .selected_text(jmeno(&akt))
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(&mut vybrany, String::new(), tr("automaticky"));
+                        for x in stav.povrchy.iter().filter(|x| x.id != p.def.povrch) {
+                            ui.selectable_value(&mut vybrany, x.id.clone(), &x.jmeno);
+                        }
+                    })
+                    .response
+                    .on_hover_text(tr("povrch pro pásy a čáru „upravený terén“; automaticky = první další povrch (přednostně se jménem upravený / návrh)"));
+                if vybrany != akt {
+                    let mut nova = p.def.clone();
+                    if vybrany.is_empty() {
+                        nova.vyjimky.remove("povrch_upraveny");
+                    } else {
+                        nova.vyjimky.insert("povrch_upraveny".into(), vybrany);
+                    }
+                    spravce::posli(Akce::PohledUpravit(p.insert, Box::new(nova)));
+                }
+            });
+        }
         ui.horizontal_wrapped(|ui| {
             karta::kpi(ui, &nazev_predlohy(&d, styly), tr("vzhled"));
             karta::kpi(ui, &czi(d.pasy.iter().filter(|x| !x.skryty).count()), tr("pásů"));

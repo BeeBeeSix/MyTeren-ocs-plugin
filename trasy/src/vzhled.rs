@@ -140,10 +140,11 @@ impl Cara {
 }
 
 /// Předlohy vzhledu (mění písma, čáry a graf; pásy nechají).
-pub const PREDLOHY: [(&str, &str, &str); 3] = [
+pub const PREDLOHY: [(&str, &str, &str); 4] = [
     ("moderni", "Moderní", "písmo Bahnschrift, jen svislice, podbarvené záhlaví, tónovaný terén"),
     ("klasicky", "Klasický", "Arial, rámečky pásů, mřížka a stupnice na obou stranách"),
     ("kompaktni", "Kompaktní", "úzké písmo, nižší pásy, bez stupnice"),
+    ("vykresovy", "Výkresový", "ISOCPEUR, záhlaví velkými písmeny bez rámečků, hodnoty u svislic, textové pásy v buňkách"),
 ];
 
 /// Hodnoty klíčů, které předloha nastaví.
@@ -171,6 +172,34 @@ pub fn predloha(id: &str) -> Vec<(&'static str, &'static str)> {
             ("stitek", "0"),
             ("svislice", "0"),
             ("hustota", "1"),
+        ][..],
+        "vykresovy" => &[
+            ("predloha", "vykresovy"),
+            ("p.nadpis", "ISOCPEUR;3.5;1;0;0;#e00000"),
+            ("p.zahlavi", "ISOCPEUR;2.5;1;0;0;"),
+            ("p.hodnota", "ISOCPEUR;2.5;1;0;0;"),
+            ("p.usek", "ISOCPEUR;2.5;1;0;0;"),
+            ("p.graf", "ISOCPEUR;2.5;1;0;0;"),
+            ("p.legenda", "ISOCPEUR;2.5;1;0;0;"),
+            ("tl.tenka", "0.13"),
+            ("tl.stredni", "0.25"),
+            ("tl.silna", "0.5"),
+            ("c.teren", "#2fb82f;stredni"),
+            ("c.povrchy", "#e040e0;stredni"),
+            ("c.niveleta", "#ff2020;silna"),
+            ("c.pasy", "#000000;tenka"),
+            ("c.mrizka", "#000000;tenka"),
+            ("cary_pasu", "vykres"),
+            ("mrizka", "0"),
+            ("ram", "0"),
+            ("stupnice", "skryt"),
+            ("podbarvit_zahlavi", "0"),
+            ("vypln_terenu", "zadna"),
+            ("legenda", "1"),
+            ("stitek", "0"),
+            ("svislice", "1"),
+            ("hustota", "1"),
+            ("sirka_zahlavi", "75"),
         ][..],
         "kompaktni" => &[
             ("predloha", "kompaktni"),

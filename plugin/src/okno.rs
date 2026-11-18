@@ -24,7 +24,7 @@ use crate::povrchy::{cislo_cz, DruhPolozky, TypObjektu, HRANY, INTERVALY, TYPY_O
 #[cfg(feature = "ukazka")]
 mod foto;
 mod editor_profilu;
-#[cfg(feature = "ukazka")]
+#[cfg(any(feature = "ukazka", test))]
 pub use editor_profilu::ukazkove_podklady;
 mod import_nahled;
 #[doc(hidden)]

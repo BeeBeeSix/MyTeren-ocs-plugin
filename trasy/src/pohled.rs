@@ -192,11 +192,13 @@ pub const SCHEMA: &[Klic] = &[
     Klic { klic: "sirka_zahlavi", vychozi: "52", popis: "Šířka záhlaví [mm]" },
     Klic { klic: "hustota", vychozi: "1", popis: "Násobek výšky pásů" },
     Klic { klic: "nadpis", vychozi: "Podélný profil – {trasa}", popis: "Nadpis ({trasa}, {povrch}, {meritko})" },
+    Klic { klic: "povrch_upraveny", vychozi: "", popis: "Upravený terén – id povrchu (prázdné = automaticky)" },
 ];
 
 /// Šablony podle oboru: id stylu, český název, kód sady pásů.
-pub const SABLONY: [(&str, &str, &str); 4] = [
+pub const SABLONY: [(&str, &str, &str); 5] = [
     ("ZAKLAD", "Základní", ""),
+    ("JEDNODUCHY", "Jednoduchý – terén a pozemky", "jednoduchy"),
     ("OBECNA", "Obecná – stávající a upravený terén", "obecna"),
     ("KANALIZACE", "Vodovod a kanalizace", "kanalizace"),
     ("TOK", "Vodní toky", "tok"),
@@ -208,6 +210,12 @@ pub fn styly_vestavene() -> Vec<Styl> {
     let mut v = vec![Styl::novy("ZAKLAD", "Základní")];
     for (id, nazev, sada) in &SABLONY[1..] {
         let mut h: Vec<(&str, &str)> = cisty.to_vec();
+        // výkresový vzhled (jako ruční podélné profily)
+        if matches!(*sada, "jednoduchy" | "kanalizace") {
+            h.extend(crate::vzhled::predloha("vykresovy").into_iter().filter(|(k, _)| !k.is_empty()));
+            h.push(("nadpis", "Podélný profil: {trasa}"));
+            h.push(("staniceni", "m"));
+        }
         h.push(("sablona", sada));
         v.push(Styl::odvozeny(id, nazev, "ZAKLAD", &h));
     }
@@ -466,7 +474,9 @@ mod testy {
         assert_eq!(k.styl, "KANALIZACE");
         assert!(k.pasy.iter().any(|p| p.zahlavi() == "Kóta dna potrubí"));
         let n = nastaveni(&k);
-        assert_eq!((n.text("cary_pasu"), n.text("stupnice"), n.ano("ram")), ("svislice", "skryt", false));
+        // kanalizace má výkresový vzhled
+        assert_eq!((n.text("cary_pasu"), n.text("stupnice"), n.ano("ram")), ("vykres", "skryt", false));
+        assert_eq!(n.text("predloha"), "vykresovy");
         k.vyjimky.insert("stupnice".into(), "vlevo".into());
         assert_eq!(nastaveni(&k).text("stupnice"), "vlevo");
         let r = k.zapis();
