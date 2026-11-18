@@ -523,20 +523,6 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
     let lomy_z_nivelety = matches!(sablona.as_str(), "kanalizace" | "tok");
     let lomy_spolecne: Vec<f64> =
         if lomy_z_nivelety && !lomy_niv.is_empty() { lomy_niv.clone() } else { lomy_profilu(&pk.useky).into_iter().chain(lomy_niv.iter().copied()).collect() };
-    if vz.svislice && !pasy_vid.is_empty() {
-        let mut hotove: Vec<f64> = Vec::new();
-        for &s in &lomy_spolecne {
-            if s < osy.od - 1e-6 || s > osy.do_ + 1e-6 || hotove.iter().any(|h| (h - s).abs() < 1e-3) {
-                continue;
-            }
-            hotove.push(s);
-            let z = [vyska_v(&pk.useky, s), pk.niveleta.as_ref().and_then(|n| n.vyska(s))].into_iter().flatten().fold(f64::NAN, f64::max);
-            if z.is_finite() {
-                let y = (z - osy.srovnavaci) * osy.prevyseni;
-                ent.push(pero.cara([s - osy.od, 0.0], [s - osy.od, y], "mrizka", H_MRIZKA));
-            }
-        }
-    }
     // profily dalších povrchů, ze kterých pásy čtou
     for (id, u) in &pk.dalsi {
         if !pasy_vid.iter().any(|p| p.zdroj == Zdroj::Povrch(id.clone()) || p.zdroj2 == Zdroj::Povrch(id.clone())) {
@@ -582,6 +568,25 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
         lomy_spolecne: &lomy_spolecne,
     };
     let (pasy_ent, vyska_nad, mut rozvrzeni) = pasy(&kontext);
+    // svislice v grafu: v místech, kde pásy zapsaly hodnoty (bez pásů v lomech)
+    if vz.svislice && !pasy_vid.is_empty() {
+        let mut mista: Vec<f64> = kontext.svislice_vykresu.borrow().iter().map(|x| x + osy.od).collect();
+        if mista.is_empty() {
+            mista = lomy_spolecne.clone();
+        }
+        mista.sort_by(|a, b| a.total_cmp(b));
+        mista.dedup_by(|a, b| (*a - *b).abs() < 1e-6);
+        for s in mista {
+            if s < osy.od - 1e-6 || s > osy.do_ + 1e-6 {
+                continue;
+            }
+            let z = [vyska_v(&pk.useky, s), pk.niveleta.as_ref().and_then(|n| n.vyska(s))].into_iter().flatten().fold(f64::NAN, f64::max);
+            if z.is_finite() {
+                let y = (z - osy.srovnavaci) * osy.prevyseni;
+                ent.push(pero.cara([s - osy.od, 0.0], [s - osy.od, y], "mrizka", H_MRIZKA));
+            }
+        }
+    }
     ent.extend(pasy_ent);
     rozvrzeni.graf = [0.0, 0.0, w, v];
     rozvrzeni.vlevo = -sirka_zahlavi;
@@ -758,7 +763,8 @@ struct KontextPasu<'a> {
     vykres: bool,
     /// Svislice v pásech s hodnotami; bez nich jsou čísla v ose staničení.
     svislice_pasu: bool,
-    /// Výkresový režim: místa hodnot (svislice se kreslí souvisle až po pásech).
+    /// Místa zapsaných hodnot (svislice v grafu; ve výkresovém režimu i souvislé
+    /// svislice přes pásy).
     svislice_vykresu: std::cell::RefCell<Vec<f64>>,
     fmt: FormatStanice,
     procenta: bool,
@@ -979,6 +985,7 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
                         _ => None,
                     };
                     let Some(t) = hodnota else { continue };
+                    k.svislice_vykresu.borrow_mut().push(x);
                     if !k.svislice_pasu {
                         // bez svislic: číslo přesně v ose staničení (u staničení
                         // ve výkresovém režimu visí od osy dolů)
@@ -992,7 +999,6 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
                     if k.vykres {
                         // výkresový režim: svislice souvisle přes všechny pásy (viz níže),
                         // číslo na střed pásu
-                        k.svislice_vykresu.borrow_mut().push(x);
                         let dx = if x < 1.5 * ht { 1.25 * ht } else { -0.3 * ht };
                         if druh == DruhPasu::Staniceni {
                             ent.push(pero.text(&role, t, [x + dx, y0 - 1.0 * m], TextHorizontalAlignment::Right, TextVerticalAlignment::Bottom, std::f64::consts::FRAC_PI_2, H_PASY));
@@ -1045,7 +1051,7 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
         }
         y0 = y1;
     }
-    if k.vykres {
+    if k.vykres && k.svislice_pasu {
         let mut xs = k.svislice_vykresu.borrow().clone();
         xs.sort_by(|a, b| a.total_cmp(b));
         xs.dedup_by(|a, b| (*a - *b).abs() < 1e-6);

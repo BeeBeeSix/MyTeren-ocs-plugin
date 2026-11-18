@@ -191,6 +191,8 @@ pub fn predloha(id: &str) -> Vec<(&'static str, &'static str)> {
             ("c.pasy", ";tenka"),
             ("c.mrizka", ";tenka"),
             ("cary_pasu", "vykres"),
+            // čísla v ose staničení, svislice jen v grafu
+            ("svislice_pasu", "0"),
             ("mrizka", "0"),
             ("ram", "0"),
             ("stupnice", "skryt"),
