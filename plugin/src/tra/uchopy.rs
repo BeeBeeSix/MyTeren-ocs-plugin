@@ -87,7 +87,10 @@ pub fn uchopy_pohledu(p: &ObjektPohledu, t: &ObjektTrasy) -> Vec<PluginGrip> {
     let mut out = Vec::new();
     let mut grip = |id: u64, bod: Option<[f64; 3]>, osa: Option<[f64; 3]>, tvar: PluginGripShape| {
         if let Some(point) = bod {
-            out.push(PluginGrip { grip_id: id, anchor: Some(p.insert), point, axis: osa, shape: tvar, xy_plane: false });
+            // Vlastník úchopu = trasa, ne pohled: OCS při tahu vyřadí z uchopování
+            // vlastníka a s pohledem by vyřadil i terén – nešlo by se ho chytit.
+            // (Pohled se pozná z čísla úchopu.)
+            out.push(PluginGrip { grip_id: id, anchor: Some(t.insert), point, axis: osa, shape: tvar, xy_plane: false });
         }
     };
     for (i, v) in n.vrcholy.iter().enumerate() {
