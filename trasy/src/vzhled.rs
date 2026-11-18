@@ -187,8 +187,9 @@ pub fn predloha(id: &str) -> Vec<(&'static str, &'static str)> {
             ("c.teren", "#2fb82f;stredni"),
             ("c.povrchy", "#e040e0;stredni"),
             ("c.niveleta", "#ff2020;silna"),
-            ("c.pasy", "#000000;tenka"),
-            ("c.mrizka", "#000000;tenka"),
+            // podle hladiny: bílé na obrazovce, černé při tisku
+            ("c.pasy", ";tenka"),
+            ("c.mrizka", ";tenka"),
             ("cary_pasu", "vykres"),
             ("mrizka", "0"),
             ("ram", "0"),

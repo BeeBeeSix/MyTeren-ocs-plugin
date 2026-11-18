@@ -574,6 +574,7 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
         sirka_zahlavi,
         svislice,
         vykres,
+        svislice_vykresu: Default::default(),
         fmt,
         procenta: nast.text("sklon") == "procento",
         lomy_z_nivelety,
@@ -754,6 +755,8 @@ struct KontextPasu<'a> {
     svislice: bool,
     /// Výkresový režim: záhlaví bez čar, velkými písmeny.
     vykres: bool,
+    /// Výkresový režim: místa hodnot (svislice se kreslí souvisle až po pásech).
+    svislice_vykresu: std::cell::RefCell<Vec<f64>>,
     fmt: FormatStanice,
     procenta: bool,
     /// Lomové body = vrcholy nivelety (šachty, profily toku).
@@ -938,7 +941,19 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
                     _ => k.lomy_spolecne.to_vec(),
                 };
                 // rozestup ≈ výška svislého textu, ať se hodnoty nepřekrývají
-                for s in mista_bez_kolizi(pas, osy.od, osy.do_, &lomy, &body, 1.4 * ht) {
+                let mut mista = mista_bez_kolizi(pas, osy.od, osy.do_, &lomy, &body, 1.4 * ht);
+                if k.vykres {
+                    // výkresový režim: z míst těsně u sebe jen první (texty se nepřepisují)
+                    let mut posledni = f64::NEG_INFINITY;
+                    mista.retain(|&s| {
+                        let ok = s - posledni >= 1.4 * ht;
+                        if ok {
+                            posledni = s;
+                        }
+                        ok
+                    });
+                }
+                for s in mista {
                     let x = s - osy.od;
                     let hodnota = match druh {
                         DruhPasu::Staniceni => {
@@ -960,14 +975,21 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
                         _ => None,
                     };
                     let Some(t) = hodnota else { continue };
+                    if k.vykres {
+                        // výkresový režim: svislice souvisle přes všechny pásy (viz níže),
+                        // číslo na střed pásu
+                        k.svislice_vykresu.borrow_mut().push(x);
+                        let dx = if x < 1.5 * ht { 1.25 * ht } else { -0.3 * ht };
+                        if druh == DruhPasu::Staniceni {
+                            ent.push(pero.text(&role, t, [x + dx, y0 - 1.0 * m], TextHorizontalAlignment::Right, TextVerticalAlignment::Bottom, std::f64::consts::FRAC_PI_2, H_PASY));
+                        } else {
+                            ent.push(pero.text(&role, t, [x + dx, ym], TextHorizontalAlignment::Center, TextVerticalAlignment::Bottom, std::f64::consts::FRAC_PI_2, H_PASY));
+                        }
+                        continue;
+                    }
                     cara(ent, [x, y0], [x, y1]);
                     // svislý text vlevo od čáry (u začátku napravo – vlevo je záhlaví)
                     let dx = if x < 1.5 * ht { 1.25 * ht } else { -0.3 * ht };
-                    if k.vykres && druh == DruhPasu::Staniceni {
-                        // výkresový režim: staničení visí dolů od osy
-                        ent.push(pero.text(&role, t, [x + dx, y0 - 1.0 * m], TextHorizontalAlignment::Right, TextVerticalAlignment::Bottom, std::f64::consts::FRAC_PI_2, H_PASY));
-                        continue;
-                    }
                     ent.push(pero.text(&role, t, [x + dx, y1 + 1.2 * m], TextHorizontalAlignment::Left, TextVerticalAlignment::Bottom, std::f64::consts::FRAC_PI_2, H_PASY));
                 }
             }
@@ -994,11 +1016,28 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
     if !pod.is_empty() && !k.vykres {
         cara(&mut ent, [-k.sirka_zahlavi, 0.0], [0.0, 0.0]);
     }
+    // výkresový režim: konec souvislých svislic = spodek posledního hodnotového
+    // pásu, který navazuje na graf (staničení včetně)
+    let mut konec_svislic = 0.0;
+    let mut navazuje = true;
     for (i, p) in pod {
         let y1 = y0 - vyska_pasu(p);
         kresli(&mut ent, p, y0, y1);
         rozvrzeni.pasy.push((i, y0, y1));
+        if navazuje && p.druh.hodnotovy() {
+            konec_svislic = y1;
+        } else {
+            navazuje = false;
+        }
         y0 = y1;
+    }
+    if k.vykres {
+        let mut xs = k.svislice_vykresu.borrow().clone();
+        xs.sort_by(|a, b| a.total_cmp(b));
+        xs.dedup_by(|a, b| (*a - *b).abs() < 1e-6);
+        for x in xs {
+            cara(&mut ent, [x, 0.0], [x, konec_svislic]);
+        }
     }
     if y0 < 0.0 && k.svislice && !k.vykres {
         cara(&mut ent, [0.0, y0], [w, y0]);
