@@ -85,6 +85,12 @@ pub trait Vykres {
     }
     fn konec_kroku(&mut self) {}
     fn hotovo(&mut self);
+    /// Jako [`Vykres::hotovo`], ale bez překreslení celého výkresu – pro změny
+    /// objektů v modelu (vložení, smazání, transakce), které OCS překreslí sám.
+    /// Překreslení celého výkresu je potřeba jen po změně definic bloků.
+    fn zmeneno(&mut self) {
+        self.hotovo()
+    }
     fn pridej(&mut self, e: Vec<EntityType>) -> Result<Vec<Handle>, String>;
     fn pridej_jednu(&mut self, e: EntityType) -> Result<Handle, String>;
     fn uprav(&mut self, e: EntityType) -> bool;
@@ -405,6 +411,9 @@ impl Vykres for PresKanal {
     }
     fn hotovo(&mut self) {
         let _ = self.pozadavek(PluginRequest::BumpGeometry);
+        let _ = self.pozadavek(PluginRequest::SetDirty);
+    }
+    fn zmeneno(&mut self) {
         let _ = self.pozadavek(PluginRequest::SetDirty);
     }
     fn pridej(&mut self, e: Vec<EntityType>) -> Result<Vec<Handle>, String> {

@@ -924,7 +924,7 @@ impl Pracovnik {
             videno.extend(otisk);
             k.zpet(tr("Posun bodu"));
             match cogo::proved_posuny(k, &doc, &posuny) {
-                Ok(_) => k.hotovo(),
+                Ok(_) => k.zmeneno(),
                 Err(e) => k.chyba(&trf!("Terén: posun bodu: {}", e)),
             }
             k.konec_kroku();
@@ -949,7 +949,7 @@ impl Pracovnik {
         if let Err(e) = cogo::oprav_nesoulad(k, &doc, &n) {
             k.chyba(&trf!("Terén: popisy bodů: {}", e));
         }
-        k.hotovo();
+        k.zmeneno();
         k.konec_kroku();
         true
     }

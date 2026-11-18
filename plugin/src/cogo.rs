@@ -714,7 +714,6 @@ pub fn nesoulad(doc: &CadDocument, m: f64) -> Nesoulad {
 pub fn oprav_nesoulad(v: &mut dyn Vykres, doc: &CadDocument, n: &Nesoulad) -> Result<(), String> {
     let m = crate::nastaveni::meritko(doc);
     let ro = Rozlisovac::new(doc);
-    smaz_objekty(v, n.navic.clone());
     let polozky: Vec<(Bod, StylBodu)> = n.chybi.iter().map(|b| (b.bod.clone(), ro.styl_bodu(b))).collect();
     let rucni = rucni_posuny(&n.chybi.iter().collect::<Vec<_>>());
     let ostatni: Vec<[f64; 2]> = body(doc).iter().map(|b| [b.bod.x, b.bod.y]).collect();
@@ -722,9 +721,81 @@ pub fn oprav_nesoulad(v: &mut dyn Vykres, doc: &CadDocument, n: &Nesoulad) -> Re
     let nove = grafika_rozmistena_r(&polozky, &rucni, &ostatni, m);
     if !nove.is_empty() {
         priprav_vykres_s(v, doc)?;
+    }
+    nahrad_grafiku(v, doc, tr("Popisy bodů"), Vec::new(), &n.navic, nove)
+}
+
+/// Nahradí starou grafiku novou s co nejmenším počtem požadavků: nové objekty
+/// převezmou handle starých stejného druhu a hladiny a spolu s `upravy`
+/// (body) se zapíšou jednou transakcí. Zbytek se smaže nebo vloží. Když
+/// transakci OCS odmítne, jde se postaru (smazat vše, vložit vše).
+fn nahrad_grafiku(v: &mut dyn Vykres, doc: &CadDocument, popis: &str, upravy: Vec<EntityType>, stare: &[Handle], nove: Vec<EntityType>) -> Result<(), String> {
+    let (sparovane, pridat, smazat) = sparuj(doc, stare, nove.clone());
+    let n_upravy = upravy.len();
+    let mut vse = upravy;
+    vse.extend(sparovane);
+    let body_zvlast: Vec<EntityType> = vse[..n_upravy].to_vec();
+    if v.transakce(popis, vse).is_ok() {
+        smaz_objekty(v, smazat);
+        if !pridat.is_empty() {
+            v.pridej(pridat)?;
+        }
+        return Ok(());
+    }
+    v.transakce(popis, body_zvlast)?;
+    smaz_objekty(v, stare.to_vec());
+    if !nove.is_empty() {
         v.pridej(nove)?;
     }
     Ok(())
+}
+
+/// Spáruje nové objekty se starými stejného druhu a hladiny: spárovaný nový
+/// objekt dostane handle (a vlastníka) starého. Vrací (spárované, k vložení,
+/// ke smazání). Bloky s atributy se nepárují.
+pub fn sparuj(doc: &CadDocument, stare: &[Handle], nove: Vec<EntityType>) -> (Vec<EntityType>, Vec<EntityType>, Vec<Handle>) {
+    fn klic(e: &EntityType) -> Option<(std::mem::Discriminant<EntityType>, String)> {
+        let ok = match e {
+            EntityType::Insert(i) => i.attributes.is_empty(),
+            EntityType::Text(_) | EntityType::Line(_) | EntityType::Circle(_) | EntityType::LwPolyline(_) | EntityType::Point(_) => true,
+            _ => false,
+        };
+        ok.then(|| (std::mem::discriminant(e), e.common().layer.to_uppercase()))
+    }
+    let mut volne: HashMap<_, Vec<&EntityType>> = HashMap::new();
+    let mut nesparovatelne = Vec::new();
+    for h in stare {
+        match doc.get_entity(*h) {
+            Some(e) => match klic(e) {
+                Some(k) => volne.entry(k).or_default().push(e),
+                None => nesparovatelne.push(*h),
+            },
+            None => {}
+        }
+    }
+    // od konce – pop() pak bere staré v původním pořadí
+    volne.values_mut().for_each(|v| v.reverse());
+    let mut sparovane = Vec::new();
+    let mut pridat = Vec::new();
+    for mut e in nove {
+        let stary = klic(&e).and_then(|k| volne.get_mut(&k)).and_then(|v| v.pop());
+        match stary {
+            Some(s) => {
+                e.common_mut().handle = s.common().handle;
+                e.common_mut().owner_handle = s.common().owner_handle;
+                if let (EntityType::Insert(n), EntityType::Insert(o)) = (&mut e, s) {
+                    n.seqend_handle = o.seqend_handle;
+                }
+                sparovane.push(e);
+            }
+            None => pridat.push(e),
+        }
+    }
+    let mut smazat = nesparovatelne;
+    for v in volne.into_values() {
+        smazat.extend(v.into_iter().map(|e| e.common().handle));
+    }
+    (sparovane, pridat, smazat)
 }
 
 /// Posunutá grafika bodu: bod, nová poloha bodu, nový ruční posun popisu.
@@ -911,9 +982,8 @@ pub fn uprav_body(v: &mut dyn Vykres, doc: &CadDocument, zmeny: &[ZmenaBodu], po
     let ro = Rozlisovac::new(doc);
     let ent: Vec<EntityType> = zmeny.iter().filter_map(|(bv, b, st)| upraveny_bod(doc, bv, b, st)).collect();
     let n = ent.len();
-    v.transakce(popis, ent)?;
     let polohy: Vec<[f64; 2]> = zmeny.iter().map(|(bv, ..)| [bv.bod.x, bv.bod.y]).collect();
-    smaz_objekty(v, grafika_bodu(doc, &polohy));
+    let stare = grafika_bodu(doc, &polohy);
     let polozky: Vec<(Bod, StylBodu)> = zmeny.iter().map(|(bv, b, st)| (b.clone(), ro.styl(b, &bv.zdroj, st))).collect();
     let rucni = rucni_posuny(&zmeny.iter().map(|(bv, ..)| bv).collect::<Vec<_>>());
     let ostatni: Vec<[f64; 2]> = body(doc)
@@ -925,8 +995,8 @@ pub fn uprav_body(v: &mut dyn Vykres, doc: &CadDocument, zmeny: &[ZmenaBodu], po
     let nove = grafika_rozmistena_r(&polozky, &rucni, &ostatni, m);
     if !nove.is_empty() {
         priprav_vykres_s(v, doc)?;
-        v.pridej(nove)?;
     }
+    nahrad_grafiku(v, doc, popis, ent, &stare, nove)?;
     Ok(n)
 }
 
@@ -1351,6 +1421,172 @@ mod testy_posunu {
         // druhý bod drží svou grafiku – nic se nemaže kromě posunuté kopie
         assert!(n.chybi.len() <= 1);
         assert_eq!(body(&doc).iter().filter(|b| b.bod.cislo == "6").count(), 2);
+    }
+
+    /// Výkres v paměti: provádí zápisy jako OCS a počítá požadavky.
+    struct Pamet {
+        doc: CadDocument,
+        pozadavky: usize,
+        smazano: usize,
+        transakci: usize,
+        zamitnout_transakci: bool,
+    }
+
+    impl Vykres for Pamet {
+        fn dokument(&mut self) -> Result<CadDocument, String> {
+            self.pozadavky += 1;
+            Ok(self.doc.clone())
+        }
+        fn info(&mut self, _: &str) {}
+        fn vystup(&mut self, _: &str) {}
+        fn chyba(&mut self, _: &str) {}
+        fn zpet(&mut self, _: &str) {
+            self.pozadavky += 1;
+        }
+        fn hotovo(&mut self) {
+            self.pozadavky += 2;
+        }
+        fn zmeneno(&mut self) {
+            self.pozadavky += 1;
+        }
+        fn pridej(&mut self, e: Vec<EntityType>) -> Result<Vec<Handle>, String> {
+            self.pozadavky += 1;
+            e.into_iter().map(|mut x| {
+                x.common_mut().handle = Handle::new(0);
+                self.doc.add_entity(x).map_err(|e| e.to_string())
+            }).collect()
+        }
+        fn pridej_jednu(&mut self, e: EntityType) -> Result<Handle, String> {
+            self.pridej(vec![e]).map(|h| h[0])
+        }
+        fn uprav(&mut self, e: EntityType) -> bool {
+            self.transakce("x", vec![e]).is_ok()
+        }
+        fn odeber(&mut self, h: Handle) -> bool {
+            self.pozadavky += 1;
+            self.smazano += 1;
+            self.doc.remove_entity(h).is_some()
+        }
+        fn zapis_xdata(&mut self, _: Handle, _: ExtendedDataRecord) -> bool {
+            self.pozadavky += 1;
+            true
+        }
+        fn tabulka(&mut self, op: ocs_plugin_api::host::TableOperation) -> Result<Handle, String> {
+            self.pozadavky += 1;
+            if let ocs_plugin_api::host::TableOperation::BlockCreate { entities, name, .. } = op {
+                // dočasný blok = hromadné smazání (bloky značek se nepočítají)
+                let kos = name.starts_with("TER_KOS_");
+                for h in entities {
+                    self.smazano += kos as usize;
+                    self.doc.remove_entity(h);
+                }
+            }
+            Ok(Handle::new(1))
+        }
+        fn hladina(&mut self, _: LayerConfig) {
+            self.pozadavky += 1;
+        }
+        fn prikaz(&mut self, _: &str) -> bool {
+            self.pozadavky += 1;
+            true
+        }
+        fn vyber(&mut self, _: Vec<Handle>) {}
+        fn vybrane(&mut self) -> Vec<Handle> {
+            Vec::new()
+        }
+        fn transakce(&mut self, _: &str, e: Vec<EntityType>) -> Result<(), String> {
+            if e.is_empty() {
+                return Ok(());
+            }
+            self.pozadavky += 1;
+            self.transakci += 1;
+            if self.zamitnout_transakci && e.len() > 1 {
+                return Err("odmítnuto".into());
+            }
+            // stejné kontroly jako OCS: objekt existuje, nemění druh ani vlastníka
+            for x in &e {
+                let h = x.common().handle;
+                let s = self.doc.get_entity(h).ok_or("neexistuje")?;
+                if std::mem::discriminant(s) != std::mem::discriminant(x) || s.common().owner_handle != x.common().owner_handle {
+                    return Err("mění druh nebo vlastníka".into());
+                }
+            }
+            for x in e {
+                let h = x.common().handle;
+                *self.doc.get_entity_mut(h).unwrap() = x;
+            }
+            Ok(())
+        }
+        fn jen_zobrazeni(&mut self, _: Handle, _: bool) -> bool {
+            true
+        }
+    }
+
+    /// Pomocné body, které `priprav_vykres_s` vloží a smaže kvůli registraci XDATA.
+    fn pomocne(doc: &CadDocument) -> usize {
+        [APP_BOD, APP_POVRCH].iter().filter(|a| !doc.app_ids.iter().any(|x| x.name.eq_ignore_ascii_case(a))).count()
+    }
+
+    fn pamet(doc: CadDocument) -> Pamet {
+        Pamet { doc, pozadavky: 0, smazano: 0, transakci: 0, zamitnout_transakci: false }
+    }
+
+    /// Posun značky MOVE (bod i grafika) a oprava popisů: grafika na novém
+    /// místě, stejné handle, pár požadavků.
+    fn oprav_po_posunu(zamitnout: bool) -> (Pamet, Vec<Handle>) {
+        let mut doc = vykres(6);
+        let vybrane = bod_a_grafika(&doc, "15");
+        presun(&mut doc, &vybrane, 1.5, 0.6);
+        let n = nesoulad(&doc, 500.0);
+        assert!(!n.je_prazdny());
+        let mut v = pamet(doc.clone());
+        v.zamitnout_transakci = zamitnout;
+        oprav_nesoulad(&mut v, &doc, &n).unwrap();
+        (v, vybrane)
+    }
+
+    #[test]
+    fn oprava_popisu_jednou_transakci() {
+        let (v, vybrane) = oprav_po_posunu(false);
+        assert!(nesoulad(&v.doc, 500.0).je_prazdny());
+        // popisy převzaly handle; značku test kreslí kružnicí a oprava blokem
+        // (jiný druh objektu), ta se vymění – v OCS jsou obě bloky
+        let g: Vec<Handle> = vsechna_grafika(&v.doc);
+        let pred = vykres(6);
+        for h in &vybrane[1..] {
+            if matches!(pred.get_entity(*h), Some(EntityType::Text(_))) {
+                assert!(g.contains(h), "handle {h:?} zmizel");
+            }
+        }
+        assert_eq!(v.smazano, 1 + pomocne(&pred), "smazat jen kružnici");
+        assert_eq!(v.transakci, 1);
+    }
+
+    #[test]
+    fn oprava_popisu_postaru_kdyz_ocs_odmitne() {
+        let (v, _) = oprav_po_posunu(true);
+        assert!(nesoulad(&v.doc, 500.0).je_prazdny());
+    }
+
+    #[test]
+    fn uprava_bodu_jednou_transakci() {
+        let doc = vykres(6);
+        let b = body(&doc).into_iter().find(|b| b.bod.cislo == "15").unwrap();
+        let grafika = grafika_bodu(&doc, &[[b.bod.x, b.bod.y]]);
+        let mut novy = b.bod.clone();
+        novy.x += 1.5;
+        novy.popis = "PATA".into();
+        let styl = b.styl.clone();
+        let mut v = pamet(doc.clone());
+        uprav_body(&mut v, &doc, &[(b.clone(), novy.clone(), styl)], "Úprava bodu").unwrap();
+        assert!(nesoulad(&v.doc, 500.0).je_prazdny());
+        let po = body(&v.doc).into_iter().find(|x| x.handle == b.handle).unwrap();
+        assert!((po.bod.x - novy.x).abs() < 1e-9);
+        assert_eq!(po.bod.popis, "PATA");
+        let g = vsechna_grafika(&v.doc);
+        assert!(grafika.iter().filter(|h| matches!(doc.get_entity(**h), Some(EntityType::Text(_)))).all(|h| g.contains(h)));
+        assert_eq!(v.smazano, 1 + pomocne(&doc), "smazat jen kružnici");
+        assert_eq!(v.transakci, 1, "bod i grafika jednou transakcí");
     }
 }
 
