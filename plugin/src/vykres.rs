@@ -162,13 +162,28 @@ pub fn prepis_blok(v: &mut dyn Vykres, doc: &CadDocument, blok: &str, nove: Vec<
     Ok(true)
 }
 
+/// Název požadavku pro ladicí záznam – jen začátek výpisu (celý výpis
+/// vkládání tisíců objektů by měl desítky MB a zkreslil by měření).
+fn nazev_pozadavku(r: &PluginRequest) -> String {
+    struct Zacatek(String);
+    impl std::fmt::Write for Zacatek {
+        fn write_str(&mut self, s: &str) -> std::fmt::Result {
+            self.0.push_str(s);
+            if self.0.len() > 48 { Err(std::fmt::Error) } else { Ok(()) }
+        }
+    }
+    let mut z = Zacatek(String::new());
+    let _ = std::fmt::write(&mut z, format_args!("{r:?}"));
+    z.0.chars().take_while(|c| c.is_alphanumeric()).collect()
+}
+
 /// Řádek do ladicího záznamu (proměnná prostředí `TEREN_LADENI` = soubor).
 pub fn ladeni(zprava: &str) {
     if let Some(soubor) = std::env::var_os("TEREN_LADENI") {
         if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(soubor) {
             use std::io::Write;
             let t = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0.0, |d| d.as_secs_f64());
-            let _ = writeln!(f, "{t:.3} # {zprava}");
+            let _ = f.write_all(format!("{t:.3} # {zprava}\n").as_bytes());
         }
     }
 }
@@ -356,18 +371,18 @@ impl PresKanal {
             pockej_na_konec_prikazu();
         }
         if let Some(soubor) = std::env::var_os("TEREN_LADENI") {
-            let nazev = format!("{r:?}");
-            let nazev: String = nazev.chars().take_while(|c| c.is_alphanumeric()).collect();
+            let nazev = nazev_pozadavku(&r);
             let t = std::time::Instant::now();
             let v = self.0.request(r);
             if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(soubor) {
                 use std::io::Write;
-                let _ = writeln!(
-                    f,
-                    "{:.3} {nazev} {} ms",
+                // celý řádek jedním zápisem – záznam píše víc vláken naráz
+                let radek = format!(
+                    "{:.3} {nazev} {} ms\n",
                     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map_or(0.0, |d| d.as_secs_f64()),
                     t.elapsed().as_millis()
                 );
+                let _ = f.write_all(radek.as_bytes());
             }
             return match v {
                 Ok(PluginResponse::Error(e)) => Err(e),
