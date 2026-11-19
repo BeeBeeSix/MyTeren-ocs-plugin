@@ -66,7 +66,7 @@ impl DefinicePohledu {
             do_: None,
             srovnavaci: None,
             meritko: 1000.0,
-            prevyseni: 10.0,
+            prevyseni: 1.0,
             styl: "ZAKLAD".into(),
             vyjimky: BTreeMap::new(),
             otisk: String::new(),
@@ -538,7 +538,8 @@ mod testy {
 
     #[test]
     fn rozvrzeni() {
-        let d = DefinicePohledu::novy("P1", "T1", "S"); // 1:1000, převýšení 10
+        let mut d = DefinicePohledu::novy("P1", "T1", "S");
+        d.prevyseni = 10.0; // 1:1000, převýšení 10
         let o = Osy::rozvrhni(0.0, 330.0, 246.3, 251.8, &d);
         assert_eq!(o.krok_z, 1.0);
         assert_eq!(o.krok_s, 20.0);

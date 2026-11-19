@@ -857,7 +857,7 @@ fn pohled_cmd(host: &mut dyn HostApi) {
         .with_control(DialogControl::Number {
             id: "prevyseni".into(),
             label: tr("Převýšení (výšky ×)").into(),
-            default: 10.0,
+            default: 1.0,
             min: Some(1.0),
             max: Some(100.0),
             step: Some(1.0),
@@ -906,7 +906,7 @@ fn pohled_vloz_cmd(host: &mut dyn HostApi, arg: &str) {
     *POSLEDNI_SABLONA.lock().unwrap_or_else(|e| e.into_inner()) = styl.id.clone();
     let mut def = trasy::pohled::DefinicePohledu::podle_stylu(&id, trasa, povrch, &styl);
     def.meritko = cislo_z("meritko").filter(|x| *x >= 10.0).unwrap_or(1000.0);
-    def.prevyseni = cislo_z("prevyseni").unwrap_or(10.0).max(0.5);
+    def.prevyseni = cislo_z("prevyseni").unwrap_or(1.0).max(0.5);
     def.srovnavaci = cislo_z("srovnavaci").filter(|x| *x != 0.0);
     v.zpet(tr("Podélný profil"));
     match pohled::uloz(&mut v, &doc, None, &def, bod) {
