@@ -61,8 +61,14 @@ python nastroje/rozbor_mereni.py rozbor znacky.txt C:\cesta\zaznam.log
 
 ## Minulá měření
 
-| Úprava | 17. 11. 2026 | 18. 11. 2026 |
+| Úprava | 17. 11. 2026 | 18.–19. 11. 2026 |
 |---|---|---|
 | Posun bodu (malý výkres) | 19 požadavků, 7× stažení výkresu | 9 požadavků, zápis 4 |
 | Pohled profilu (přepis) | ~12 požadavků | 2 (transakce + SetDirty) |
-| 20 000 bodů, nový povrch | chyba 74 MB, pak pád | viz kontrolní seznam |
+| Import 5 000 bodů | 24 stažení výkresu | 26 požadavků, 11 stažení, hotovo za 7,9 s |
+| Nový povrch, 5 000 bodů | 2,3 s | 3,2 s (zápisy jdou přímo, záznam vidí jen stažení) |
+| 20 000 bodů, nový povrch | chyba 74 MB, pak pád | povrch hotový (40 846 troj.), plugin reaguje; další příkazy odmítne s hláškou o velikosti (~63 MB) |
+
+Poznámka: u výkresu nad 32 MB stojí kontrola velikosti před každým stažením
+několik sekund (sdílená paměť OCS). Trvalé řešení: čtení jen potřebných
+objektů a povrch po dlaždicích (krok 11 plánu).
