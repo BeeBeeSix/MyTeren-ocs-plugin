@@ -1809,13 +1809,14 @@ fn nazev_zdroje(z: &Zdroj, povrchy: &[(String, String)]) -> String {
         Zdroj::Teren => tr("Povrch pohledu").to_string(),
         Zdroj::Niveleta => tr("Niveleta").to_string(),
         Zdroj::Upraveny => tr("Upravený terén").to_string(),
+        Zdroj::Potrubi => tr("Potrubí (zatím bez dat)").to_string(),
         Zdroj::Povrch(id) => povrchy.iter().find(|p| p.0 == *id).map_or_else(|| id.clone(), |p| p.1.clone()),
     }
 }
 
 fn vyber_zdroje(ui: &mut egui::Ui, salt: (&str, usize), z: &mut Zdroj, povrchy: &[(String, String)]) {
     egui::ComboBox::from_id_salt(salt).selected_text(nazev_zdroje(z, povrchy)).width(ui.available_width()).show_ui(ui, |ui| {
-        let mut moznosti = vec![Zdroj::Teren, Zdroj::Upraveny, Zdroj::Niveleta];
+        let mut moznosti = vec![Zdroj::Teren, Zdroj::Upraveny, Zdroj::Niveleta, Zdroj::Potrubi];
         moznosti.extend(povrchy.iter().map(|p| Zdroj::Povrch(p.0.clone())));
         for m in moznosti {
             let n = nazev_zdroje(&m, povrchy);

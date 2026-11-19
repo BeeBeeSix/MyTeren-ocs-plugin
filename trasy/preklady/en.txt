@@ -273,3 +273,14 @@ Druh pozemku	Land type
 Staničení [m]	Chainage [m]
 Profil [mm] – materiál – délka [m]	Size [mm] – material – length [m]
 Podélný profil: {trasa}	Longitudinal profile: {trasa}
+Terén a výkop	Ground and excavation
+Upravený terén	Modified ground
+Výkop (+) / násyp (−) [m]	Cut (+) / fill (−) [m]
+Osa potrubí	Pipe axis
+Hloubka výkopu	Trench depth
+Kóta výkopu	Trench bottom level
+Krytí potrubí	Pipe cover
+Hloubka dna potrubí	Pipe invert depth
+Označení šachet	Manhole labels
+Kapacitní průtok [l/s] – rychlost [m/s]	Capacity [l/s] – velocity [m/s]
+Uložení	Bedding

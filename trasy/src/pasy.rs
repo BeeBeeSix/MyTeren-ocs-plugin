@@ -93,6 +93,9 @@ pub enum Zdroj {
     /// Upravený terén: povrch nastavený u pohledu (`povrch_upraveny`),
     /// bez nastavení první další povrch ve výkrese.
     Upraveny,
+    /// Potrubí – zatím bez dat (pásy kanalizace jsou připravené, hodnoty
+    /// doplní objekty potrubí).
+    Potrubi,
 }
 
 impl Zdroj {
@@ -101,6 +104,7 @@ impl Zdroj {
             Zdroj::Teren => "teren".into(),
             Zdroj::Niveleta => "niveleta".into(),
             Zdroj::Upraveny => "upraveny".into(),
+            Zdroj::Potrubi => "potrubi".into(),
             Zdroj::Povrch(id) => format!("povrch:{id}"),
         }
     }
@@ -109,6 +113,7 @@ impl Zdroj {
             "teren" => Some(Zdroj::Teren),
             "niveleta" => Some(Zdroj::Niveleta),
             "upraveny" => Some(Zdroj::Upraveny),
+            "potrubi" => Some(Zdroj::Potrubi),
             k => k.strip_prefix("povrch:").filter(|id| !id.is_empty()).map(|id| Zdroj::Povrch(id.into())),
         }
     }
@@ -379,28 +384,44 @@ pub fn sada_sablony(sablona: &str) -> Vec<Pas> {
                 Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Druh úpravy", 5.0) },
             ]
         }
+        // niveleta = upravený terén
         "jednoduchy" => vec![
             nad(Pas { useky: cely("…"), na_stred: true, ..pojmenovany(D::Useky, "Katastrální území", 6.0) }),
             nad(Pas { useky: cely("…"), na_stred: true, ..pojmenovany(D::Useky, "Parcelní čísla", 6.0) }),
             nad(Pas { useky: cely("…"), na_stred: true, ..pojmenovany(D::Useky, "Druh pozemku", 6.0) }),
-            v_lomech(Pas { zdroj: Zdroj::Upraveny, ..pojmenovany(D::Kota, "Kóta upraveného terénu", 14.0) }),
+            v_lomech(pojmenovany(D::Niveleta, "Kóta upraveného terénu", 14.0)),
             v_lomech(pojmenovany(D::Teren, "Kóta původního terénu", 14.0)),
             v_lomech(pojmenovany(D::Staniceni, "Staničení [m]", 12.0)),
         ],
-        // pásy „potrubí“ (dno, hloubka, sklony) zatím počítají z nivelety
+        // terén a výkop: výkop = původní terén − niveleta (kladný výkop, záporný násyp)
+        "teren_vykop" => vec![
+            v_lomech(pojmenovany(D::Niveleta, "Kóta upraveného terénu", 14.0)),
+            v_lomech(pojmenovany(D::Teren, "Kóta původního terénu", 14.0)),
+            v_lomech(Pas { zdroj: Zdroj::Teren, zdroj2: Zdroj::Niveleta, ..pojmenovany(D::Rozdil, "Výkop (+) / násyp (−) [m]", 12.0) }),
+            v_lomech(pojmenovany(D::Staniceni, "Staničení [m]", 12.0)),
+        ],
+        // kanalizace podle výkresové praxe; pásy potrubí jsou připravené bez
+        // dat (zdroj Potrubí), šachty a parametry potrubí jako texty „…“
         "kanalizace" => vec![
             nad(Pas { useky: cely("…"), na_stred: true, ..pojmenovany(D::Useky, "Katastrální území", 6.0) }),
             nad(Pas { useky: cely("…"), na_stred: true, ..pojmenovany(D::Useky, "Parcelní čísla", 6.0) }),
             nad(Pas { useky: cely("…"), na_stred: true, ..pojmenovany(D::Useky, "Druh povrchu", 6.0) }),
-            nad(v_lomech(pojmenovany(D::Vzdalenosti, "Vzdálenosti šachet", 6.0))),
-            v_lomech(Pas { zdroj: Zdroj::Upraveny, ..pojmenovany(D::Kota, "Kóta upraveného terénu", 14.0) }),
-            v_lomech(Pas { zdroj: Zdroj::Teren, zdroj2: Zdroj::Niveleta, ..pojmenovany(D::Rozdil, "Hloubka dna potrubí", 11.0) }),
-            v_lomech(pojmenovany(D::Niveleta, "Kóta dna potrubí", 14.0)),
-            v_lomech(pojmenovany(D::Teren, "Kóta původního terénu", 14.0)),
+            nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Vzdálenosti šachet", 6.0) }),
+            nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Označení šachet", 6.0) }),
+            nad(pojmenovany(D::Smer, "Směrové poměry", 10.0)),
+            v_lomech(Pas { zdroj: Zdroj::Potrubi, ..pojmenovany(D::Kota, "Osa potrubí", 12.0) }),
+            v_lomech(pojmenovany(D::Niveleta, "Kóta upraveného terénu", 12.0)),
+            v_lomech(Pas { zdroj: Zdroj::Niveleta, zdroj2: Zdroj::Potrubi, ..pojmenovany(D::Rozdil, "Hloubka výkopu", 11.0) }),
+            v_lomech(Pas { zdroj: Zdroj::Potrubi, ..pojmenovany(D::Kota, "Kóta výkopu", 12.0) }),
+            v_lomech(Pas { zdroj: Zdroj::Niveleta, zdroj2: Zdroj::Potrubi, ..pojmenovany(D::Rozdil, "Krytí potrubí", 11.0) }),
+            v_lomech(Pas { zdroj: Zdroj::Potrubi, ..pojmenovany(D::Kota, "Kóta dna potrubí", 12.0) }),
+            v_lomech(Pas { zdroj: Zdroj::Niveleta, zdroj2: Zdroj::Potrubi, ..pojmenovany(D::Rozdil, "Hloubka dna potrubí", 11.0) }),
+            v_lomech(pojmenovany(D::Teren, "Kóta původního terénu", 12.0)),
             v_lomech(pojmenovany(D::Staniceni, "Staničení [m]", 12.0)),
             Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Profil [mm] – materiál – délka [m]", 6.0) },
-            pojmenovany(D::Sklony, "Sklon [‰] – délka [m]", 6.0),
-            Pas { useky: cely("pískové lože tl. 100 mm"), ..pojmenovany(D::Useky, "Uložení", 6.0) },
+            Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Sklon [‰] – délka [m]", 6.0) },
+            Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Uložení", 6.0) },
+            Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Kapacitní průtok [l/s] – rychlost [m/s]", 6.0) },
         ],
         "tok" => vec![
             nad(Pas { useky: cely("…"), ..pojmenovany(D::Useky, "Katastrální území", 5.0) }),

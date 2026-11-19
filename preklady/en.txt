@@ -1808,3 +1808,4 @@ Měřítko 1:	Scale 1:
 vlastní měřítko délek	custom length scale
 vlastní převýšení (měřítko výšek = měřítko délek / převýšení)	custom exaggeration (vertical scale = length scale / exaggeration)
 výšky 1:{}	heights 1:{}
+Potrubí (zatím bez dat)	Pipe (no data yet)

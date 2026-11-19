@@ -195,12 +195,14 @@ pub const SCHEMA: &[Klic] = &[
     Klic { klic: "hustota", vychozi: "1", popis: "Násobek výšky pásů" },
     Klic { klic: "nadpis", vychozi: "Podélný profil: {trasa}", popis: "Nadpis ({trasa}, {povrch}, {meritko})" },
     Klic { klic: "povrch_upraveny", vychozi: "", popis: "Upravený terén – id povrchu (prázdné = automaticky)" },
+    Klic { klic: "nazev_nivelety", vychozi: "Niveleta", popis: "Název nivelety v legendě" },
 ];
 
 /// Šablony podle oboru: id stylu, český název, kód sady pásů.
-pub const SABLONY: [(&str, &str, &str); 2] = [
+pub const SABLONY: [(&str, &str, &str); 3] = [
     ("JEDNODUCHY", "Jednoduchý – terén a pozemky", "jednoduchy"),
     ("KANALIZACE", "Vodovod a kanalizace", "kanalizace"),
+    ("TEREN_VYKOP", "Terén a výkop", "teren_vykop"),
 ];
 
 /// Dřívější vestavěné styly: v nabídkách už nejsou, ale pohledy ze starších
@@ -217,8 +219,11 @@ pub fn styly_vestavene() -> Vec<Styl> {
     let mut v = vec![Styl::novy("ZAKLAD", "Základní")];
     for (id, nazev, sada) in SABLONY.iter().chain(STARSI_STYLY[1..].iter()) {
         let mut h: Vec<(&str, &str)> = vec![("sablona", sada)];
-        if matches!(*sada, "jednoduchy" | "kanalizace") {
+        if matches!(*sada, "jednoduchy" | "kanalizace" | "teren_vykop") {
             h.push(("staniceni", "m"));
+            // niveleta představuje upravený terén
+            h.push(("nazev_nivelety", "Upravený terén"));
+            h.push(("c.niveleta", "#e040e0;stredni"));
         }
         v.push(Styl::odvozeny(id, nazev, "ZAKLAD", &h));
     }

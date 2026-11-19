@@ -628,7 +628,8 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
         let mut x = 0.0;
         let mut polozky: Vec<(String, &str)> = vec![(trf!("Terén – {}", pk.povrch), "teren")];
         if pk.niveleta.is_some() {
-            polozky.push((tr("Niveleta").to_string(), "niveleta"));
+            let nazev = nast.text("nazev_nivelety");
+            polozky.push((if nazev.trim().is_empty() { tr("Niveleta").to_string() } else { trasy::preklad::tr_dyn(nazev) }, "niveleta"));
         }
         for (id, _) in &pk.dalsi {
             if pasy_vid.iter().any(|p| p.zdroj == Zdroj::Povrch(id.clone()) || p.zdroj2 == Zdroj::Povrch(id.clone())) {
@@ -807,7 +808,7 @@ fn pasy(k: &KontextPasu) -> (Vec<EntityType>, f64, Rozvrzeni) {
             Zdroj::Teren => Some(k.useky),
             Zdroj::Povrch(id) if *id == k.def.povrch => Some(k.useky),
             Zdroj::Povrch(id) => k.dalsi.iter().find(|x| x.0 == *id).map(|x| &x.1[..]),
-            Zdroj::Niveleta | Zdroj::Upraveny => None,
+            Zdroj::Niveleta | Zdroj::Upraveny | Zdroj::Potrubi => None,
         }
     };
     let vyska = |z: &Zdroj, s: f64| -> Option<f64> {
