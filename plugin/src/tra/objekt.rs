@@ -540,8 +540,12 @@ mod testy {
         }
     }
 
+    /// Testy se styly tras sdílí globální seznam stylů – běží po jednom.
+    static ZAMEK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
     #[test]
     fn barvy_ze_stylu() {
+        let _z = ZAMEK.lock().unwrap_or_else(|e| e.into_inner());
         let mut st = vestavene_ploche();
         let mut s = st.iter().find(|x| x.id == trasy::trasa::STYL_ZAKLAD).unwrap().clone();
         s.id = "TEST_BARVY".into();
@@ -562,6 +566,7 @@ mod testy {
 
     #[test]
     fn nove_styly_tras() {
+        let _z = ZAMEK.lock().unwrap_or_else(|e| e.into_inner());
         nastav_styly(vestavene_ploche());
         let v = vec![Vrchol::new(0.0, 0.0, 0.0), Vrchol::new(100.0, 40.0, 36.0), Vrchol::new(150.0, 160.0, 0.0)];
         let g = geometrie(&v, 0.0).unwrap();
