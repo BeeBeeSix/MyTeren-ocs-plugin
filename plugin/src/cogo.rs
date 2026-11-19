@@ -1318,6 +1318,17 @@ pub fn presun_nosice(v: &mut dyn Vykres, doc: &CadDocument) -> bool {
 mod testy_posunu {
     use super::*;
 
+    /// Testy sdílí globální tabulku velikostí bloků značek (`velikosti_bloku`)
+    /// – běží po jednom, jinak se značka jednou kreslí blokem a jindy kružnicí.
+    static ZAMEK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    /// Zámek testů a čistá tabulka velikostí bloků (každý test začíná stejně).
+    fn cisty_stav() -> std::sync::MutexGuard<'static, ()> {
+        let z = ZAMEK.lock().unwrap_or_else(|e| e.into_inner());
+        velikosti_bloku().lock().unwrap_or_else(|e| e.into_inner()).clear();
+        z
+    }
+
     /// Výkres s body hustě vedle sebe (popisy se rozmisťují kolem sousedů).
     fn vykres(n: usize) -> CadDocument {
         let mut doc = CadDocument::new();
@@ -1375,6 +1386,7 @@ mod testy_posunu {
 
     #[test]
     fn posun_bodu_i_s_grafikou() {
+        let _z = cisty_stav();
         let mut doc = vykres(6);
         let vybrane = bod_a_grafika(&doc, "15");
         let pred = vsechna_grafika(&doc).len();
@@ -1391,6 +1403,7 @@ mod testy_posunu {
 
     #[test]
     fn posun_jen_bodu() {
+        let _z = cisty_stav();
         let mut doc = vykres(6);
         let b = body(&doc).into_iter().find(|b| b.bod.cislo == "15").unwrap();
         let grafika = grafika_bodu(&doc, &[[b.bod.x, b.bod.y]]);
@@ -1403,6 +1416,7 @@ mod testy_posunu {
 
     #[test]
     fn posun_jen_grafiky_posune_bod() {
+        let _z = cisty_stav();
         let mut doc = vykres(6);
         let b = body(&doc).into_iter().find(|b| b.bod.cislo == "15").unwrap();
         let grafika = grafika_bodu(&doc, &[[b.bod.x, b.bod.y]]);
@@ -1415,6 +1429,7 @@ mod testy_posunu {
 
     #[test]
     fn dva_body_na_stejnem_miste() {
+        let _z = cisty_stav();
         // import dvakrát: posun jednoho bodu s grafikou nechá druhý bod i jeho popis na místě
         let mut doc = vykres(4);
         let dalsi = vykres(4);
@@ -1555,6 +1570,7 @@ mod testy_posunu {
 
     #[test]
     fn oprava_popisu_jednou_transakci() {
+        let _z = cisty_stav();
         let (v, vybrane) = oprav_po_posunu(false);
         assert!(nesoulad(&v.doc, 500.0).je_prazdny());
         // popisy převzaly handle; značku test kreslí kružnicí a oprava blokem
@@ -1572,12 +1588,14 @@ mod testy_posunu {
 
     #[test]
     fn oprava_popisu_postaru_kdyz_ocs_odmitne() {
+        let _z = cisty_stav();
         let (v, _) = oprav_po_posunu(true);
         assert!(nesoulad(&v.doc, 500.0).je_prazdny());
     }
 
     #[test]
     fn uprava_bodu_jednou_transakci() {
+        let _z = cisty_stav();
         let doc = vykres(6);
         let b = body(&doc).into_iter().find(|b| b.bod.cislo == "15").unwrap();
         let grafika = grafika_bodu(&doc, &[[b.bod.x, b.bod.y]]);
