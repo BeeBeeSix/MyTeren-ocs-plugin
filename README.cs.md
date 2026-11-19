@@ -61,7 +61,7 @@ kontroluje, že obě strany používají stejný formát dat výkresu):
 
 | Open CAD Studio | Terén |
 |---|---|
-| 2026.46 | 1.1.0 |
+| 2026.46 | 1.1.0 – 1.2.0 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
@@ -89,6 +89,40 @@ angličtina), projeví se po novém spuštění.
   nejvíc pomůže krátký popis a malý vymyšlený soubor zaměření.
 
 # Co je nového
+
+## Verze 1.2.0
+
+- **Plynulejší práce.** Po změně výkresu se výkres stahuje jen jednou
+  místo 5–7×, posun bodu potřebuje polovinu požadavků (bod i popisy jedním
+  zápisem) a trasa i pohled profilu se při úpravě přepisují na místě –
+  výběr a úchopy zůstávají.
+- **Přepočet po dokončení úprav.** Nová nabídka *Přepočet* (pás karet
+  i Prospektor): povrchy a profily se přepočítají hned, až po chvíli klidu
+  (výchozí), nebo až na povel *Přepočítat teď*. Úprava nivelety svůj pohled
+  překreslí vždy hned.
+- **Velké výkresy bez pádu.** Vkládání po dávkách a kontrola velikosti
+  přenosu: povrch z 20 000 bodů se vytvoří, a když je výkres na přenos
+  příliš velký, Terén to srozumitelně ohlásí místo pádu.
+- **Trojúhelníky ve 2D celé.** Síť povrchu se ve 2D kreslí se všemi
+  hranami (Terén nastaví VSEDGESMOOTH 0).
+- **Podélný profil ve výkresovém vzhledu:** písmo ISOCPEUR, záhlaví
+  velkými písmeny, čísla v ose svislic, textové pásy v buňkách. Tři styly:
+  *Jednoduchý – terén a pozemky*, *Vodovod a kanalizace* (pásy potrubí
+  připravené, zatím bez dat) a *Terén a výkop*. Upravený terén se bere
+  z nivelety; výchozí převýšení 1.
+- **Editor vzhledu profilu** ve vlastním okně s živým náhledem (písma,
+  čáry, pásy, nadpis, legenda) a v kartě pohledu výběr stylu, měřítka,
+  převýšení a upraveného terénu.
+- **Niveleta se při tahu chytá terénu** (uchopovací body).
+- **Styly tras:** Netisk (šedá), Červená čerchovaná, Červená plná,
+  Přímé červeně / oblouky modře (s rozkreslením oblouků).
+- **Kreslení trasy:** výchozí poloměr 20 m; poloměr, který se mezi vrcholy
+  nevejde, se zmenší na největší možný.
+- **Nový vzorový výkres:** tři oblasti s vlastními skupinami bodů
+  a povrchy, povinné spojnice, trasa s niveletou a podélný profil.
+
+Trasy a podélné profily jsou dál rozpracované – vzhled a uložení ve výkrese
+se ještě mohou měnit.
 
 ## Verze 1.1.0
 

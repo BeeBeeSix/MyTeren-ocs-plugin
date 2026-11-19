@@ -19,6 +19,22 @@ DWG, and every action is a single Undo step. Interface in English or Czech.
 </tr>
 </table>
 
+## What's new in 1.2.0
+
+- **Smoother editing.** Fewer round trips to Open CAD Studio after every
+  change; moving a point, editing an alignment or redrawing a profile view
+  rewrites objects in place, so selection and grips stay.
+- **Recalculate when you're done.** New *Recalculation* menu: surfaces and
+  profiles update immediately, after a short pause (default), or only on
+  *Recalculate now*.
+- **Large drawings no longer crash** – a clear message instead.
+- **Long profiles in a drawing-office look** (ISOCPEUR, numbers on the
+  verticals) with three styles – simple, water and sewer (pipe bands ready
+  for later), ground and excavation – and a profile appearance editor with
+  live preview.
+- **Alignment styles** (no-plot grey, red dash-dot, red solid, red tangents
+  with blue arcs) and a new sample drawing.
+
 ## What's new in 1.1.0
 
 - **Open CAD Studio 2026.46.** Built for the current release.
@@ -130,7 +146,7 @@ Manager offers the right one.
 
 | Open CAD Studio | Terén |
 |---|---|
-| 2026.46 | 1.1.0 |
+| 2026.46 | 1.1.0 – 1.2.0 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
