@@ -34,7 +34,7 @@ struct Stav {
     prvky: Option<Vec<Vec<String>>>,
 }
 
-static STAV: Mutex<Stav> = Mutex::new(Stav { polomer: 100.0, aktivni: None, tabulka: None, prvky: None });
+static STAV: Mutex<Stav> = Mutex::new(Stav { polomer: 20.0, aktivni: None, tabulka: None, prvky: None });
 static OTEVREN: AtomicBool = AtomicBool::new(false);
 /// Požadavek „vrátit poslední vrchol“ pro běžící kreslení.
 static VRATIT: AtomicBool = AtomicBool::new(false);

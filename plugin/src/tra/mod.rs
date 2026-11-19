@@ -343,7 +343,9 @@ fn kreslit_hotovo(host: &mut dyn HostApi) {
         Ok(d) => d,
         Err(e) => return v.chyba(&trf!("Trasy: {}", e)),
     };
-    // oblouky, které se nevejdou, dostanou poloměr 0 (vrchol zůstane jako lom)
+    // poloměry, které se nevejdou, se zmenší na největší možné
+    let zmensene: Vec<(usize, f64)> = trasy::geometrie::prizpusob_polomery(&mut vrcholy).into_iter().map(|i| (i, vrcholy[i].r)).collect();
+    // co se nevejde ani tak, dostane poloměr 0 (vrchol zůstane jako lom)
     let mut bez_oblouku = Vec::new();
     loop {
         match geometrie(&vrcholy, 0.0) {
@@ -378,6 +380,10 @@ fn kreslit_hotovo(host: &mut dyn HostApi) {
                 if let Some(t) = objekt::trasy(&d).into_iter().find(|t| t.insert == h) {
                     v.info(&trf!("Trasy: {}", objekt::popis(&t)));
                 }
+            }
+            if !zmensene.is_empty() {
+                let s: Vec<String> = zmensene.iter().map(|(i, r)| format!("{} (R = {} m)", i + 1, cislo(*r, 1, true))).collect();
+                v.info(&trf!("Trasy: poloměr se nevešel – zmenšen na největší možný ve vrcholech {}.", s.join(", ")));
             }
             if !bez_oblouku.is_empty() {
                 let s: Vec<String> = bez_oblouku.iter().map(|i| i.to_string()).collect();

@@ -183,6 +183,41 @@ fn tecna(v: &[Vrchol], i: usize) -> Result<f64, Chyba> {
     Ok(v[i].r * (w / 2.0).tan())
 }
 
+/// Zmenší poloměry, které se mezi sousední vrcholy nevejdou, na největší
+/// možné (zaokrouhlené dolů na 0,1 m). Vrací indexy upravených vrcholů.
+pub fn prizpusob_polomery(v: &mut [Vrchol]) -> Vec<usize> {
+    let mut zmenene = Vec::new();
+    let n = v.len();
+    if n < 3 {
+        return zmenene;
+    }
+    for _ in 0..20 {
+        let mut hotovo = true;
+        for i in 0..n - 1 {
+            let (ta, tb) = (tecna(v, i).unwrap_or(0.0), tecna(v, i + 1).unwrap_or(0.0));
+            let d = vzd(v[i].bod(), v[i + 1].bod());
+            if ta + tb <= d + 1e-9 || ta + tb <= 0.0 {
+                continue;
+            }
+            hotovo = false;
+            let k = d / (ta + tb) * 0.999;
+            for j in [i, i + 1] {
+                if j > 0 && j + 1 < n && v[j].r > 0.0 {
+                    v[j].r = ((v[j].r * k) * 10.0).floor() / 10.0;
+                    if !zmenene.contains(&j) {
+                        zmenene.push(j);
+                    }
+                }
+            }
+        }
+        if hotovo {
+            break;
+        }
+    }
+    zmenene.sort_unstable();
+    zmenene
+}
+
 /// Spočte prvky, staničení a hlavní body trasy.
 pub fn geometrie(v: &[Vrchol], pocatek: f64) -> Result<Geometrie, Chyba> {
     let n = v.len();
@@ -540,6 +575,12 @@ mod testy {
             Vrchol::new(200.0, 50.0, 0.0),
         ];
         assert_eq!(geometrie(&v, 0.0), Err(Chyba::Prekryv { a: 1, b: 2 }));
+        // nevejdoucí se poloměry se zmenší na největší možné
+        let mut w = v.clone();
+        let zm = prizpusob_polomery(&mut w);
+        assert!(!zm.is_empty());
+        assert!(geometrie(&w, 0.0).is_ok());
+        assert!(w.iter().zip(&v).all(|(a, b)| a.r <= b.r));
     }
 
     #[test]

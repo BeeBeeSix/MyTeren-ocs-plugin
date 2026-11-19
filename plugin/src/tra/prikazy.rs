@@ -136,7 +136,9 @@ impl InteractiveCommand for KresleniTrasy {
                 b[2] = crate::tra::editor::polomer();
             }
         }
-        let v = self.vrcholy(Some([pt[0], pt[1]]));
+        let mut v = self.vrcholy(Some([pt[0], pt[1]]));
+        // náhled s poloměry zmenšenými tak, aby se vešly (stejně jako po Enter)
+        trasy::geometrie::prizpusob_polomery(&mut v);
         let polygon = PreviewWire::with_color(v.iter().map(|x| [x.x, x.y, 0.0]).collect(), [0.6, 0.6, 0.6, 1.0]);
         let mut out = vec![polygon];
         match geometrie(&v, 0.0) {

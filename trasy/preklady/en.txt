@@ -284,3 +284,4 @@ Hloubka dna potrubí	Pipe invert depth
 Označení šachet	Manhole labels
 Kapacitní průtok [l/s] – rychlost [m/s]	Capacity [l/s] – velocity [m/s]
 Uložení	Bedding
+Trasy: poloměr se nevešel – zmenšen na největší možný ve vrcholech {}.	Alignments: the radius did not fit – reduced to the largest possible at vertices {}.
