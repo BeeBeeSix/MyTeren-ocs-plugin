@@ -168,3 +168,40 @@ mod testy {
         }
     }
 }
+
+#[cfg(test)]
+mod rozbor_dwg {
+    /// Vývojová pomůcka: vypíše hladiny a čáry výkresu DWG
+    /// (`TEREN_DWG=soubor.dwg TEREN_VYPIS=vystup.txt cargo test --release --lib vypis_dwg -- --ignored`).
+    #[test]
+    #[ignore = "vývojová pomůcka, spouštět ručně"]
+    fn vypis_dwg() {
+        use ocs_plugin_api::host::document::DwgReader;
+        use ocs_plugin_api::host::EntityType;
+        use std::collections::BTreeMap;
+        use std::fmt::Write;
+        let (Some(dwg), Some(vystup)) = (std::env::var_os("TEREN_DWG"), std::env::var_os("TEREN_VYPIS")) else { return };
+        let doc = DwgReader::from_file(&dwg).unwrap().read().unwrap();
+        let mut pocty: BTreeMap<(String, String), usize> = BTreeMap::new();
+        let mut s = String::new();
+        for e in doc.model_space_entities() {
+            let druh = format!("{e:?}").split('(').next().unwrap_or("").to_string();
+            *pocty.entry((e.common().layer.clone(), druh)).or_default() += 1;
+        }
+        for ((h, d), n) in &pocty {
+            let _ = writeln!(s, "{h}\t{d}\t{n}");
+        }
+        let _ = writeln!(s, "--- čáry");
+        for e in doc.model_space_entities() {
+            let body: Vec<String> = match e {
+                EntityType::LwPolyline(p) => p.vertices.iter().map(|v| format!("{:.3},{:.3}", v.location.x, v.location.y)).collect(),
+                EntityType::Polyline3D(p) => p.vertices.iter().map(|v| format!("{:.3},{:.3},{:.3}", v.position.x, v.position.y, v.position.z)).collect(),
+                EntityType::Point(b) => vec![format!("{:.3},{:.3},{:.3}", b.location.x, b.location.y, b.location.z)],
+                EntityType::Line(l) => vec![format!("{:.3},{:.3},{:.3}", l.start.x, l.start.y, l.start.z), format!("{:.3},{:.3},{:.3}", l.end.x, l.end.y, l.end.z)],
+                _ => continue,
+            };
+            let _ = writeln!(s, "{}\t{}\t{}", e.common().layer, body.len(), body.join(" "));
+        }
+        std::fs::write(vystup, s).unwrap();
+    }
+}
