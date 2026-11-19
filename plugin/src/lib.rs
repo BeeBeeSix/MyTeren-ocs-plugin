@@ -22,6 +22,8 @@ mod uchopy;
 #[cfg(feature = "ukazka")]
 pub mod ukazka;
 mod vykres;
+#[cfg(feature = "ukazka")]
+mod vzor_vykresu;
 
 #[doc(hidden)]
 pub use okno::ukazka_importu;
@@ -1073,6 +1075,8 @@ impl TerenPlugin {
                 host.push_info(tr("Terén: Prospektor se otevírá ve vlastním okně."));
             }
             "TER_NAJIT" | "TER_STYL_BODU" => najit(host),
+            #[cfg(feature = "ukazka")]
+            "TER_DEV_VZOR" => vzor_vykresu::sestav(host),
             "TER_EXPORT_POVRCHU" => {
                 let mut v = PresHost(host);
                 if let Some((z, _)) = aktivni(&mut v) {
