@@ -1809,3 +1809,10 @@ vlastní měřítko délek	custom length scale
 vlastní převýšení (měřítko výšek = měřítko délek / převýšení)	custom exaggeration (vertical scale = length scale / exaggeration)
 výšky 1:{}	heights 1:{}
 Potrubí (zatím bez dat)	Pipe (no data yet)
+Rozkreslit oblouky (poloměry ke středu)	Draw arc construction (radii to centre)
+Netisknout (hladina, která se netiskne)	Do not plot (non-plotting layer)
+Čára osy	Centreline
+plná	solid
+čerchovaná	dash-dot
+Oblouky osy	Centreline arcs
+jinou barvou	different colour

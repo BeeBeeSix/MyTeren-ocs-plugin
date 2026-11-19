@@ -33,6 +33,10 @@ pub const H_OSA: &str = "TRA_OSA";
 pub const H_STANICENI: &str = "TRA_STANICENI";
 pub const H_BODY: &str = "TRA_HLAVNI_BODY";
 pub const H_POLYGON: &str = "TRA_POLYGON";
+/// Hladina stylu Netisk (netiskne se).
+pub const H_NETISK: &str = "TRA_NETISK";
+/// Čerchovaná čára osy (vzor v mm na papíře, měřítko čáry = měřítko / 1000).
+pub const TYP_CERCHOVANA: &str = "TRA_CERCHOVANA";
 
 /// Trasa nalezená ve výkrese.
 #[derive(Clone, Debug)]
@@ -209,7 +213,15 @@ pub fn objekty(def: &DefiniceTrasy, vrcholy: &[Vrchol], g: &Geometrie) -> Vec<En
     for (_, p) in &g.prvky {
         match *p {
             Prvek::Primka { a, b } => out.push(na(cara(a, b, H_OSA), H_OSA)),
-            Prvek::Oblouk { stred, r, uhel_a, sweep, .. } => out.push(oblouk(stred, r, uhel_a, sweep)),
+            Prvek::Oblouk { stred, r, uhel_a, sweep, .. } => {
+                // rozkreslení oblouku: poloměry ze středu do začátku a konce
+                if h.ano("polomery") {
+                    for u in [uhel_a, uhel_a + sweep] {
+                        out.push(cara(stred, [stred[0] + r * u.cos(), stred[1] + r * u.sin()], H_POLYGON));
+                    }
+                }
+                out.push(oblouk(stred, r, uhel_a, sweep));
+            }
         }
     }
 
@@ -269,8 +281,23 @@ pub fn objekty(def: &DefiniceTrasy, vrcholy: &[Vrchol], g: &Geometrie) -> Vec<En
             out.push(text(t, [v.x + vyska, v.y + vyska], 0.0, vyska, H_BODY, true));
         }
     }
+    let barva_oblouk = h.cislo("barva_oblouk") as i16;
+    let cerchovana = h.text("typ_osa") == "cerchovana";
+    let meritko_cary = h.cislo("meritko").max(1.0) / 1000.0;
+    let netisk = h.ano("netisk");
     for e in &mut out {
         obarvi(e, &h);
+        let osa = e.common().layer == H_OSA;
+        if osa && barva_oblouk > 0 && matches!(e, EntityType::Arc(_)) {
+            e.common_mut().color = crate::styly::barva(barva_oblouk);
+        }
+        if osa && cerchovana {
+            e.common_mut().linetype = TYP_CERCHOVANA.into();
+            e.common_mut().linetype_scale = meritko_cary;
+        }
+        if netisk {
+            e.common_mut().layer = H_NETISK.into();
+        }
     }
     out
 }
@@ -282,6 +309,23 @@ fn zajisti_hladiny(v: &mut dyn Vykres, doc: &CadDocument) {
         if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(nazev)) {
             v.hladina(LayerConfig { name: nazev.to_string(), color: Some(Color::from_index(barva)), ..Default::default() });
         }
+    }
+    if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(H_NETISK)) {
+        v.hladina(LayerConfig {
+            name: H_NETISK.to_string(),
+            color: Some(Color::from_index(8)),
+            plottable: Some(false),
+            description: Some(tr("Trasy – netiskne se").into()),
+            ..Default::default()
+        });
+    }
+    if !doc.line_types.contains(TYP_CERCHOVANA) {
+        // čárka 12 mm, mezera 3, tečka, mezera 3 (na papíře)
+        let _ = v.tabulka(TableOperation::LinetypeCreate {
+            name: TYP_CERCHOVANA.into(),
+            description: tr("Čerchovaná (trasa)").into(),
+            pattern: vec![12.0, -3.0, 0.0, -3.0],
+        });
     }
 }
 
@@ -499,7 +543,7 @@ mod testy {
     #[test]
     fn barvy_ze_stylu() {
         let mut st = vestavene_ploche();
-        let mut s = st[0].clone();
+        let mut s = st.iter().find(|x| x.id == trasy::trasa::STYL_ZAKLAD).unwrap().clone();
         s.id = "TEST_BARVY".into();
         s.hodnoty.insert("barva_osa".into(), "3".into());
         s.hodnoty.insert("tloustka_polygon".into(), "50".into());
@@ -514,5 +558,23 @@ mod testy {
         let pol: Vec<_> = e.iter().filter(|x| x.common().layer == H_POLYGON).collect();
         assert!(!pol.is_empty() && pol.iter().all(|x| x.common().line_weight == crate::styly::tloustka(50)));
         assert!(e.iter().filter(|x| x.common().layer == H_STANICENI).all(|x| x.common().color == Color::ByLayer));
+    }
+
+    #[test]
+    fn nove_styly_tras() {
+        nastav_styly(vestavene_ploche());
+        let v = vec![Vrchol::new(0.0, 0.0, 0.0), Vrchol::new(100.0, 40.0, 36.0), Vrchol::new(150.0, 160.0, 0.0)];
+        let g = geometrie(&v, 0.0).unwrap();
+        let kresli = |styl: &str| objekty(&DefiniceTrasy::nova("T1", "Trasa 1", v.clone(), styl), &v, &g);
+        // netisk: vše na netiskové hladině
+        assert!(kresli("NETISK").iter().all(|x| x.common().layer == H_NETISK));
+        // čerchovaná osa
+        let e = kresli("CERVENA_CERCHOVANA");
+        assert!(e.iter().filter(|x| x.common().layer == H_OSA).all(|x| x.common().linetype == TYP_CERCHOVANA));
+        // přímé červeně, oblouky modře, poloměry ke středu
+        let e = kresli("PRIMKY_OBLOUKY");
+        assert!(e.iter().any(|x| matches!(x, EntityType::Arc(_)) && x.common().color == Color::from_index(5)));
+        assert!(e.iter().any(|x| matches!(x, EntityType::Line(_)) && x.common().layer == H_OSA && x.common().color == Color::from_index(1)));
+        assert!(e.iter().filter(|x| x.common().layer == H_POLYGON).count() >= 4, "polygon + 2 poloměry");
     }
 }

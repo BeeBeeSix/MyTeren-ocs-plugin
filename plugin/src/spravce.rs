@@ -1060,7 +1060,9 @@ impl Pracovnik {
             s.bloky = cogo::bloky_pro_znacky(&doc);
             s.styly_povrchu = styly::styly_povrchu(&doc);
             s.styly_profilu = styly::styly_profilu(&doc);
-            s.styly_tras = styly::styly_tras(&doc);
+            // dřívější vestavěné styly jen tehdy, když je nějaká trasa používá
+            let pouzite: Vec<String> = crate::tra::objekt::trasy(&doc).into_iter().map(|t| t.def.styl).collect();
+            s.styly_tras = styly::styly_tras(&doc).into_iter().filter(|x| !trasy::trasa::je_skryty(&x.id) || pouzite.contains(&x.id)).collect();
             s.ulozene_styly = s
                 .styly_bodu
                 .iter()

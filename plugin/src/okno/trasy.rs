@@ -940,6 +940,17 @@ impl Okno {
             }
         });
         zaskrt_trasy(ui, s, "polygon", "Kreslit tečnový polygon");
+        zaskrt_trasy(ui, s, "polomery", "Rozkreslit oblouky (poloměry ke středu)");
+        zaskrt_trasy(ui, s, "netisk", "Netisknout (hladina, která se netiskne)");
+        ui.horizontal(|ui| {
+            ui.label(tr("Čára osy"));
+            let akt = s.hodnoty.get("typ_osa").cloned().unwrap_or_else(|| "plna".into());
+            for (k, popis) in [("plna", tr("plná")), ("cerchovana", tr("čerchovaná"))] {
+                if ui.selectable_label(akt == k, popis).clicked() && akt != k {
+                    nastav_trasy(s, "typ_osa", k.to_string());
+                }
+            }
+        });
 
         ui.add_space(8.0);
         ui.label(RichText::new(tr("Barvy a tloušťky")).strong());
@@ -958,6 +969,19 @@ impl Okno {
                 }
                 ui.end_row();
             }
+            // oblouky osy: 0 = stejně jako osa
+            ui.label(tr("Oblouky osy"));
+            let mut b = cislo_trasy(s, "barva_oblouk") as i16;
+            let mut jinak = b > 0;
+            ui.horizontal(|ui| {
+                if ui.checkbox(&mut jinak, tr("jinou barvou")).changed() {
+                    nastav_trasy(s, "barva_oblouk", if jinak { "5".into() } else { "0".into() });
+                }
+                if jinak && super::vyber_barvy(ui, &format!("{id}_barva_oblouk"), &mut b) {
+                    nastav_trasy(s, "barva_oblouk", b.to_string());
+                }
+            });
+            ui.end_row();
         });
 
         ui.add_space(8.0);

@@ -285,3 +285,9 @@ Označení šachet	Manhole labels
 Kapacitní průtok [l/s] – rychlost [m/s]	Capacity [l/s] – velocity [m/s]
 Uložení	Bedding
 Trasy: poloměr se nevešel – zmenšen na největší možný ve vrcholech {}.	Alignments: the radius did not fit – reduced to the largest possible at vertices {}.
+Netisk (šedá)	No plot (grey)
+Červená čerchovaná	Red dash-dot
+Červená plná	Red solid
+Přímé červeně, oblouky modře	Tangents red, arcs blue
+Trasy – netiskne se	Alignments – not plotted
+Čerchovaná (trasa)	Dash-dot (alignment)

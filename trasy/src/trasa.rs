@@ -165,20 +165,51 @@ pub const SCHEMA: &[Klic] = &[
     Klic { klic: "tloustka_body", vychozi: "-1", popis: "Tloušťka hlavních bodů" },
     Klic { klic: "barva_polygon", vychozi: "256", popis: "Barva tečnového polygonu" },
     Klic { klic: "tloustka_polygon", vychozi: "-1", popis: "Tloušťka tečnového polygonu" },
+    Klic { klic: "typ_osa", vychozi: "plna", popis: "Typ čáry osy (plna / cerchovana)" },
+    // 0 = jako osa
+    Klic { klic: "barva_oblouk", vychozi: "0", popis: "Barva oblouků osy (0 = jako osa)" },
+    Klic { klic: "polomery", vychozi: "0", popis: "Rozkreslit oblouky (poloměry ke středu)" },
+    Klic { klic: "netisk", vychozi: "0", popis: "Netisknout (hladina, která se netiskne)" },
 ];
 
-pub const STYL_ZAKLAD: &str = "SITUACE_500";
+/// Styl nové trasy.
+pub const STYL_ZAKLAD: &str = "CERVENA_PLNA";
+/// Základ všech vestavěných stylů (situace 1:500).
+const ZAKLAD: &str = "SITUACE_500";
 
-/// Vestavěné styly tras (v kódu; uživatelské styly ve výkrese přijdou ve fázi 2).
+/// Dřívější vestavěné styly: v nabídkách už nejsou (pokud je trasa ve výkrese
+/// nepoužívá), trasy ze starších výkresů s nimi dál fungují.
+pub const SKRYTE_STYLY: [&str; 4] = ["SITUACE_500", "SITUACE_250", "SITUACE_1000", "JEN_OSA"];
+
+pub fn je_skryty(id: &str) -> bool {
+    SKRYTE_STYLY.contains(&id)
+}
+
+/// Vestavěné styly tras (v kódu; vlastní styly jsou ve výkrese).
 pub fn vestavene_styly() -> Vec<Styl> {
     vec![
-        Styl::novy(STYL_ZAKLAD, "Situace 1:500"),
-        Styl::odvozeny("SITUACE_250", "Situace 1:250", STYL_ZAKLAD, &[("meritko", "250"), ("krok_vedlejsi", "10")]),
-        Styl::odvozeny("SITUACE_1000", "Situace 1:1000", STYL_ZAKLAD, &[("meritko", "1000"), ("krok_vedlejsi", "50")]),
+        Styl::odvozeny(
+            "NETISK",
+            "Netisk (šedá)",
+            ZAKLAD,
+            &[("barva_osa", "8"), ("barva_staniceni", "8"), ("barva_body", "8"), ("barva_polygon", "8"), ("netisk", "1")],
+        ),
+        Styl::odvozeny("CERVENA_CERCHOVANA", "Červená čerchovaná", ZAKLAD, &[("barva_osa", "1"), ("typ_osa", "cerchovana")]),
+        Styl::odvozeny(STYL_ZAKLAD, "Červená plná", ZAKLAD, &[("barva_osa", "1")]),
+        Styl::odvozeny(
+            "PRIMKY_OBLOUKY",
+            "Přímé červeně, oblouky modře",
+            ZAKLAD,
+            &[("barva_osa", "1"), ("barva_oblouk", "5"), ("barva_polygon", "8"), ("polygon", "1"), ("polomery", "1")],
+        ),
+        // dřívější (skryté)
+        Styl::novy(ZAKLAD, "Situace 1:500"),
+        Styl::odvozeny("SITUACE_250", "Situace 1:250", ZAKLAD, &[("meritko", "250"), ("krok_vedlejsi", "10")]),
+        Styl::odvozeny("SITUACE_1000", "Situace 1:1000", ZAKLAD, &[("meritko", "1000"), ("krok_vedlejsi", "50")]),
         Styl::odvozeny(
             "JEN_OSA",
             "Jen osa bez popisů",
-            STYL_ZAKLAD,
+            ZAKLAD,
             &[("krok_hlavni", "0"), ("krok_vedlejsi", "0"), ("popis_body", "0"), ("polygon", "0")],
         ),
     ]
