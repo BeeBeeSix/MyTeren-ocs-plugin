@@ -443,3 +443,20 @@ mezipřímka mezi oblouky {} a {} je jen {} m	the tangent between curves {} and 
 bez oblouku	no curve
 ◀ Předchozí vrchol	◀ Previous vertex
 Další vrchol ▶	Next vertex ▶
++ Přidat vrchol	+ Add vertex
+✕ Smazat vrchol	✕ Delete vertex
+↑↓ Zvednout / snížit	↑↓ Raise / lower
+↓ Vrchol na terén	↓ Vertex to terrain
+⌒ Vložit oblouk	⌒ Insert curve
+✕ Odstranit oblouk	✕ Remove curve
+⌒⌒ Do všech vrcholů	⌒⌒ At all vertices
+∠ Změnit sklon	∠ Change grade
+↔ Změnit délku	↔ Change length
+• Úsek bodem	• Segment through point
+→ Prodloužit	→ Extend
+Zbytek nivelety	Rest of profile
+posunout	shift
+držet konec	keep the end
+Nastavení oblouku	Curve settings
+Zvednout / snížit: klikněte na vrchol nivelety, nebo do pohledu mimo vrcholy = celá niveleta	Raise / lower: click a design profile vertex, or in the view away from vertices = whole profile
+Celá niveleta: o kolik zvednout [m] – napište číslo a Enter (kurzor nad kliknutím = nahoru, pod = dolů)	Whole profile: raise by [m] – type a number and Enter (cursor above the click = up, below = down)

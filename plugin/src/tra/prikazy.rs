@@ -718,39 +718,49 @@ impl InteractiveCommand for UsekNivelety {
     }
 }
 
-/// Zvednout / snížit vrchol: klik na vrchol, pak výška na příkazovém řádku
-/// (kurzor nad kliknutím = nahoru, pod = dolů).
+/// Zvednout / snížit: klik na vrchol (nebo do pohledu mimo vrcholy = celá
+/// niveleta), pak výška na příkazovém řádku (kurzor nad kliknutím = nahoru,
+/// pod = dolů).
 pub struct ZvednoutVrchol {
     pub trasa: String,
     pub pohledy: Vec<crate::tra::pohled::ObjektPohledu>,
     pub vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
-    pub vybrany: Option<(usize, [f64; 3])>,
+    /// Vybraný vrchol (`None` = celá niveleta) a bod kliknutí.
+    pub vybrany: Option<(Option<usize>, [f64; 3])>,
 }
 
 impl InteractiveCommand for ZvednoutVrchol {
     fn prompt(&self) -> String {
         match self.vybrany {
-            None => tr("Zvednout / snížit: klikněte na vrchol nivelety (celou niveletu zvednete tlačítkem v panelu)").to_string(),
-            Some((k, _)) => trf!(
+            None => tr("Zvednout / snížit: klikněte na vrchol nivelety, nebo do pohledu mimo vrcholy = celá niveleta").to_string(),
+            Some((Some(k), _)) => trf!(
                 "Vrchol {}: o kolik zvednout [m] – napište číslo a Enter (kurzor nad kliknutím = nahoru, pod = dolů)",
                 k + 1
             ),
+            Some((None, _)) => {
+                tr("Celá niveleta: o kolik zvednout [m] – napište číslo a Enter (kurzor nad kliknutím = nahoru, pod = dolů)").to_string()
+            }
         }
     }
     fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
         match self.vybrany {
             None => {
                 let Some(p) = self.pohledy.iter().find(|p| p.obsahuje([pt[0], pt[1]])) else { return CommandStep::NeedPoint };
+                // vrchol blíž než 3 % šířky pohledu, jinak celá niveleta
+                let sirka = p.def.osy.map_or(10.0, |o| (o[1] - o[0]).abs()).max(1.0);
                 let k = (0..self.vrcholy.len())
                     .filter_map(|k| p.na_vykres(self.vrcholy[k].s, self.vrcholy[k].z).map(|q| (k, (q[0] - pt[0]).hypot(q[1] - pt[1]))))
                     .min_by(|a, b| a.1.total_cmp(&b.1))
+                    .filter(|x| x.1 < 0.03 * sirka)
                     .map(|x| x.0);
-                let Some(k) = k else { return CommandStep::NeedPoint };
                 self.vybrany = Some((k, pt));
                 CommandStep::NeedPoint
             }
             Some((k, p1)) => match napsane_se_znamenkem(p1, pt) {
-                Some(dz) => CommandStep::Dispatch(format!("TRA_NIV_ZVEDNOUT_HOTOVO {} {} {:.4}", self.trasa, k, dz)),
+                Some(dz) => {
+                    let kde = k.map_or("v".to_string(), |k| k.to_string());
+                    CommandStep::Dispatch(format!("TRA_NIV_ZVEDNOUT_HOTOVO {} {} {:.4}", self.trasa, kde, dz))
+                }
                 None => CommandStep::NeedPoint,
             },
         }

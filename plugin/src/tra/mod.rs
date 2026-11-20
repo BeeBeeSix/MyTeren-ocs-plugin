@@ -1435,33 +1435,24 @@ fn uprav_niveletu(
 
 fn zvednout_hotovo(host: &mut dyn HostApi, arg: &str) {
     let c: Vec<&str> = arg.split_whitespace().collect();
-    let (Some(id), Some(k), Some(dz)) = (c.first(), c.get(1).and_then(|x| x.parse::<usize>().ok()), c.get(2).and_then(|x| cti_cislo(x))) else { return };
+    let (Some(id), Some(kde), Some(dz)) = (c.first(), c.get(1), c.get(2).and_then(|x| cti_cislo(x))) else { return };
+    let smer = |z: f64, muz: bool| match (z >= 0.0, muz) {
+        (true, true) => tr("zvednut"),
+        (false, true) => tr("snížen"),
+        (true, false) => tr("zvednuta"),
+        (false, false) => tr("snížena"),
+    };
+    if *kde == "v" {
+        return uprav_niveletu(host, id, tr("Zvednutí nivelety"), |vr| {
+            trasy::niveleta::posun_od(vr, 0, 0.0, dz);
+            Ok((trf!("Trasy: celá niveleta {} o {} m.", smer(dz, false), cislo(dz.abs(), 3, true)), None))
+        });
+    }
+    let Ok(k) = kde.parse::<usize>() else { return };
     uprav_niveletu(host, id, tr("Zvednutí vrcholu nivelety"), |vr| {
         let x = vr.get_mut(k).ok_or_else(|| tr("vrchol už neexistuje").to_string())?;
         x.z += dz;
-        Ok((
-            trf!("Trasy: vrchol {} nivelety {} o {} m.", k + 1, if dz >= 0.0 { tr("zvednut") } else { tr("snížen") }, cislo(dz.abs(), 3, true)),
-            Some(k),
-        ))
-    });
-}
-
-fn zvednout_vse_cmd(host: &mut dyn HostApi) {
-    let doc = match PresHost(host).dokument() {
-        Ok(d) => d,
-        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
-    };
-    let Some(t) = trasa_nastroje(host, &doc) else {
-        return host.push_error(tr("Trasy: nejdřív klikněte na pohled profilu s niveletou (nebo niveletu nakreslete tlačítkem Niveleta)."));
-    };
-    let dz = editor_nivelety::dz_vse();
-    if dz.abs() < 1e-6 {
-        return host.push_error(tr("Trasy: v panelu zadejte, o kolik niveletu zvednout (záporně = snížit)."));
-    }
-    let id = t.def.id.clone();
-    uprav_niveletu(host, &id, tr("Zvednutí nivelety"), |vr| {
-        trasy::niveleta::posun_od(vr, 0, 0.0, dz);
-        Ok((trf!("Trasy: celá niveleta {} o {} m.", if dz >= 0.0 { tr("zvednuta") } else { tr("snížena") }, cislo(dz.abs(), 3, true)), None))
+        Ok((trf!("Trasy: vrchol {} nivelety {} o {} m.", k + 1, smer(dz, true), cislo(dz.abs(), 3, true)), Some(k)))
     });
 }
 
@@ -1944,10 +1935,6 @@ pub fn dispatch(host: &mut dyn HostApi, cmd: &str) -> bool {
             }
             "TRA_NIV_ZVEDNOUT_HOTOVO" => {
                 zvednout_hotovo(host, zbytek);
-                true
-            }
-            "TRA_NIV_ZVEDNOUT_VSE" => {
-                zvednout_vse_cmd(host);
                 true
             }
             "TRA_NIV_USEK_SKLON" => {
