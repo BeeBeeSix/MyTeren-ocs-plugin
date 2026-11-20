@@ -488,3 +488,5 @@ kruh R {} · L {} · K {}	circle R {} · L {} · K {}
 Popisy oblouků	Curve labels
 Trasy: popisy oblouků zapnuty (pohledů: {}).	Alignments: curve labels on (views: {}).
 Trasy: popisy oblouků vypnuty (pohledů: {}).	Alignments: curve labels off (views: {}).
+◀ Předchozí	◀ Previous
+Další ▶	Next ▶

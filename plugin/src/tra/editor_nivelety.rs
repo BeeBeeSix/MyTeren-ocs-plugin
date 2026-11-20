@@ -247,13 +247,12 @@ pub fn definice() -> PanelDef {
         .with_control(nadpis(tr("Vybraný vrchol")))
         .with_control(DialogControl::Choice { id: "vrchol".into(), label: tr("Vrchol").into(), options: vec!["1".into()], default_index: 0 })
         .with_control(radek(vec![
-            DialogControl::Button { id: "pred".into(), label: tr("◀ Předchozí vrchol").into(), action: None, align_h: None, width: None },
-            DialogControl::Button { id: "dalsi".into(), label: tr("Další vrchol ▶").into(), action: None, align_h: None, width: None },
-        ]))
-        .with_control(radek(vec![
-            DialogControl::Checkbox { id: "zvyraznit".into(), label: tr("Zvýraznit v pohledu").into(), default: zvyraznit },
+            DialogControl::Button { id: "pred".into(), label: tr("◀ Předchozí").into(), action: None, align_h: None, width: None },
             DialogControl::Button { id: "ukazat".into(), label: tr("Ukázat ve výkrese").into(), action: None, align_h: None, width: None },
+            DialogControl::Button { id: "dalsi".into(), label: tr("Další ▶").into(), action: None, align_h: None, width: None },
         ]))
+        // zaškrtávátko samostatně – v řádku s tlačítkem mu OCS neobnoví stav
+        .with_control(DialogControl::Checkbox { id: "zvyraznit".into(), label: tr("Zvýraznit v pohledu").into(), default: zvyraznit })
         .with_control(DialogControl::Checkbox { id: "popisy".into(), label: tr("Popisy oblouků").into(), default: true })
         .with_control(DialogControl::Fields {
             id: "detail".into(),
@@ -867,6 +866,8 @@ pub fn proved(k: &mut PresKanal) {
     if let Some(b) = stav(|s| s.popisy.take()) {
         let pohledy: Vec<_> = crate::tra::pohled::pohledy(&doc).into_iter().filter(|p| p.def.trasa == t.def.id).collect();
         let mut n = 0;
+        // překreslit hned i v režimu „přepočet po dokončení úprav“
+        let _hned = crate::prepocet::Vynuceni::zacni();
         for p in pohledy {
             let mut def = p.def.clone();
             def.vyjimky.insert("popis_oblouku".into(), if b { "1" } else { "0" }.into());
@@ -875,6 +876,7 @@ pub fn proved(k: &mut PresKanal) {
             }
             k.konec_kroku();
         }
+        k.hotovo();
         if n > 0 {
             k.info(&if b {
                 trf!("Trasy: popisy oblouků zapnuty (pohledů: {}).", n)
