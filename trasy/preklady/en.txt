@@ -490,3 +490,8 @@ Trasy: popisy oblouků zapnuty (pohledů: {}).	Alignments: curve labels on (view
 Trasy: popisy oblouků vypnuty (pohledů: {}).	Alignments: curve labels off (views: {}).
 ◀ Předchozí	◀ Previous
 Další ▶	Next ▶
+Vlastnosti nivelety	Design profile properties
+Oblouky do všech vrcholů	Curves at all vertices
+Změnit sklon úseku	Change segment grade
+Změnit délku úseku	Change segment length
+Prodloužit niveletu	Extend design profile

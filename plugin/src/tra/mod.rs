@@ -85,30 +85,31 @@ pub fn skupiny() -> Vec<RibbonGroup> {
             tools: vec![
                 RibbonItem::LargeTool(tool("TRA_POHLED", tr("Podélný profil"), ikona!("tra_profil"))),
                 RibbonItem::LargeTool(tool("TRA_NIVELETA", tr("Niveleta"), ikona!("tra_niveleta"))),
-                RibbonItem::LabeledTool(tool("TRA_EDITOR_NIVELETY", tr("Editor nivelety"), ikona!("tra_editor"))),
-                RibbonItem::LabeledTool(tool("TRA_NIVELETA_TABULKA", tr("Vrcholy nivelety"), ikona!("tra_vlastnosti"))),
-                RibbonItem::LabeledTool(tool("TRA_NIVELETA_SMAZAT", tr("Smazat vrchol nivelety"), ikona!("tra_smazat"))),
-                RibbonItem::LabeledTool(tool("TRA_PREPOCITAT", tr("Překreslit trasy a profily"), ikona!("tra_prepocitat"))),
-                prepocet_nabidka(),
+                RibbonItem::LargeTool(tool("TRA_EDITOR_NIVELETY", tr("Editor nivelety"), ikona!("tra_editor"))),
+                // jako u trasy: úpravy vrcholů v nabídce, pod ní vlastnosti
+                RibbonItem::LabeledDropdown {
+                    id: "TRA_DD_VRCHOLY_NIV",
+                    label: tr("Vrcholy nivelety"),
+                    icon: ikona!("tra_vlozit"),
+                    items: vec![
+                        ("TRA_NIV_PRIDAT", tr("Přidat vrchol"), ikona!("tra_vlozit")),
+                        ("TRA_NIVELETA_SMAZAT", tr("Smazat vrchol"), ikona!("tra_smazat")),
+                        ("TRA_NIV_ZVEDNOUT", tr("Zvednout / snížit"), ikona!("tra_uchopy")),
+                        ("TRA_NIV_NATEREN", tr("Vrchol na terén"), ikona!("tra_profil")),
+                        ("TRA_NIV_VLOZIT_OBLOUK", tr("Vložit oblouk"), ikona!("tra_oblouk")),
+                        ("TRA_NIV_ODSTRANIT_OBLOUK", tr("Odstranit oblouk"), ikona!("tra_bez_oblouku")),
+                        ("TRA_NIV_OBLOUKY_VSE", tr("Oblouky do všech vrcholů"), ikona!("tra_oblouk")),
+                        ("TRA_NIV_USEK_SKLON", tr("Změnit sklon úseku"), ikona!("tra_niveleta")),
+                        ("TRA_NIV_USEK_DELKA", tr("Změnit délku úseku"), ikona!("tra_niveleta")),
+                        ("TRA_NIV_USEK_BODEM", tr("Úsek bodem"), ikona!("tra_niveleta")),
+                        ("TRA_NIV_PRODLOUZIT", tr("Prodloužit niveletu"), ikona!("tra_prodlouzit")),
+                    ],
+                    default: "TRA_NIV_PRIDAT",
+                },
+                RibbonItem::LabeledTool(tool("TRA_NIVELETA_TABULKA", tr("Vlastnosti nivelety"), ikona!("tra_vlastnosti"))),
             ],
         },
     ]
-}
-
-/// Nabídka režimu přepočtu povrchů a profilů. OCS kreslí na tlačítku
-/// naposledy zvolenou položku – výchozí je režim z nastavení.
-fn prepocet_nabidka() -> RibbonItem {
-    let mut items = vec![
-        ("TER_PREPOCET_PO", tr("Přepočet: po dokončení úprav"), ikona!("ter_prepocet_po")),
-        ("TER_PREPOCET_AUTO", tr("Přepočet: hned po každé změně"), ikona!("ter_prepocet_auto")),
-        ("TER_PREPOCET_PAUZA", tr("Přepočet: pozastavit"), ikona!("ter_prepocet_pauza")),
-        ("TER_PREPOCET_TED", tr("Přepočítat teď"), ikona!("tra_prepocitat")),
-    ];
-    if crate::nastaveni::akt().prepocet == "auto" {
-        items.swap(0, 1);
-    }
-    let default = items[0].0;
-    RibbonItem::LabeledDropdown { id: "TER_DD_PREPOCET", label: tr("Přepočet"), icon: ikona!("ter_prepocet_po"), items, default }
 }
 
 // ── Pomocné ─────────────────────────────────────────────────────────────────
