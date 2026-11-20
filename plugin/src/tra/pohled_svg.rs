@@ -214,7 +214,7 @@ mod popis_oblouku {
     fn popisy(d: &DefinicePohledu) -> usize {
         let pk = crate::okno::ukazkove_podklady();
         let (ent, _, _) = super::super::pohled::kresli(&pk, d, &nastaveni_s(d, &[]));
-        ent.iter().filter(|e| matches!(e, EntityType::Text(t) if t.value.starts_with("R = ") && t.value.contains(" · K = "))).count()
+        ent.iter().filter(|e| matches!(e, EntityType::Text(t) if t.value.starts_with("R ") && t.value.contains(" · K "))).count()
     }
 
     #[test]

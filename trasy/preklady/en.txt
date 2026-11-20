@@ -482,3 +482,6 @@ Zvýraznit vybraný vrchol v pohledu	Highlight the selected vertex in the view
 Držet konec nivelety na místě	Keep the profile end in place
 Při změně sklonu nebo délky úseku se posune jen konec úseku. Nezaškrtnuto: posune se celý zbytek nivelety.	When a segment grade or length changes, only the segment end moves. Unchecked: the whole rest of the profile moves.
 Ukázat ve výkrese	Show in drawing
+Zvýraznit v pohledu	Highlight in view
+Držet konec nivelety	Keep profile end
+kruh R {} · L {} · K {}	circle R {} · L {} · K {}

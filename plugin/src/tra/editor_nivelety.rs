@@ -248,7 +248,7 @@ pub fn definice() -> PanelDef {
             DialogControl::Button { id: "dalsi".into(), label: tr("Další vrchol ▶").into(), action: None, align_h: None, width: None },
         ]))
         .with_control(radek(vec![
-            DialogControl::Checkbox { id: "zvyraznit".into(), label: tr("Zvýraznit vybraný vrchol v pohledu").into(), default: zvyraznit },
+            DialogControl::Checkbox { id: "zvyraznit".into(), label: tr("Zvýraznit v pohledu").into(), default: zvyraznit },
             DialogControl::Button { id: "ukazat".into(), label: tr("Ukázat ve výkrese").into(), action: None, align_h: None, width: None },
         ]))
         .with_control(DialogControl::Fields {
@@ -300,7 +300,7 @@ pub fn definice() -> PanelDef {
                 tlacitko("prodlouzit", tr("→ Prodloužit"), "TRA_NIV_PRODLOUZIT"),
             ]),
         ]))
-        .with_control(DialogControl::Checkbox { id: "drzet".into(), label: tr("Držet konec nivelety na místě").into(), default: !posun })
+        .with_control(DialogControl::Checkbox { id: "drzet".into(), label: tr("Držet konec nivelety").into(), default: !posun })
         .with_control(DialogControl::StyledText {
             text: tr("Při změně sklonu nebo délky úseku se posune jen konec úseku. Nezaškrtnuto: posune se celý zbytek nivelety.").into(),
             style: TextStyle::Muted,
@@ -620,6 +620,10 @@ pub fn hodnoty_trasy(doc: &CadDocument, t: Option<&ObjektTrasy>) -> HashMap<Stri
         m.insert(format!("{id}:visible"), DialogValue::Visible(vid));
     }
     viditelnost_nastaveni(&mut m);
+    // zaškrtávátka (výchozí hodnotu z definice OCS v panelu neukáže)
+    let (zv, posun) = stav(|s| (s.zvyraznit, s.posun));
+    m.insert("zvyraznit".into(), DialogValue::Bool(zv));
+    m.insert("drzet".into(), DialogValue::Bool(!posun));
     m
 }
 
