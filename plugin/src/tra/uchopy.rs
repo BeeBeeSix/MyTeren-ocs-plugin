@@ -193,7 +193,7 @@ fn zacatek_nivelety(host: &mut dyn HostApi, h: u64, idx: usize, pt: [f64; 3]) ->
     let vrcholy = n.vrcholy.clone();
     if sub != NIV_VLOZIT {
         crate::tra::editor_nivelety::nastav_aktivni(&trasa.def.id);
-        crate::tra::editor_nivelety::nastav_vybrany(i);
+        crate::tra::editor_nivelety::vyber_a_obnov(i);
     }
     let t = TahNivelety { doc, pohled, trasa, vrcholy, sub, i, start };
     let r = nahled_nivelety(&t, pt);

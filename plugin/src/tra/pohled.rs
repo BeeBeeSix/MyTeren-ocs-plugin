@@ -563,10 +563,10 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
                     "kružnice R = {} · L = {} · K = {}",
                     cislo(o.r, 0, true),
                     cislo(o.delka, 2, true),
-                    cislo(o.k, 1, true)
+                    cislo(o.k, if o.k < 10.0 { 2 } else { 1 }, true)
                 ),
                 trasy::niveleta::TypOblouku::Parabola => {
-                    format!("R = {} · L = {} · K = {}", cislo(o.r, 0, true), cislo(o.delka, 2, true), cislo(o.k, 1, true))
+                    format!("R = {} · L = {} · K = {}", cislo(o.r, 0, true), cislo(o.delka, 2, true), cislo(o.k, if o.k < 10.0 { 2 } else { 1 }, true))
                 }
             };
             let (y, va) = if o.vypukly { (p[1] + 0.8 * hg, TextVerticalAlignment::Bottom) } else { (p[1] - 0.8 * hg, TextVerticalAlignment::Top) };

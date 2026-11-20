@@ -359,7 +359,7 @@ impl Upozorneni {
             ),
             Upozorneni::MalyPolomer { vrchol, r } => (
                 "vrchol {}: R = {} m (K = {}) je malý",
-                vec![(vrchol + 1).to_string(), cislo(*r, 0, true), cislo(r / 100.0, 1, true)],
+                vec![(vrchol + 1).to_string(), cislo(*r, 0, true), cislo(r / 100.0, if *r < 1000.0 { 2 } else { 1 }, true)],
             ),
             Upozorneni::VelkySklon { od, sklon } => (
                 "úsek {}–{}: sklon {} ‰ je velký",

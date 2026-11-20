@@ -440,3 +440,6 @@ niveleta nemá vrcholy	the design profile has no vertices
  (oblouk se do vrcholu nevešel)	 (the curve did not fit at the vertex)
 Trasy: niveleta prodloužena o {} m se sklonem {} ‰{}.	Alignments: design profile extended by {} m at {} ‰{}.
 mezipřímka mezi oblouky {} a {} je jen {} m	the tangent between curves {} and {} is only {} m
+bez oblouku	no curve
+◀ Předchozí vrchol	◀ Previous vertex
+Další vrchol ▶	Next vertex ▶
