@@ -64,6 +64,10 @@ struct Stav {
     n_podil: f64,
     /// Délka nesouměrného oblouku L [m] (zadává se jen délkou).
     n_l: f64,
+    /// Zvýraznit vybraný vrchol v pohledu (úchop na niveletě).
+    zvyraznit: bool,
+    /// Přiblížit výkres k vybranému vrcholu (tlačítko Ukázat ve výkrese).
+    ukazat: bool,
     /// Při změně sklonu / délky úseku posunout zbytek nivelety (jinak držet konec).
     posun: bool,
 }
@@ -79,6 +83,8 @@ static STAV: Mutex<Stav> = Mutex::new(Stav {
     n_hod: 50.0,
     n_podil: 0.4,
     n_l: 40.0,
+    zvyraznit: true,
+    ukazat: false,
     posun: true,
 });
 static OTEVREN: AtomicBool = AtomicBool::new(false);
@@ -126,6 +132,15 @@ pub fn vyber_a_obnov(i: usize) {
 /// zadání (R / L / K), hodnota a podíl L1.
 pub fn nastaveni_oblouku() -> (usize, &'static str, f64, f64) {
     stav(|s| if s.n_typ == 1 { (1, "L", s.n_l, s.n_podil) } else { (s.n_typ, TYPY[s.n_zad.min(2)], s.n_hod, s.n_podil) })
+}
+
+/// Vrchol, který se má zvýraznit v pohledu: (id trasy, index) – jen když je
+/// panel otevřený a zvýraznění zapnuté.
+pub fn zvyrazneny_vrchol() -> Option<(String, usize)> {
+    if !otevren() {
+        return None;
+    }
+    stav(|s| if s.zvyraznit { s.trasa.clone().map(|t| (t, s.vybrany)) } else { None })
 }
 
 /// Posunout zbytek nivelety při změně sklonu / délky úseku?
@@ -202,7 +217,7 @@ fn sloupec(nazev: &str, c: Vec<DialogControl>) -> DialogControl {
 
 pub fn definice() -> PanelDef {
     OTEVREN.store(true, Ordering::SeqCst);
-    let (n_typ, n_zad, n_hod, n_podil, n_l, posun) = stav(|s| (s.n_typ, s.n_zad, s.n_hod, s.n_podil, s.n_l, s.posun));
+    let (n_typ, n_zad, n_hod, n_podil, n_l, posun, zvyraznit) = stav(|s| (s.n_typ, s.n_zad, s.n_hod, s.n_podil, s.n_l, s.posun, s.zvyraznit));
     PanelDef::new(ID, tr("Editor nivelety"))
         .with_command(PRIKAZ)
         .with_width(540.0)
@@ -231,6 +246,10 @@ pub fn definice() -> PanelDef {
         .with_control(radek(vec![
             DialogControl::Button { id: "pred".into(), label: tr("◀ Předchozí vrchol").into(), action: None, align_h: None, width: None },
             DialogControl::Button { id: "dalsi".into(), label: tr("Další vrchol ▶").into(), action: None, align_h: None, width: None },
+        ]))
+        .with_control(radek(vec![
+            DialogControl::Checkbox { id: "zvyraznit".into(), label: tr("Zvýraznit vybraný vrchol v pohledu").into(), default: zvyraznit },
+            DialogControl::Button { id: "ukazat".into(), label: tr("Ukázat ve výkrese").into(), action: None, align_h: None, width: None },
         ]))
         .with_control(DialogControl::Fields {
             id: "detail".into(),
@@ -281,11 +300,11 @@ pub fn definice() -> PanelDef {
                 tlacitko("prodlouzit", tr("→ Prodloužit"), "TRA_NIV_PRODLOUZIT"),
             ]),
         ]))
-        .with_control(DialogControl::Choice {
-            id: "navaz".into(),
-            label: tr("Při změně úseku").into(),
-            options: vec![tr("posunout zbytek nivelety").into(), tr("zbytek nivelety držet na místě").into()],
-            default_index: if posun { 0 } else { 1 },
+        .with_control(DialogControl::Checkbox { id: "drzet".into(), label: tr("Držet konec nivelety na místě").into(), default: !posun })
+        .with_control(DialogControl::StyledText {
+            text: tr("Při změně sklonu nebo délky úseku se posune jen konec úseku. Nezaškrtnuto: posune se celý zbytek nivelety.").into(),
+            style: TextStyle::Muted,
+            align_h: None,
         })
         .with_control(nadpis(tr("Nastavení oblouku při vložení")))
         .with_control(DialogControl::Fields {
@@ -314,8 +333,6 @@ pub fn definice() -> PanelDef {
             ],
             collapsed: false,
         })
-        .with_control(nadpis(tr("Kontrola")))
-        .with_control(DialogControl::Label { id: "kontrola".into(), text: String::new(), align_h: None })
 }
 
 /// Viditelnost polí nastavení oblouku podle typu (nesouměrný = jen délka a poměr).
@@ -496,28 +513,6 @@ pub fn radky(n: &Niveleta) -> Vec<Vec<String>> {
         .collect()
 }
 
-fn formatuj(t: &'static str, a: &[String]) -> String {
-    trasy::preklad::formatuj(tr(t), &a.iter().map(|x| x as &dyn std::fmt::Display).collect::<Vec<_>>())
-}
-
-/// Text kontroly nivelety: chyba, varování (!) a informace (✓), jinak „v pořádku“.
-pub fn kontrola(n: &Niveleta) -> String {
-    let mut radky = Vec::new();
-    if let Err(e) = n.kontrola() {
-        let (t, a) = e.popis();
-        radky.push(format!("✕ {}", formatuj(t, &a)));
-    }
-    let u = n.upozorneni();
-    for x in &u {
-        let (t, a) = x.popis();
-        radky.push(format!("{} {}", if x.v_poradku() { "✓" } else { "!" }, formatuj(t, &a)));
-    }
-    if radky.iter().all(|r| r.starts_with('✓')) {
-        radky.insert(0, tr("✓ V pořádku – oblouky se vejdou, sklony i poloměry vyhovují.").to_string());
-    }
-    radky.join("\n")
-}
-
 /// Hodnoty panelu pro trasu (bez stahování výkresu).
 pub fn hodnoty_trasy(doc: &CadDocument, t: Option<&ObjektTrasy>) -> HashMap<String, DialogValue> {
     let mut m = HashMap::new();
@@ -609,7 +604,6 @@ pub fn hodnoty_trasy(doc: &CadDocument, t: Option<&ObjektTrasy>) -> HashMap<Stri
         tr("Bez oblouku.").to_string()
     };
     m.insert("d_ty".into(), DialogValue::Text(ty));
-    m.insert("kontrola".into(), DialogValue::Text(kontrola(n)));
     // pole, která pro vybraný vrchol nejdou vyplnit, se skryjí
     let posledni = n.vrcholy.len() - 1;
     for (id, vid) in [
@@ -672,7 +666,15 @@ pub fn akce(control_id: &str, _action: &str, value: Option<DialogValue>) {
             s.obnovit = true;
         }),
         ("n_zad", Some(DialogValue::Choice { index, .. })) => stav(|s| s.n_zad = index.min(2)),
-        ("navaz", Some(DialogValue::Choice { index, .. })) => stav(|s| s.posun = index == 0),
+        ("drzet", Some(DialogValue::Bool(b))) => stav(|s| s.posun = !b),
+        ("ukazat", _) => stav(|s| {
+            s.ukazat = true;
+            s.obnovit = true;
+        }),
+        ("zvyraznit", Some(DialogValue::Bool(b))) => stav(|s| {
+            s.zvyraznit = b;
+            s.obnovit = true;
+        }),
         ("n_hod", Some(DialogValue::Text(t))) => {
             if let Some(x) = cti(&t).filter(|x| *x > 0.0) {
                 stav(|s| s.n_hod = x);
@@ -848,6 +850,22 @@ pub fn proved(k: &mut PresKanal) {
     let doc = k.dokument().unwrap_or(doc);
     let t = trasa_panelu(&doc);
     k.panel_id(ID, hodnoty_trasy(&doc, t.as_ref()));
+    // Ukázat ve výkrese: přiblížit na vybraný vrchol v prvním pohledu trasy
+    if stav(|s| std::mem::take(&mut s.ukazat)) {
+        if let Some(t) = &t {
+            let k_v = vybrany();
+            let bod = t.def.nivelety.first().and_then(|n| n.vrcholy.get(k_v)).and_then(|v| {
+                crate::tra::pohled::pohledy(&doc).into_iter().find(|p| p.def.trasa == t.def.id).and_then(|p| {
+                    let sirka = p.def.osy.map_or(50.0, |o| (o[1] - o[0]).abs());
+                    p.na_vykres(v.s, v.z).map(|q| (q, (sirka * 0.15).max(5.0)))
+                })
+            });
+            if let Some((q, r)) = bod {
+                let _ = k.prikaz(&format!("ZOOM W {},{} {},{}", q[0] - r, q[1] - r, q[0] + r, q[1] + r));
+            }
+        }
+    }
+    k.uchopy(crate::uchopy::spoj_trasy(crate::tra::uchopy::uchopy(&doc)));
 }
 
 /// Výška terénu (profil povrchu pohledu) ve staničení `s`.
@@ -933,8 +951,6 @@ mod testy {
         // zpět na kružnici: drží se délka L
         let v = nove_vrcholy(&n2, 1, &Zmena::Druh(3)).unwrap().unwrap();
         assert_eq!((v[1].typ, v[1].zadani), (TypOblouku::Kruh, Zadani::L(60.0)));
-        // kontrola s navazujícími oblouky ukáže ✓
-        assert!(kontrola(&n).starts_with('✓'));
         // bez oblouku: typ „–“ a prázdné R, L, K; volba „bez oblouku“ oblouk odstraní
         let v = nove_vrcholy(&n, 1, &Zmena::Druh(0)).unwrap().unwrap();
         let n3 = Niveleta::nova("N", "", v);

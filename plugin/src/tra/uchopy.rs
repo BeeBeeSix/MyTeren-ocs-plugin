@@ -62,9 +62,30 @@ pub fn uchopy(doc: &CadDocument) -> Vec<PluginGrip> {
     for t in trasy.iter().filter(|t| vse || vyber.contains(&t.insert)) {
         out.extend(uchopy_trasy(t));
     }
-    for p in crate::tra::pohled::pohledy(doc).into_iter().filter(|p| vyber.contains(&p.insert)) {
+    let pohledy = crate::tra::pohled::pohledy(doc);
+    for p in pohledy.iter().filter(|p| vyber.contains(&p.insert)) {
         if let Some(t) = trasy.iter().find(|t| t.def.id == p.def.trasa) {
-            out.extend(uchopy_pohledu(&p, t));
+            out.extend(uchopy_pohledu(p, t));
+        }
+    }
+    // vrchol vybraný v Editoru nivelety: úchop na niveletě (jen v pohledech,
+    // které nejsou vybrané – tam jsou úchopy všech vrcholů)
+    if let Some((id, k)) = crate::tra::editor_nivelety::zvyrazneny_vrchol() {
+        if let Some(t) = trasy.iter().find(|t| t.def.id == id) {
+            if let Some(v) = t.def.nivelety.first().and_then(|n| n.vrcholy.get(k)) {
+                for p in pohledy.iter().filter(|p| p.def.trasa == id && !vyber.contains(&p.insert)) {
+                    if let Some(point) = p.na_vykres(v.s, v.z) {
+                        out.push(PluginGrip {
+                            grip_id: id_niv(p, NIV_VRCHOL, k),
+                            anchor: Some(t.insert),
+                            point,
+                            axis: None,
+                            shape: PluginGripShape::Square,
+                            xy_plane: false,
+                        });
+                    }
+                }
+            }
         }
     }
     out
@@ -595,7 +616,12 @@ fn spust_obnovu(tab: u64) {
                 if let Some(t) = vybrane.first() {
                     crate::tra::editor::nastav_aktivni(&t.def.id);
                 }
-                if ZAPNUTO.load(Ordering::SeqCst) || byla || !vybrane.is_empty() || vybrany_pohled.is_some() {
+                if ZAPNUTO.load(Ordering::SeqCst)
+                    || byla
+                    || !vybrane.is_empty()
+                    || vybrany_pohled.is_some()
+                    || crate::tra::editor_nivelety::zvyrazneny_vrchol().is_some()
+                {
                     let g = uchopy(&doc);
                     k.uchopy(crate::uchopy::spoj_trasy(g));
                 }
