@@ -138,14 +138,20 @@ fn nove_vrcholy_nivelety(t: &TahNivelety, pt: [f64; 3], pusteni: bool) -> Vec<Vr
         }
         NIV_POLOMER => {
             if let Some(r) = pusteni.then(|| napsana_vzdalenost(t.start, pt)).flatten() {
-                v[i].r = r;
+                // napsané číslo platí v zadání oblouku (R, délka L nebo K)
+                use trasy::niveleta::Zadani;
+                match v[i].zadani {
+                    Zadani::L(_) => v[i].zadani = Zadani::L(r),
+                    Zadani::K => v[i].r = r * 100.0,
+                    Zadani::R => v[i].r = r,
+                }
             } else {
                 let n = Niveleta::nova("N", "", t.vrcholy.clone());
                 let skl = n.sklony();
                 let di = (skl[i] - skl[i - 1]).abs();
                 let y = (v[i].z - z).abs();
                 if di > 1e-9 {
-                    v[i].r = (8.0 * y / (di * di)).max(1.0);
+                    trasy::niveleta::nastav_polomer(&mut v, i, (8.0 * y / (di * di)).max(1.0));
                 }
             }
         }

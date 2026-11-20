@@ -90,6 +90,13 @@ angličtina), projeví se po novém spuštění.
 
 # Co je nového
 
+## Připravuje se
+
+- **Zakružovací oblouk nivelety zadáte poloměrem R, délkou L nebo hodnotou K**
+  (K = L / lom sklonu v %, jak je zvykem např. v 12d) – zbylé hodnoty se
+  dopočtou. Zadaná délka L se při změně sklonů drží. Pohled profilu oblouk
+  popíše (R · L · K). Námět z hlášení #2.
+
 ## Verze 1.2.0
 
 - **Plynulejší práce.** Po změně výkresu se výkres stahuje jen jednou

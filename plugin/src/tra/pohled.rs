@@ -548,6 +548,17 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
         if b.len() >= 2 {
             ent.push(pero.polylinie(&b, "niveleta", H_NIVELETA));
         }
+        // popis zakružovacích oblouků u vrcholu: nad vypuklým, pod údolnicovým
+        for o in n.oblouky() {
+            let v = n.vrcholy[o.vrchol];
+            if v.s < osy.od - 1e-6 || v.s > osy.do_ + 1e-6 {
+                continue;
+            }
+            let p = osy.bod(v.s, v.z);
+            let t = format!("R = {} · L = {} · K = {}", cislo(o.r, 0, true), cislo(o.delka, 2, true), cislo(o.k, 1, true));
+            let (y, va) = if o.vypukly { (p[1] + 0.8 * hg, TextVerticalAlignment::Bottom) } else { (p[1] - 0.8 * hg, TextVerticalAlignment::Top) };
+            ent.push(pero.text("graf", t, [p[0], y], TextHorizontalAlignment::Center, va, 0.0, H_POPIS));
+        }
     }
     let kontext = KontextPasu {
         def,

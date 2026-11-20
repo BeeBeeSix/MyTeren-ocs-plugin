@@ -1009,6 +1009,7 @@ fn uloz_niveletu_cmd(
     let mut def = t.def.clone();
     let Some(n) = def.nivelety.first_mut() else { return Err(tr("trasa nemá niveletu").into()) };
     n.vrcholy = vrcholy;
+    n.dopocti();
     if let Err(e) = n.kontrola() {
         let (txt, a) = e.popis();
         return Err(trasy::preklad::formatuj(tr(txt), &a.iter().map(|x| x as &dyn std::fmt::Display).collect::<Vec<_>>()));
@@ -1047,44 +1048,123 @@ fn niveleta_tabulka_cmd(host: &mut dyn HostApi) {
         return host.push_error(tr("Trasy: nejdřív klikněte na pohled profilu s niveletou (nebo niveletu nakreslete tlačítkem Niveleta)."));
     };
     let n = &t.def.nivelety[0];
-    let radky: Vec<Vec<String>> = n.vrcholy.iter().map(|v| vec![cislo(v.s, 3, false), cislo(v.z, 3, false), cislo(v.r, 1, false)]).collect();
+    let radky = radky_nivelety(n);
     let sklony: Vec<String> = n.sklony().iter().map(|i| format!("{} ‰", cislo(i * 1000.0, 2, true))).collect();
-    let d = DialogDef::new(trf!("Vrcholy nivelety – trasa {}", t.def.jmeno))
+    let oblouky: Vec<String> = n
+        .oblouky()
+        .iter()
+        .map(|o| {
+            trf!(
+                "vrchol {} (zadáno {}): T = {} · y = {}",
+                o.vrchol + 1,
+                n.vrcholy[o.vrchol].zadani.pismeno(),
+                cislo(o.tecna, 2, true),
+                cislo(o.vzepeti, 3, true)
+            )
+        })
+        .collect();
+    let mut d = DialogDef::new(trf!("Vrcholy nivelety – trasa {}", t.def.jmeno))
         .with_control(DialogControl::Table {
             id: "vrcholy".into(),
-            label: Some(tr("Vrcholy: staničení [m], výška [m n. m.], R zakružovacího oblouku [m] (0 = bez oblouku)").into()),
-            headers: vec![tr("Staničení").into(), tr("Výška").into(), "R".into()],
+            label: Some(tr("Vrcholy: staničení [m], výška [m n. m.] a zakružovací oblouk: R = poloměr [m], L = délka oblouku [m], K = L / lom sklonu [m na 1 %]. Přepište číslo ve sloupci, kterým chcete oblouk zadat – ostatní se dopočtou; 0 = bez oblouku. Zadaná hodnota platí i po změně sklonů.").into()),
+            headers: vec![tr("Staničení").into(), tr("Výška").into(), "R".into(), "L".into(), "K".into()],
             rows: radky,
             allow_add: true,
             allow_delete: true,
         })
-        .with_control(DialogControl::InfoText { text: trf!("Sklony úseků: {}", sklony.join(" · ")), align_h: None })
+        .with_control(DialogControl::InfoText { text: trf!("Sklony úseků: {}", sklony.join(" · ")), align_h: None });
+    if !oblouky.is_empty() {
+        d = d.with_control(DialogControl::InfoText { text: trf!("Oblouky: {}", oblouky.join("\n")), align_h: None });
+    }
+    let d = d
         .submit_label(tr("Použít"))
         .cancel_label(tr("Zrušit"))
-        .width(520.0);
+        .width(620.0);
     host.start_interactive(vykres::hlidany(Box::new(prikazy::DialogPrikaz::new(d, format!("TRA_NIVELETA_TABULKA_HOTOVO {}", t.def.id)))));
+}
+
+/// Řádky tabulky vrcholů: staničení, výška, R, L, K (oblouk spočtený ze zadání; u krajních vrcholů prázdné).
+fn radky_nivelety(n: &trasy::niveleta::Niveleta) -> Vec<Vec<String>> {
+    let ob = n.oblouky();
+    let posledni = n.vrcholy.len().saturating_sub(1);
+    n.vrcholy
+        .iter()
+        .enumerate()
+        .map(|(k, v)| {
+            let mut r = vec![cislo(v.s, 3, false), cislo(v.z, 3, false)];
+            if k == 0 || k == posledni {
+                r.extend([String::new(), String::new(), String::new()]);
+            } else if let Some(o) = ob.iter().find(|o| o.vrchol == k) {
+                r.extend([cislo(o.r, 1, false), cislo(o.delka, 2, false), cislo(o.k, 2, false)]);
+            } else if let trasy::niveleta::Zadani::L(l) = v.zadani {
+                // délka bez lomu sklonu: oblouk teď není, zadání zůstává
+                r.extend(["0".into(), cislo(l, 2, false), "0".into()]);
+            } else {
+                r.extend(["0".into(), "0".into(), "0".into()]);
+            }
+            r
+        })
+        .collect()
+}
+
+/// Vrchol z řádku tabulky: platí sloupec R/L/K, který se proti původnímu řádku změnil;
+/// beze změny zůstane původní zadání, nový řádek bere první vyplněný sloupec.
+fn vrchol_z_radku(
+    s: f64,
+    z: f64,
+    r: &[String],
+    puvodni: Option<(&trasy::niveleta::VrcholNivelety, &[String])>,
+) -> trasy::niveleta::VrcholNivelety {
+    use trasy::niveleta::VrcholNivelety;
+    const SLOUPCE: [&str; 3] = ["R", "L", "K"];
+    let bunka = |radek: &[String], i: usize| radek.get(2 + i).and_then(|c| cti_cislo(c));
+    match puvodni {
+        Some((v, puv)) => {
+            let zmena = (0..3).find(|&i| match (bunka(r, i), bunka(puv, i)) {
+                (Some(a), Some(b)) => (a - b).abs() > 1e-9,
+                (a, b) => a.is_some() != b.is_some(),
+            });
+            match zmena {
+                Some(i) => VrcholNivelety::zadany(s, z, SLOUPCE[i], bunka(r, i).unwrap_or(0.0)),
+                None => VrcholNivelety { s, z, ..*v },
+            }
+        }
+        None => match (0..3).find(|&i| bunka(r, i).is_some_and(|h| h > 0.0)) {
+            Some(i) => VrcholNivelety::zadany(s, z, SLOUPCE[i], bunka(r, i).unwrap_or(0.0)),
+            None => VrcholNivelety::new(s, z, 0.0),
+        },
+    }
 }
 
 fn niveleta_tabulka_hotovo(host: &mut dyn HostApi, arg: &str) {
     let Some(odp) = prikazy::vezmi_odpoved() else { return };
     let Some(DialogValue::Table(rows)) = odp.get("vrcholy") else { return };
-    let mut vrcholy = Vec::new();
-    for (i, r) in rows.iter().enumerate() {
-        if r.iter().all(|c| c.trim().is_empty()) {
-            continue;
-        }
-        match (r.first().and_then(|c| cti_cislo(c)), r.get(1).and_then(|c| cti_cislo(c))) {
-            (Some(s), Some(z)) => vrcholy.push(trasy::niveleta::VrcholNivelety::new(s, z, r.get(2).and_then(|c| cti_cislo(c)).unwrap_or(0.0).max(0.0))),
-            _ => return host.push_error(&trf!("Trasy: řádek {} nemá platné staničení a výšku – nic se nezměnilo.", i + 1)),
-        }
-    }
-    vrcholy.sort_by(|a, b| a.s.total_cmp(&b.s));
     let mut v = PresHost(host);
     let doc = match v.dokument() {
         Ok(d) => d,
         Err(e) => return v.chyba(&trf!("Trasy: {}", e)),
     };
     let Some(t) = objekt::trasy(&doc).into_iter().find(|t| t.def.id == arg.trim()) else { return };
+    let Some(n) = t.def.nivelety.first() else { return };
+    let puvodni = radky_nivelety(n);
+    let mut vrcholy = Vec::new();
+    for (i, r) in rows.iter().enumerate() {
+        if r.iter().all(|c| c.trim().is_empty()) {
+            continue;
+        }
+        match (r.first().and_then(|c| cti_cislo(c)), r.get(1).and_then(|c| cti_cislo(c))) {
+            (Some(s), Some(z)) => {
+                // původní řádek: stejné staničení a výška, jinak stejné pořadí (když se počet řádků nezměnil)
+                let j = puvodni
+                    .iter()
+                    .position(|p| p.first().and_then(|c| cti_cislo(c)) == Some(s) && p.get(1).and_then(|c| cti_cislo(c)) == Some(z))
+                    .or_else(|| (rows.len() == puvodni.len()).then_some(i));
+                vrcholy.push(vrchol_z_radku(s, z, r, j.map(|j| (&n.vrcholy[j], puvodni[j].as_slice()))));
+            }
+            _ => return v.chyba(&trf!("Trasy: řádek {} nemá platné staničení a výšku – nic se nezměnilo.", i + 1)),
+        }
+    }
+    vrcholy.sort_by(|a, b| a.s.total_cmp(&b.s));
     match uloz_niveletu_cmd(&mut v, &doc, &t, vrcholy, tr("Vrcholy nivelety")) {
         Ok(n) => v.info(&trf!("Trasy: niveleta trasy {} upravena, překresleno pohledů: {}.", t.def.jmeno, n)),
         Err(e) => v.chyba(&trf!("Trasy: změna se nepřijala – {}", e)),
@@ -1123,10 +1203,10 @@ fn niveleta_smazat_cmd(host: &mut dyn HostApi, arg: &str) {
     let mut vrcholy = n.vrcholy.clone();
     vrcholy.remove(i);
     if let Some(x) = vrcholy.first_mut() {
-        x.r = 0.0;
+        *x = trasy::niveleta::VrcholNivelety::new(x.s, x.z, 0.0);
     }
     if let Some(x) = vrcholy.last_mut() {
-        x.r = 0.0;
+        *x = trasy::niveleta::VrcholNivelety::new(x.s, x.z, 0.0);
     }
     match uloz_niveletu_cmd(&mut v, &doc, &t, vrcholy, tr("Smazání vrcholu nivelety")) {
         Ok(_) => v.info(&trf!("Trasy: z nivelety trasy {} smazán vrchol {}.", t.def.jmeno, i + 1)),
@@ -1382,4 +1462,41 @@ pub fn dispatch(host: &mut dyn HostApi, cmd: &str) -> bool {
         };
         host.end_undo_group();
         r
+}
+
+#[cfg(test)]
+mod testy_tabulky_nivelety {
+    use super::{radky_nivelety, vrchol_z_radku};
+    use trasy::niveleta::{Niveleta, VrcholNivelety, Zadani};
+
+    fn n() -> Niveleta {
+        Niveleta::nova("N", "", vec![
+            VrcholNivelety::new(0.0, 100.0, 0.0),
+            VrcholNivelety::new(100.0, 102.0, 2000.0),
+            VrcholNivelety::new(200.0, 101.0, 0.0),
+        ])
+    }
+
+    #[test]
+    fn prepsany_sloupec_plati() {
+        let n = n();
+        let puv = radky_nivelety(&n);
+        assert_eq!(puv[1][2..], ["2000.0".to_string(), "60.00".into(), "20.00".into()]);
+        assert!(puv[0][2].is_empty());
+        let mut r = puv[1].clone();
+        // beze změny zůstane zadání poloměrem
+        assert_eq!(vrchol_z_radku(100.0, 102.0, &r, Some((&n.vrcholy[1], &puv[1]))).zadani, Zadani::R);
+        r[3] = "90".into();
+        assert_eq!(vrchol_z_radku(100.0, 102.0, &r, Some((&n.vrcholy[1], &puv[1]))).zadani, Zadani::L(90.0));
+        let mut r = puv[1].clone();
+        r[4] = "30".into();
+        let v = vrchol_z_radku(100.0, 102.0, &r, Some((&n.vrcholy[1], &puv[1])));
+        assert_eq!((v.zadani, v.r), (Zadani::K, 3000.0));
+        let mut r = puv[1].clone();
+        r[2] = "0".into();
+        assert_eq!(vrchol_z_radku(100.0, 102.0, &r, Some((&n.vrcholy[1], &puv[1]))).r, 0.0);
+        // nový řádek: první vyplněný sloupec
+        let novy = vec!["50".to_string(), "101".into(), "".into(), "40".into(), "".into()];
+        assert_eq!(vrchol_z_radku(50.0, 101.0, &novy, None).zadani, Zadani::L(40.0));
+    }
 }

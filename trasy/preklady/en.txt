@@ -212,7 +212,9 @@ trasa nemá niveletu	the alignment has no design profile
 niveletu se nepodařilo uložit	the design profile could not be saved
 Trasy: nejdřív klikněte na pohled profilu s niveletou (nebo niveletu nakreslete tlačítkem Niveleta).	Alignments: first click a profile view with a design profile (or draw one with the Design profile button).
 Vrcholy nivelety – trasa {}	Design profile vertices – alignment {}
-Vrcholy: staničení [m], výška [m n. m.], R zakružovacího oblouku [m] (0 = bez oblouku)	Vertices: station [m], elevation [m a.s.l.], vertical curve R [m] (0 = no curve)
+Oblouky: {}	Vertical curves: {}
+Vrcholy: staničení [m], výška [m n. m.] a zakružovací oblouk: R = poloměr [m], L = délka oblouku [m], K = L / lom sklonu [m na 1 %]. Přepište číslo ve sloupci, kterým chcete oblouk zadat – ostatní se dopočtou; 0 = bez oblouku. Zadaná hodnota platí i po změně sklonů.	Vertices: station [m], elevation [m a.s.l.] and vertical curve: R = radius [m], L = curve length [m], K = L / grade change [m per 1 %]. Overwrite the number in the column you want to set the curve by – the others are calculated; 0 = no curve. The entered value is kept when grades change.
+vrchol {} (zadáno {}): T = {} · y = {}	vertex {} (set by {}): T = {} · y = {}
 Výška	Elevation
 Sklony úseků: {}	Segment grades: {}
 Trasy: řádek {} nemá platné staničení a výšku – nic se nezměnilo.	Alignments: row {} has no valid station and elevation – nothing changed.

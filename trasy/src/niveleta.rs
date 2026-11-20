@@ -2,6 +2,32 @@
 //!
 //! Zakružovací oblouk je kvadratická parabola zadaná vrcholovým poloměrem R
 //! (česká praxe): tečna T = R·|i₂ − i₁| / 2, vzepětí y = T² / (2R).
+//! Oblouk jde zadat i délkou L = R·|i₂ − i₁| (= 2T) nebo hodnotou
+//! K = L / A [m na 1 % lomu] = R / 100 (praxe 12d, AASHTO, Austroads).
+//! Zadaná délka L zůstává při změně sklonů stejná, poloměr se dopočte.
+
+/// Čím je zakružovací oblouk zadaný (co zůstane při změně sklonů).
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub enum Zadani {
+    /// Vrcholovým poloměrem R (pole `r`).
+    #[default]
+    R,
+    /// Hodnotou K = R / 100 (drží se R, jen se tak zadává a vypisuje).
+    K,
+    /// Délkou oblouku L [m] – při změně sklonů se drží L.
+    L(f64),
+}
+
+impl Zadani {
+    /// Písmeno zadání (R, L, K).
+    pub fn pismeno(self) -> &'static str {
+        match self {
+            Zadani::R => "R",
+            Zadani::K => "K",
+            Zadani::L(_) => "L",
+        }
+    }
+}
 
 /// Vrchol nivelety.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -11,12 +37,45 @@ pub struct VrcholNivelety {
     /// Výška [m n. m.].
     pub z: f64,
     /// Poloměr zakružovacího oblouku [m]; 0 = bez oblouku. U krajních vrcholů se nepoužije.
+    /// U zadání délkou je to poslední dopočtený poloměr (platí `Niveleta::polomer`).
     pub r: f64,
+    pub zadani: Zadani,
 }
 
 impl VrcholNivelety {
     pub fn new(s: f64, z: f64, r: f64) -> Self {
-        Self { s, z, r }
+        Self { s, z, r, zadani: Zadani::R }
+    }
+
+    /// Vrchol s obloukem zadaným písmenem a hodnotou (R, L nebo K; hodnota ≤ 0 = bez oblouku).
+    pub fn zadany(s: f64, z: f64, zadani: &str, hodnota: f64) -> Self {
+        let h = hodnota.max(0.0);
+        match zadani {
+            "L" | "l" if h > 0.0 => Self { s, z, r: 0.0, zadani: Zadani::L(h) },
+            "K" | "k" => Self { s, z, r: h * 100.0, zadani: Zadani::K },
+            _ => Self::new(s, z, h),
+        }
+    }
+}
+
+/// Rozdíl sklonů ve vnitřním vrcholu `k` (poměr, kladný).
+fn lom(v: &[VrcholNivelety], k: usize) -> f64 {
+    if k == 0 || k + 1 >= v.len() {
+        return 0.0;
+    }
+    let i1 = (v[k].z - v[k - 1].z) / (v[k].s - v[k - 1].s);
+    let i2 = (v[k + 1].z - v[k].z) / (v[k + 1].s - v[k].s);
+    let d = (i2 - i1).abs();
+    if d.is_finite() { d } else { 0.0 }
+}
+
+/// Nastaví vrcholu `i` poloměr tak, aby zadání zůstalo (u délky L se přepočte L = R·lom).
+pub fn nastav_polomer(v: &mut [VrcholNivelety], i: usize, r: f64) {
+    let r = r.max(0.0);
+    let d = lom(v, i);
+    v[i].r = r;
+    if let Zadani::L(_) = v[i].zadani {
+        v[i].zadani = if r > 0.0 && d > 1e-9 { Zadani::L(r * d) } else { Zadani::R };
     }
 }
 
@@ -67,6 +126,16 @@ pub struct Oblouk {
     pub od: f64,
     pub do_: f64,
     pub vzepeti: f64,
+    /// Vrcholový poloměr R [m].
+    pub r: f64,
+    /// Délka oblouku L = 2T [m].
+    pub delka: f64,
+    /// K = L / A [m na 1 %] = R / 100.
+    pub k: f64,
+    /// Lom sklonu A [%] (kladný).
+    pub a: f64,
+    /// Vypuklý (vrcholový) oblouk – jinak údolnicový.
+    pub vypukly: bool,
 }
 
 fn f(v: f64) -> String {
@@ -96,13 +165,46 @@ impl Niveleta {
         for k in 1..self.vrcholy.len().saturating_sub(1) {
             let v = self.vrcholy[k];
             let di = (i[k] - i[k - 1]).abs();
-            if v.r <= 0.0 || di < 1e-9 {
+            let r = self.polomer(k);
+            if r <= 0.0 || di < 1e-9 {
                 continue;
             }
-            let t = v.r * di / 2.0;
-            out.push(Oblouk { vrchol: k, tecna: t, od: v.s - t, do_: v.s + t, vzepeti: t * t / (2.0 * v.r) });
+            let t = r * di / 2.0;
+            out.push(Oblouk {
+                vrchol: k,
+                tecna: t,
+                od: v.s - t,
+                do_: v.s + t,
+                vzepeti: t * t / (2.0 * r),
+                r,
+                delka: 2.0 * t,
+                k: r / 100.0,
+                a: di * 100.0,
+                vypukly: i[k] < i[k - 1],
+            });
         }
         out
+    }
+
+    /// Platný poloměr oblouku ve vrcholu `k` (u zadání délkou dopočtený ze sklonů).
+    pub fn polomer(&self, k: usize) -> f64 {
+        let v = self.vrcholy[k];
+        match v.zadani {
+            Zadani::L(l) => {
+                let d = lom(&self.vrcholy, k);
+                if d > 1e-9 { l / d } else { 0.0 }
+            }
+            _ => v.r,
+        }
+    }
+
+    /// Dopočte poloměry oblouků zadaných délkou (pole `r` pak odpovídá sklonům).
+    pub fn dopocti(&mut self) {
+        for k in 0..self.vrcholy.len() {
+            if let Zadani::L(_) = self.vrcholy[k].zadani {
+                self.vrcholy[k].r = self.polomer(k);
+            }
+        }
     }
 
     pub fn kontrola(&self) -> Result<(), ChybaNivelety> {
@@ -137,7 +239,7 @@ impl Niveleta {
                 let (i1, i2) = (i[o.vrchol - 1], i[o.vrchol]);
                 let x = s - o.od;
                 let znamenko = if i2 > i1 { 1.0 } else { -1.0 };
-                return Some(p.z - o.tecna * i1 + i1 * x + znamenko * x * x / (2.0 * p.r));
+                return Some(p.z - o.tecna * i1 + i1 * x + znamenko * x * x / (2.0 * o.r));
             }
         }
         let k = v.windows(2).position(|w| s <= w[1].s + 1e-9).unwrap_or(v.len() - 2);
@@ -148,7 +250,7 @@ impl Niveleta {
     pub fn body(&self) -> Vec<[f64; 2]> {
         let mut st: Vec<f64> = self.vrcholy.iter().map(|v| v.s).collect();
         for o in self.oblouky() {
-            let r = self.vrcholy[o.vrchol].r;
+            let r = o.r;
             // odchylka tětivy paraboly: krok² / (8R) ≤ 0,001
             let krok = (0.008 * r).sqrt().max(0.2);
             let n = ((o.do_ - o.od) / krok).ceil().max(2.0) as usize;
@@ -162,11 +264,17 @@ impl Niveleta {
         st.into_iter().filter_map(|s| self.vyska(s).map(|z| [s, z])).collect()
     }
 
-    /// Řádky pro uložení k trase: `niv=id;jméno`, `nv=id;s;z;R`.
+    /// Řádky pro uložení k trase: `niv=id;jméno`, `nv=id;s;z;R[;K | ;L<délka>]`
+    /// (R je vždy platný poloměr – starší verze pátý sloupec nečtou).
     pub fn zapis(&self) -> Vec<String> {
         let mut r = vec![format!("niv={};{}", self.id, self.jmeno.chars().take(150).collect::<String>())];
-        for v in &self.vrcholy {
-            r.push(format!("nv={};{};{};{}", self.id, f(v.s), f(v.z), f(v.r)));
+        for (k, v) in self.vrcholy.iter().enumerate() {
+            let zad = match v.zadani {
+                Zadani::R => String::new(),
+                Zadani::K => ";K".into(),
+                Zadani::L(l) => format!(";L{}", f(l)),
+            };
+            r.push(format!("nv={};{};{};{}{}", self.id, f(v.s), f(v.z), f(self.polomer(k)), zad));
         }
         r
     }
@@ -183,7 +291,17 @@ impl Niveleta {
                 let cislo = |i: usize| c.get(i).and_then(|x| x.trim().parse::<f64>().ok());
                 if let (Some(id), Some(s), Some(z)) = (c.first(), cislo(1), cislo(2)) {
                     if let Some(n) = out.iter_mut().find(|n| n.id == *id) {
-                        n.vrcholy.push(VrcholNivelety::new(s, z, cislo(3).unwrap_or(0.0)));
+                        let mut v = VrcholNivelety::new(s, z, cislo(3).unwrap_or(0.0));
+                        match c.get(4).map(|x| x.trim()) {
+                            Some("K") => v.zadani = Zadani::K,
+                            Some(x) if x.starts_with('L') => {
+                                if let Some(l) = x[1..].parse::<f64>().ok().filter(|l| *l > 0.0) {
+                                    v.zadani = Zadani::L(l);
+                                }
+                            }
+                            _ => {}
+                        }
+                        n.vrcholy.push(v);
                     }
                 }
             }
@@ -263,5 +381,42 @@ mod testy {
         let r = n.zapis();
         let rr: Vec<&str> = r.iter().map(String::as_str).collect();
         assert_eq!(Niveleta::cti_vse(&rr), vec![n]);
+    }
+
+    #[test]
+    fn oblouk_l_a_k() {
+        let o = n().oblouky()[0];
+        // R 2000, lom 3 % → L = 60, K = 20
+        assert!(blizko(o.delka, 60.0) && blizko(o.k, 20.0) && blizko(o.a, 3.0) && o.vypukly);
+        let mut l = n();
+        l.vrcholy[1] = VrcholNivelety::zadany(100.0, 102.0, "L", 60.0);
+        assert!(blizko(l.oblouky()[0].r, 2000.0));
+        assert!(blizko(l.vyska(100.0).unwrap(), n().vyska(100.0).unwrap()));
+        let mut k = n();
+        k.vrcholy[1] = VrcholNivelety::zadany(100.0, 102.0, "K", 20.0);
+        assert_eq!(k.oblouky(), n().oblouky());
+        assert_eq!(k.vrcholy[1].zadani, Zadani::K);
+    }
+
+    #[test]
+    fn delka_zustava_pri_zmene_sklonu() {
+        let mut n = n();
+        n.vrcholy[1] = VrcholNivelety::zadany(100.0, 102.0, "L", 60.0);
+        n.vrcholy[2].z = 100.0; // lom 2 % + 2 % = 4 %
+        let o = n.oblouky()[0];
+        assert!(blizko(o.delka, 60.0) && blizko(o.r, 1500.0));
+        n.dopocti();
+        assert!(blizko(n.vrcholy[1].r, 1500.0));
+        // zápis: R je platný poloměr, pátý sloupec drží zadání
+        let r = n.zapis();
+        assert_eq!(r[2], "nv=N1;100;102;1500;L60");
+        let rr: Vec<&str> = r.iter().map(String::as_str).collect();
+        assert_eq!(Niveleta::cti_vse(&rr), vec![n.clone()]);
+        // starší zápis bez pátého sloupce = zadání poloměrem
+        let stary = Niveleta::cti_vse(&["niv=N1;x", "nv=N1;0;100;0", "nv=N1;100;102;1500", "nv=N1;200;100;0"]);
+        assert_eq!(stary[0].vrcholy[1].zadani, Zadani::R);
+        // úchop změní poloměr – délka se přepočte, zadání zůstane délkou
+        nastav_polomer(&mut n.vrcholy, 1, 1000.0);
+        assert_eq!(n.vrcholy[1].zadani, Zadani::L(40.0));
     }
 }

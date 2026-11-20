@@ -19,6 +19,13 @@ DWG, and every action is a single Undo step. Interface in English or Czech.
 </tr>
 </table>
 
+## Coming next
+
+- **Vertical curves by radius R, length L or K value** (K = L / grade
+  change in %, as in 12d); the other two are reported. An entered length L is
+  kept when grades change, and the profile view labels each curve
+  (R · L · K). Suggested in #2.
+
 ## What's new in 1.2.0
 
 - **Smoother editing.** Fewer round trips to Open CAD Studio after every
