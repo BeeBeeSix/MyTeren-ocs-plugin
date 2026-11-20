@@ -61,7 +61,7 @@ kontroluje, že obě strany používají stejný formát dat výkresu):
 
 | Open CAD Studio | Terén |
 |---|---|
-| 2026.46 | 1.1.0 – 1.2.0 |
+| 2026.46 | 1.1.0 – 1.3.0 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
@@ -90,24 +90,32 @@ angličtina), projeví se po novém spuštění.
 
 # Co je nového
 
-## Připravuje se
+## Verze 1.3.0
 
-- **Zakružovací oblouk nivelety zadáte poloměrem R, délkou L nebo hodnotou K**
+- **Editor nivelety** – nový ukotvený panel (tlačítko *Editor nivelety*
+  nebo klik na pohled profilu): tabulka vrcholů se staničením, výškou,
+  typem oblouku, R | L | K, sklonem a délkou úseku – přepsaná hodnota se
+  hned zapíše do výkresu. Detail vybraného vrcholu (výběr ze seznamu,
+  tlačítky Předchozí / Další, úpravou řádku nebo klikem na vrchol v pohledu)
+  ukazuje jen pole, která jdou vyplnit; vybraný vrchol se v pohledu
+  zvýrazní a *Ukázat ve výkrese* k němu přiblíží.
+- **Nástroje nivelety** ve třech skupinách – Vrcholy (přidat, smazat,
+  zvednout / snížit vrchol i celou niveletu, vrchol na terén), Oblouky
+  (vložit a odstranit oblouk klikáním na vrcholy, oblouky do všech vrcholů –
+  podle *Nastavení oblouku při vložení*) a Úseky (změnit sklon, změnit
+  délku, úsek bodem, prodloužit). Volba *Držet konec nivelety* určuje, zda
+  se při změně úseku posune zbytek nivelety. Nové vrcholy jsou bez oblouku.
+- **Zakružovací oblouk zadaný poloměrem R, délkou L nebo hodnotou K**
   (K = L / lom sklonu v %, jak je zvykem např. v 12d) – zbylé hodnoty se
-  dopočtou. Zadaná délka L se při změně sklonů drží. Pohled profilu oblouk
-  popíše (R · L · K). Námět z hlášení #2.
-- **Editor nivelety** – ukotvený panel: tabulka vrcholů s typem oblouku,
-  R | L | K, sklonem a délkou úseku; detail vybraného vrcholu (sklon a délka
-  před a za jde přepsat). Nástroje ve třech skupinách – Vrcholy (přidat,
-  smazat, zvednout / snížit, na terén), Oblouky (vložit, odstranit, do všech
-  vrcholů – podle nastavení oblouku v panelu) a Úseky (změnit sklon, změnit
-  délku, úsek bodem, prodloužit); volba, zda se zbytek nivelety posune, nebo
-  konec drží; Zpět a Znovu. Kontrola hlásí malé R/K, velký sklon, krátkou
-  mezipřímku a navazující oblouky. Změny se do výkresu zapisují chvíli po
-  dopsání.
-- **Typy zakružovacích oblouků**: parabola (výchozí), nesouměrný (L1 a L2)
-  a kružnice. Oblouky sousedních vrcholů smí na sebe navazovat bez
-  mezipřímky; překryv se hlásí s údajem o kolik metrů.
+  dopočtou; zadaná délka L se při změně sklonů drží. Námět z hlášení #2.
+- **Typy oblouků:** parabola (výchozí), nesouměrná (L1 před a L2 za
+  vrcholem) a kružnice. Oblouky sousedních vrcholů smí na sebe navazovat
+  bez mezipřímky; překryv se hlásí s údajem, o kolik metrů.
+- **Popis oblouků v pohledu** (R · L · K), vypíná se v panelu nebo ve stylu
+  profilu. Tečnový polygon se kreslí jen u oblouků, niveleta je celá vidět.
+- **Pás karet:** skupina Podélný profil jako u trasy – Podélný profil,
+  Niveleta, Editor nivelety, nabídka *Vrcholy nivelety* a *Vlastnosti
+  nivelety*. Režim přepočtu se přepíná v Prospektoru.
 
 ## Verze 1.2.0
 

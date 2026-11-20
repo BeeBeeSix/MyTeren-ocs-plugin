@@ -19,24 +19,33 @@ DWG, and every action is a single Undo step. Interface in English or Czech.
 </tr>
 </table>
 
-## Coming next
+## What's new in 1.3.0
 
-- **Vertical curves by radius R, length L or K value** (K = L / grade
-  change in %, as in 12d); the other two are reported. An entered length L is
-  kept when grades change, and the profile view labels each curve
-  (R · L · K). Suggested in #2.
-- **Design profile editor** – a docked panel with the vertex table (curve
-  type, R | L | K, segment grade and length) and selected-vertex details
-  (editable grades and lengths behind and ahead). Tools in three groups –
-  Vertices (add, delete, raise / lower, to terrain), Curves (insert, remove,
-  at all vertices – from the panel's curve settings) and Segments (change
-  grade, change length, through a point, extend); a choice to shift the rest
-  of the profile or keep its end; Undo and Redo. The check reports small
-  R/K, steep grades, short tangents and touching curves. Changes are written
-  to the drawing shortly after you stop typing.
-- **Vertical curve types**: parabola (default), unsymmetrical (L1 and L2)
-  and circle. Curves at neighbouring vertices may touch without a tangent
-  between them; an overlap is reported with its length in metres.
+- **Design profile editor** – a new docked panel (*Design profile editor*
+  button, or click a profile view): a vertex table with station, elevation,
+  curve type, R | L | K, segment grade and length – an overwritten value is
+  written to the drawing right away. Details of the selected vertex (picked
+  from a list, with Previous / Next, by editing its row or by clicking it in
+  the view) show only the fields that apply; the selected vertex is
+  highlighted in the view and *Show in drawing* zooms to it.
+- **Design profile tools** in three groups – Vertices (add, delete, raise /
+  lower a vertex or the whole profile, vertex to terrain), Curves (insert and
+  remove curves by clicking vertices, curves at all vertices – from the
+  *Curve settings for inserting*) and Segments (change grade, change length,
+  through a point, extend). *Keep profile end* decides whether the rest of
+  the profile moves when a segment changes. New vertices have no curve.
+- **Vertical curves by radius R, length L or K value** (K = L / grade change
+  in %, as in 12d); the other two are calculated, and an entered length L is
+  kept when grades change. Suggested in #2.
+- **Curve types:** parabola (default), unsymmetrical (L1 before and L2 after
+  the vertex) and circle. Curves at neighbouring vertices may touch without
+  a tangent between them; an overlap is reported with its length.
+- **Curve labels in the profile view** (R · L · K), switched off in the
+  panel or the profile style. The tangent polygon is drawn only at curves,
+  so the whole design profile stays visible.
+- **Ribbon:** the Long profile group now mirrors Alignments – Long profile,
+  Design profile, Design profile editor, a *Design profile vertices* menu and
+  *Design profile properties*. The recalculation mode is set in the Prospector.
 
 ## What's new in 1.2.0
 
@@ -165,7 +174,7 @@ Manager offers the right one.
 
 | Open CAD Studio | Terén |
 |---|---|
-| 2026.46 | 1.1.0 – 1.2.0 |
+| 2026.46 | 1.1.0 – 1.3.0 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 

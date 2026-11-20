@@ -12,9 +12,10 @@ z čistého výkresu a vymyšlených bodů (`python nastroje/body_testovaci.py`)
 - [ ] **Zpět:** po každé úpravě Ctrl+Z vrátí celou úpravu.
 - [ ] **Trasa:** nakreslit (Kreslit vrcholy), tah vrcholu úchopem, Zpět.
 - [ ] **Pohled profilu:** nový pohled (styl Jednoduchý), niveleta, tah vrcholu nivelety – chytá se terénu (uchopování).
+- [ ] **Editor nivelety:** tabulka (R / L / K, sklon, délka), detail vybraného vrcholu, Vložit oblouk klikáním + Enter, Popisy oblouků bez REGEN.
 - [ ] **Karta pohledu:** změna stylu, měřítka a převýšení překreslí pohled.
 - [ ] **Editor vzhledu profilu:** úprava pásu, Uložit a překreslit.
-- [ ] **Režim přepočtu:** nabídka Přepočet na pásu karet; „pozastavit“ → změna trasy nepřepočítá pohled, „Přepočítat teď“ ano.
+- [ ] **Režim přepočtu:** přepínač v horní liště Prospektoru; „pozastavit“ → změna trasy nepřepočítá pohled, „Přepočítat teď“ ano.
 - [ ] **Uložit, zavřít, znovu otevřít výkres:** body, povrch, trasa i pohled zůstanou a jdou upravovat.
 - [ ] **Prospektor:** hodnoty odpovídají výkresu (počet bodů, povrchy, trasy, pohledy).
 - [ ] **Velký výkres:** 20 000 bodů + nový povrch – povrch nebo srozumitelná chyba o velikosti, plugin dál reaguje.
