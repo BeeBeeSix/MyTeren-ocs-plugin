@@ -555,7 +555,20 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
                 continue;
             }
             let p = osy.bod(v.s, v.z);
-            let t = format!("R = {} · L = {} · K = {}", cislo(o.r, 0, true), cislo(o.delka, 2, true), cislo(o.k, 1, true));
+            let t = match o.typ {
+                trasy::niveleta::TypOblouku::Nesoumerny { .. } => {
+                    format!("L1 = {} · L2 = {} · y = {}", cislo(o.t1, 2, true), cislo(o.t2, 2, true), cislo(o.vzepeti, 3, true))
+                }
+                trasy::niveleta::TypOblouku::Kruh => trf!(
+                    "kružnice R = {} · L = {} · K = {}",
+                    cislo(o.r, 0, true),
+                    cislo(o.delka, 2, true),
+                    cislo(o.k, 1, true)
+                ),
+                trasy::niveleta::TypOblouku::Parabola => {
+                    format!("R = {} · L = {} · K = {}", cislo(o.r, 0, true), cislo(o.delka, 2, true), cislo(o.k, 1, true))
+                }
+            };
             let (y, va) = if o.vypukly { (p[1] + 0.8 * hg, TextVerticalAlignment::Bottom) } else { (p[1] - 0.8 * hg, TextVerticalAlignment::Top) };
             ent.push(pero.text("graf", t, [p[0], y], TextHorizontalAlignment::Center, va, 0.0, H_POPIS));
         }

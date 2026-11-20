@@ -489,3 +489,124 @@ impl InteractiveCommand for VrcholSklonem {
         }
     }
 }
+
+/// Přidat vrcholy nivelety: klikání do pohledu (výška = kliknutá), Enter = hotovo.
+pub struct PridatVrcholyNivelety {
+    pub trasa: String,
+    pub pohledy: Vec<crate::tra::pohled::ObjektPohledu>,
+    pub vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
+    pub pridane: Vec<(f64, f64)>,
+}
+
+impl PridatVrcholyNivelety {
+    fn s_pridanymi(&self, navic: Option<(f64, f64)>) -> Vec<trasy::niveleta::VrcholNivelety> {
+        let mut v = self.vrcholy.clone();
+        for &(s, z) in self.pridane.iter().chain(navic.iter()) {
+            let _ = trasy::niveleta::vloz_vrchol(&mut v, s, z, 0.0);
+        }
+        v
+    }
+}
+
+impl InteractiveCommand for PridatVrcholyNivelety {
+    fn prompt(&self) -> String {
+        trf!("Přidat vrchol nivelety: klikněte do pohledu profilu (přidáno {}; Enter = hotovo, Esc = zrušit)", self.pridane.len())
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        if let Some(p) = self.pohledy.iter().find(|p| p.obsahuje([pt[0], pt[1]])) {
+            if let Some((s, z)) = p.na_profil(pt) {
+                let v = self.s_pridanymi(None);
+                if !v.iter().any(|x| (x.s - s).abs() < 1e-3) {
+                    self.pridane.push((s, z));
+                }
+            }
+        }
+        CommandStep::NeedPoint
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        if self.pridane.is_empty() {
+            return CommandStep::Cancel;
+        }
+        let body: Vec<String> = self.pridane.iter().map(|(s, z)| format!("{s:.4} {z:.4}")).collect();
+        CommandStep::Dispatch(format!("TRA_NIV_PRIDAT_HOTOVO {} {}", self.trasa, body.join(" ")))
+    }
+    fn on_cursor_move(&mut self, pt: [f64; 3]) -> Vec<PreviewWire> {
+        let Some(p) = self.pohledy.iter().find(|p| p.obsahuje([pt[0], pt[1]])) else { return Vec::new() };
+        let v = self.s_pridanymi(p.na_profil(pt));
+        let b: Vec<[f64; 3]> = v.iter().filter_map(|x| p.na_vykres(x.s, x.z)).collect();
+        vec![PreviewWire::with_color(b, [1.0, 0.8, 0.2, 1.0])]
+    }
+}
+
+/// Změnit oblouk nivelety: klik na vrchol, pak číslo na příkazovém řádku
+/// (OCS ho předá jako bod v té vzdálenosti od kliknutí). Enter přepíná
+/// zadání L → R → K, 0 = bez oblouku.
+pub struct ZmenitObloukNivelety {
+    pub trasa: String,
+    pub pohledy: Vec<crate::tra::pohled::ObjektPohledu>,
+    pub vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
+    /// Vybraný vrchol, bod kliknutí a zadání (0 = L, 1 = R, 2 = K).
+    pub vybrany: Option<(usize, [f64; 3], usize)>,
+}
+
+const ZADANI_OBLOUKU: [&str; 3] = ["L", "R", "K"];
+
+impl InteractiveCommand for ZmenitObloukNivelety {
+    fn prompt(&self) -> String {
+        match self.vybrany {
+            None => tr("Změnit oblouk: klikněte na vrchol nivelety v pohledu profilu").to_string(),
+            Some((k, _, m)) => {
+                let nes = matches!(self.vrcholy[k].typ, trasy::niveleta::TypOblouku::Nesoumerny { .. });
+                let dalsi = ZADANI_OBLOUKU[(m + 1) % 3];
+                if nes {
+                    trf!("Nesouměrný oblouk ve vrcholu {}: napište L [m] a Enter (L1 : L2 zůstane; 0 = bez oblouku)", k + 1)
+                } else {
+                    trf!(
+                        "Oblouk ve vrcholu {}: {} = ? – napište číslo a Enter (0 = bez oblouku; jen Enter = přepnout na {})",
+                        k + 1,
+                        ZADANI_OBLOUKU[m],
+                        dalsi
+                    )
+                }
+            }
+        }
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        match self.vybrany {
+            None => {
+                // nejbližší vnitřní vrchol (ve výkrese) v pohledu, kam se kliklo
+                let Some(p) = self.pohledy.iter().find(|p| p.obsahuje([pt[0], pt[1]])) else { return CommandStep::NeedPoint };
+                let n = self.vrcholy.len();
+                let k = (1..n.saturating_sub(1))
+                    .filter_map(|k| p.na_vykres(self.vrcholy[k].s, self.vrcholy[k].z).map(|q| (k, (q[0] - pt[0]).hypot(q[1] - pt[1]))))
+                    .min_by(|a, b| a.1.total_cmp(&b.1))
+                    .map(|x| x.0);
+                let Some(k) = k else { return CommandStep::NeedPoint };
+                let m = match self.vrcholy[k].zadani {
+                    trasy::niveleta::Zadani::R => 1,
+                    trasy::niveleta::Zadani::K => 2,
+                    trasy::niveleta::Zadani::L(_) => 0,
+                };
+                let m = if matches!(self.vrcholy[k].typ, trasy::niveleta::TypOblouku::Nesoumerny { .. }) { 0 } else { m };
+                self.vybrany = Some((k, pt, m));
+                CommandStep::NeedPoint
+            }
+            // napsaná 0 přijde jako bod v místě kliknutí
+            Some((k, p1, m)) => match crate::tra::uchopy::napsana_vzdalenost(p1, pt).or(((pt[0] - p1[0]).hypot(pt[1] - p1[1]) < 1e-9).then_some(0.0)) {
+                Some(h) => CommandStep::Dispatch(format!("TRA_NIV_OBLOUK_NASTAV {} {} {} {:.4}", self.trasa, k, ZADANI_OBLOUKU[m], h)),
+                None => CommandStep::NeedPoint,
+            },
+        }
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        match self.vybrany {
+            Some((k, p, m)) => {
+                if !matches!(self.vrcholy[k].typ, trasy::niveleta::TypOblouku::Nesoumerny { .. }) {
+                    self.vybrany = Some((k, p, (m + 1) % 3));
+                }
+                CommandStep::NeedPoint
+            }
+            None => CommandStep::Cancel,
+        }
+    }
+}

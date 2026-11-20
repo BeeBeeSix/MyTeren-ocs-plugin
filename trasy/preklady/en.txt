@@ -333,3 +333,33 @@ Vrchol nivelety sklonem	Design profile vertex by grade
 Trasy: přidán vrchol {} nivelety ({} ‰ od vrcholu {}).	Alignments: design profile vertex {} added ({} ‰ from vertex {}).
 Vrchol sklonem: klikněte v pohledu profilu staničení nového vrcholu	Vertex by grade: click the station of the new vertex in the profile view
 Sklon od vrcholu {} [‰]: napište číslo a Enter (kurzor nad kliknutím = stoupání, pod = klesání), nebo klikněte výšku; jen Enter = {} ‰ (na niveletě)	Grade from vertex {} [‰]: type a number and Enter (cursor above the click = rising, below = falling), or click the elevation; Enter alone = {} ‰ (on the design profile)
+zakružovací oblouky ve vrcholech nivelety {} a {} se překrývají o {} m – zmenšete oblouk	vertical curves at design profile vertices {} and {} overlap by {} m – reduce the curve
+oblouky ve vrcholech {} a {} na sebe navazují bez mezipřímky (v pořádku)	curves at vertices {} and {} meet without a tangent between them (OK)
+vrchol {}: R = {} m (K = {}) je malý	vertex {}: R = {} m (K = {}) is small
+úsek {}–{}: sklon {} ‰ je velký	segment {}–{}: grade {} ‰ is steep
+Typ	Type
+Typ oblouku: parabola (výchozí), nesouměrný (L1 a L2 v detailu vrcholu), kružnice – přepište první písmeno (p / n / k) nebo vyberte v detailu. Oblouk zadáte přepsáním R, L nebo K – ostatní se dopočítají (* = zadaná hodnota, platí i po změně sklonů). 0 = bez oblouku. Změna se do výkresu zapíše chvíli po dopsání.	Curve type: parabola (default), unsymmetrical (L1 and L2 in the vertex details), circle – overwrite the first letter (p / u / c) or choose in the details. Set a curve by overwriting R, L or K – the others are calculated (* = entered value, kept when grades change). 0 = no curve. The change is written to the drawing shortly after you stop typing.
+Typ oblouku	Curve type
+parabola (souměrná)	parabola (symmetrical)
+nesouměrný	unsymmetrical
+kružnice	circle
+parabola	parabola
+nesoum.	unsym.
+L1 před vrcholem [m]	L1 before vertex [m]
+L2 za vrcholem [m]	L2 after vertex [m]
+Přidat vrchol	Add vertex
+Změnit oblouk	Change curve
+Zpět	Undo
+✓ V pořádku – oblouky se vejdou, sklony i poloměry vyhovují.	✓ OK – curves fit, grades and radii are fine.
+{} nesouměrný oblouk: L1 = {} m · L2 = {} m · L = {} m · y = {} m (R a K se u nesouměrného neuvádějí)	{} unsymmetrical curve: L1 = {} m · L2 = {} m · L = {} m · y = {} m (R and K are not given for unsymmetrical curves)
+kružnice R = {} · L = {} · K = {}	circle R = {} · L = {} · K = {}
+Přidat vrchol nivelety: klikněte do pohledu profilu (přidáno {}; Enter = hotovo, Esc = zrušit)	Add design profile vertex: click in the profile view (added {}; Enter = done, Esc = cancel)
+Změnit oblouk: klikněte na vrchol nivelety v pohledu profilu	Change curve: click a design profile vertex in the profile view
+Nesouměrný oblouk ve vrcholu {}: napište L [m] a Enter (L1 : L2 zůstane; 0 = bez oblouku)	Unsymmetrical curve at vertex {}: type L [m] and Enter (L1 : L2 is kept; 0 = no curve)
+Oblouk ve vrcholu {}: {} = ? – napište číslo a Enter (0 = bez oblouku; jen Enter = přepnout na {})	Curve at vertex {}: {} = ? – type a number and Enter (0 = no curve; Enter alone = switch to {})
+Přidání vrcholů nivelety	Add design profile vertices
+Trasy: do nivelety trasy {} přidáno vrcholů: {}.	Alignments: vertices added to the design profile of alignment {}: {}.
+Trasy: niveleta nemá vnitřní vrchol – oblouk není kam dát.	Alignments: the design profile has no inner vertex – there is nowhere to put a curve.
+Změna oblouku nivelety	Change design profile curve
+Trasy: oblouk ve vrcholu {} nivelety: {} = {}.	Alignments: curve at design profile vertex {}: {} = {}.
+Trasy: vrchol {} nivelety je bez oblouku.	Alignments: design profile vertex {} has no curve.

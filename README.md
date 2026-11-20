@@ -25,10 +25,14 @@ DWG, and every action is a single Undo step. Interface in English or Czech.
   change in %, as in 12d); the other two are reported. An entered length L is
   kept when grades change, and the profile view labels each curve
   (R · L · K). Suggested in #2.
-- **Design profile editor (preview)** – a docked panel with the vertex
-  table (R | L | K), selected-vertex details (editable grades behind and
-  ahead), and the Vertex by grade and Ends to terrain tools. Changes are
-  written to the drawing shortly after you stop typing.
+- **Design profile editor** – a docked panel with the vertex table (curve
+  type and R | L | K), selected-vertex details (editable grades behind and
+  ahead), tools Add vertex, Vertex by grade, Change curve, Ends to terrain,
+  Delete vertex, Undo, and a check (small R/K, steep grades, touching
+  curves). Changes are written to the drawing shortly after you stop typing.
+- **Vertical curve types**: parabola (default), unsymmetrical (L1 and L2)
+  and circle. Curves at neighbouring vertices may touch without a tangent
+  between them; an overlap is reported with its length in metres.
 
 ## What's new in 1.2.0
 
