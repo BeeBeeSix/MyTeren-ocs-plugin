@@ -540,8 +540,9 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
     }
     // niveleta: tečnový polygon (je-li zakružení) a niveleta s oblouky
     if let Some(n) = &pk.niveleta {
-        if !n.oblouky().is_empty() {
-            let b: Vec<[f64; 2]> = n.vrcholy.iter().map(|v| osy.bod(v.s, v.z)).collect();
+        // tečnový polygon jen v místě oblouků (jinak by šedá čára překryla niveletu)
+        for t in n.tecny_oblouku() {
+            let b: Vec<[f64; 2]> = t.iter().map(|p| osy.bod(p[0], p[1])).collect();
             ent.push(pero.polylinie(&b, "polygon", H_NIV_POLYGON));
         }
         let b: Vec<[f64; 2]> = n.body().into_iter().filter(|p| p[0] >= osy.od - 1e-6 && p[0] <= osy.do_ + 1e-6).map(|p| osy.bod(p[0], p[1])).collect();

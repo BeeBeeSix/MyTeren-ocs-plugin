@@ -76,7 +76,7 @@ static STAV: Mutex<Stav> = Mutex::new(Stav {
     otevren_pro: None,
     n_typ: 0,
     n_zad: 0,
-    n_hod: 1500.0,
+    n_hod: 50.0,
     n_podil: 0.4,
     n_l: 40.0,
     posun: true,

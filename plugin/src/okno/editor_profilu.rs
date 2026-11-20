@@ -1498,7 +1498,7 @@ fn body_cary(pk: &Podklady, osy: &Osy, k: &str) -> Vec<Vec<[f64; 2]>> {
         "teren" => pk.useky.iter().map(|u| u.iter().map(|p| osy.bod(p[0], p[1])).collect()).collect(),
         "povrchy" => pk.dalsi.iter().flat_map(|(_, u)| u.iter().map(|x| x.iter().map(|p| osy.bod(p[0], p[1])).collect())).collect(),
         "niveleta" => pk.niveleta.as_ref().map_or(Vec::new(), |n| vec![n.body().into_iter().map(|p| osy.bod(p[0], p[1])).collect()]),
-        "polygon" => pk.niveleta.as_ref().map_or(Vec::new(), |n| vec![n.vrcholy.iter().map(|v| osy.bod(v.s, v.z)).collect()]),
+        "polygon" => pk.niveleta.as_ref().map_or(Vec::new(), |n| n.tecny_oblouku().iter().map(|t| t.iter().map(|p| osy.bod(p[0], p[1])).collect()).collect()),
         _ => Vec::new(),
     }
 }

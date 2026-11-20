@@ -617,6 +617,19 @@ impl Niveleta {
         Some(v[k].z + i[k] * (s - v[k].s))
     }
 
+    /// Tečny zakružovacích oblouků pro kresbu: u každého oblouku lomená čára
+    /// začátek oblouku → vrchol → konec oblouku (na tečnách). Mimo oblouky
+    /// tečnový polygon splývá s niveletou, proto se nekreslí.
+    pub fn tecny_oblouku(&self) -> Vec<Vec<[f64; 2]>> {
+        self.oblouky()
+            .iter()
+            .map(|o| {
+                let v = self.vrcholy[o.vrchol];
+                vec![[o.od, v.z - o.t1 * o.i1], [v.s, v.z], [o.do_, v.z + o.t2 * o.i2]]
+            })
+            .collect()
+    }
+
     /// Body lomené čáry nivelety (oblouky po kouscích – odchylka do 1 mm).
     pub fn body(&self) -> Vec<[f64; 2]> {
         let mut st: Vec<f64> = self.vrcholy.iter().map(|v| v.s).collect();
