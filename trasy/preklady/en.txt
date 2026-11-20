@@ -485,3 +485,6 @@ Ukázat ve výkrese	Show in drawing
 Zvýraznit v pohledu	Highlight in view
 Držet konec nivelety	Keep profile end
 kruh R {} · L {} · K {}	circle R {} · L {} · K {}
+Popisy oblouků	Curve labels
+Trasy: popisy oblouků zapnuty (pohledů: {}).	Alignments: curve labels on (views: {}).
+Trasy: popisy oblouků vypnuty (pohledů: {}).	Alignments: curve labels off (views: {}).

@@ -68,6 +68,8 @@ struct Stav {
     zvyraznit: bool,
     /// Přiblížit výkres k vybranému vrcholu (tlačítko Ukázat ve výkrese).
     ukazat: bool,
+    /// Zapnout / vypnout popisy oblouků v pohledech trasy (čeká na zápis).
+    popisy: Option<bool>,
     /// Při změně sklonu / délky úseku posunout zbytek nivelety (jinak držet konec).
     posun: bool,
 }
@@ -85,6 +87,7 @@ static STAV: Mutex<Stav> = Mutex::new(Stav {
     n_l: 40.0,
     zvyraznit: true,
     ukazat: false,
+    popisy: None,
     posun: true,
 });
 static OTEVREN: AtomicBool = AtomicBool::new(false);
@@ -251,6 +254,7 @@ pub fn definice() -> PanelDef {
             DialogControl::Checkbox { id: "zvyraznit".into(), label: tr("Zvýraznit v pohledu").into(), default: zvyraznit },
             DialogControl::Button { id: "ukazat".into(), label: tr("Ukázat ve výkrese").into(), action: None, align_h: None, width: None },
         ]))
+        .with_control(DialogControl::Checkbox { id: "popisy".into(), label: tr("Popisy oblouků").into(), default: true })
         .with_control(DialogControl::Fields {
             id: "detail".into(),
             title: None,
@@ -623,6 +627,11 @@ pub fn hodnoty_trasy(doc: &CadDocument, t: Option<&ObjektTrasy>) -> HashMap<Stri
     // zaškrtávátka (výchozí hodnotu z definice OCS v panelu neukáže)
     let (zv, posun) = stav(|s| (s.zvyraznit, s.posun));
     m.insert("zvyraznit".into(), DialogValue::Bool(zv));
+    if let Some(p) = &pohled {
+        let styly = crate::styly::styly_profilu(doc);
+        let nast = trasy::pohled::nastaveni_s(&p.def, &styly);
+        m.insert("popisy".into(), DialogValue::Bool(nast.ano("popis_oblouku")));
+    }
     m.insert("drzet".into(), DialogValue::Bool(!posun));
     m
 }
@@ -671,6 +680,10 @@ pub fn akce(control_id: &str, _action: &str, value: Option<DialogValue>) {
         }),
         ("n_zad", Some(DialogValue::Choice { index, .. })) => stav(|s| s.n_zad = index.min(2)),
         ("drzet", Some(DialogValue::Bool(b))) => stav(|s| s.posun = !b),
+        ("popisy", Some(DialogValue::Bool(b))) => stav(|s| {
+            s.popisy = Some(b);
+            s.obnovit = true;
+        }),
         ("ukazat", _) => stav(|s| {
             s.ukazat = true;
             s.obnovit = true;
@@ -849,6 +862,25 @@ pub fn proved(k: &mut PresKanal) {
             }
             Ok(None) => {}
             Err(e) => k.chyba(&trf!("Trasy: změna se nepřijala – {}", e)),
+        }
+    }
+    if let Some(b) = stav(|s| s.popisy.take()) {
+        let pohledy: Vec<_> = crate::tra::pohled::pohledy(&doc).into_iter().filter(|p| p.def.trasa == t.def.id).collect();
+        let mut n = 0;
+        for p in pohledy {
+            let mut def = p.def.clone();
+            def.vyjimky.insert("popis_oblouku".into(), if b { "1" } else { "0" }.into());
+            if crate::tra::prospektor::uprav_pohled(k, p.insert, &def).is_ok() {
+                n += 1;
+            }
+            k.konec_kroku();
+        }
+        if n > 0 {
+            k.info(&if b {
+                trf!("Trasy: popisy oblouků zapnuty (pohledů: {}).", n)
+            } else {
+                trf!("Trasy: popisy oblouků vypnuty (pohledů: {}).", n)
+            });
         }
     }
     let doc = k.dokument().unwrap_or(doc);
