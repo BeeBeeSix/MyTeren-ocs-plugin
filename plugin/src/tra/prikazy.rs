@@ -38,12 +38,12 @@ impl InteractiveCommand for VyberObjektu {
 }
 
 /// Klik do výkresu → spustí `prikaz x y` (nástroje vrcholů editoru).
-pub struct VyberBodu {
+pub struct VyberBoduJeden {
     pub vyzva: &'static str,
     pub prikaz: &'static str,
 }
 
-impl InteractiveCommand for VyberBodu {
+impl InteractiveCommand for VyberBoduJeden {
     fn prompt(&self) -> String {
         tr(self.vyzva).to_string()
     }
@@ -52,6 +52,45 @@ impl InteractiveCommand for VyberBodu {
     }
     fn on_enter(&mut self) -> CommandStep {
         CommandStep::Cancel
+    }
+}
+
+/// Výběr více bodů kliknutím: Enter = provést příkaz se všemi body
+/// (`PRIKAZ x1 y1 x2 y2 …`), Esc = zrušit. Kliknutá místa se označí křížkem.
+pub struct VyberBodu {
+    pub vyzva: &'static str,
+    pub prikaz: &'static str,
+    pub body: Vec<[f64; 2]>,
+    /// Velikost značky (ve výkrese).
+    pub znacka: f64,
+}
+
+impl InteractiveCommand for VyberBodu {
+    fn prompt(&self) -> String {
+        trf!("{} – vybráno {} (Enter = provést, Esc = zrušit)", tr(self.vyzva), self.body.len())
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        self.body.push([pt[0], pt[1]]);
+        CommandStep::NeedPoint
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        if self.body.is_empty() {
+            return CommandStep::Cancel;
+        }
+        let b: Vec<String> = self.body.iter().map(|p| format!("{:.4} {:.4}", p[0], p[1])).collect();
+        CommandStep::Dispatch(format!("{} {}", self.prikaz, b.join(" ")))
+    }
+    fn on_cursor_move(&mut self, _pt: [f64; 3]) -> Vec<PreviewWire> {
+        let d = self.znacka;
+        self.body
+            .iter()
+            .flat_map(|p| {
+                [
+                    PreviewWire::line([p[0] - d, p[1] - d, 0.0], [p[0] + d, p[1] + d, 0.0], Some([1.0, 0.8, 0.2, 1.0])),
+                    PreviewWire::line([p[0] - d, p[1] + d, 0.0], [p[0] + d, p[1] - d, 0.0], Some([1.0, 0.8, 0.2, 1.0])),
+                ]
+            })
+            .collect()
     }
 }
 

@@ -409,7 +409,7 @@ fn nastroj_vrcholu(
 ) -> Option<(ObjektTrasy, ocs_plugin_api::host::Document, [f64; 2])> {
     let Some(p) = bod_z_argumentu(arg) else {
         otevri_editor(host);
-        host.start_interactive(vykres::hlidany(Box::new(prikazy::VyberBodu { vyzva, prikaz })));
+        host.start_interactive(vykres::hlidany(Box::new(prikazy::VyberBoduJeden { vyzva, prikaz })));
         return None;
     };
     let doc = match PresHost(host).dokument() {
@@ -1135,13 +1135,10 @@ fn vrchol_sklonem_hotovo(host: &mut dyn HostApi, arg: &str) {
     };
     let Some(t) = objekt::trasy(&doc).into_iter().find(|t| t.def.id == *id) else { return };
     let mut vr = t.def.nivelety[0].vrcholy.clone();
-    let Some(i) = trasy::niveleta::vloz_sklonem(&mut vr, od, s, sklon, prikazy::R_NIVELETY) else {
+    // nový vrchol je bez oblouku (oblouk se vkládá nástrojem Vložit oblouk)
+    let Some(i) = trasy::niveleta::vloz_sklonem(&mut vr, od, s, sklon, 0.0) else {
         return v.chyba(tr("Trasy: v tomto staničení už vrchol nivelety je – nic se nezměnilo."));
     };
-    // oblouk s výchozím R se nemusí vejít – pak vrchol bez oblouku
-    if trasy::niveleta::Niveleta::nova("N", "", vr.clone()).kontrola().is_err() {
-        vr[i].r = 0.0;
-    }
     let od_novy = if od >= i { od + 1 } else { od };
     match uloz_niveletu_cmd(&mut v, &doc, &t, vr, tr("Vrchol nivelety sklonem")) {
         Ok(_) => {
@@ -1207,13 +1204,8 @@ fn pridat_vrcholy_hotovo(host: &mut dyn HostApi, arg: &str) {
     let mut vr = t.def.nivelety[0].vrcholy.clone();
     let mut posledni = None;
     for b in cisla.chunks(2).filter(|b| b.len() == 2) {
-        if let Some(i) = trasy::niveleta::vloz_vrchol(&mut vr, b[0], b[1], 0.0) {
-            // oblouk podle nastavení panelu (zmenší se, nebo vynechá, když se nevejde);
-            // u nového krajního vrcholu dostane oblouk bývalý krajní
-            let k = if i == 0 { 1 } else if i + 1 == vr.len() { vr.len().saturating_sub(2) } else { i };
-            if trasy::niveleta::Niveleta::nova("N", "", vr.clone()).polomer(k) <= 0.0 {
-                let _ = editor_nivelety::dej_oblouk(&mut vr, k);
-            }
+        // nový vrchol je jen lom nivelety, bez oblouku (oblouk = Vložit oblouk)
+        if trasy::niveleta::vloz_vrchol(&mut vr, b[0], b[1], 0.0).is_some() {
             posledni = Some(b[0]);
         }
     }
@@ -1285,16 +1277,21 @@ fn nastroj_na_vrchol(
     vyzva: &'static str,
     krok: &str,
     jen_vnitrni: bool,
-    uprav: impl FnOnce(&mut Vec<trasy::niveleta::VrcholNivelety>, usize, &pohled::ObjektPohledu, &ocs_plugin_api::host::Document) -> Result<String, String>,
+    uprav: impl Fn(&mut Vec<trasy::niveleta::VrcholNivelety>, usize, &pohled::ObjektPohledu, &ocs_plugin_api::host::Document) -> Result<String, String>,
 ) {
-    let Some(p) = bod_z_argumentu(arg) else {
-        host.start_interactive(vykres::hlidany(Box::new(prikazy::VyberBodu { vyzva, prikaz })));
-        return;
-    };
+    let cisla: Vec<f64> = arg.split_whitespace().filter_map(cti_cislo).collect();
+    let body: Vec<[f64; 2]> = cisla.chunks(2).filter(|c| c.len() == 2).map(|c| [c[0], c[1]]).collect();
     let doc = match PresHost(host).dokument() {
         Ok(d) => d,
         Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
     };
+    if body.is_empty() {
+        // značka kliknutí ~ 1 % šířky pohledu
+        let znacka = pohled::pohledy(&doc).first().and_then(|p| p.def.osy).map_or(0.5, |o| ((o[1] - o[0]).abs() * 0.01).max(0.05));
+        host.start_interactive(vykres::hlidany(Box::new(prikazy::VyberBodu { vyzva, prikaz, body: Vec::new(), znacka })));
+        return;
+    }
+    let p = body[0];
     let ph = pohled::pohledy(&doc).into_iter().find(|x| x.obsahuje(p));
     let Some(ph) = ph else { return host.push_error(tr("Trasy: klikněte do rámu pohledu profilu.")) };
     let Some(t) = objekt::trasy(&doc).into_iter().find(|t| t.def.id == ph.def.trasa) else { return };
@@ -1309,24 +1306,51 @@ fn nastroj_na_vrchol(
         .min_by(|a, b| a.1.total_cmp(&b.1))
         .map(|x| x.0);
     let Some(i) = i else { return host.push_error(tr("Trasy: niveleta nemá vnitřní vrchol.")) };
+    let _ = i;
+    // všechna kliknutá místa v jednom kroku Zpět
     let mut vr = n.vrcholy.clone();
-    let zprava = match uprav(&mut vr, i, &ph, &doc) {
-        Ok(z) => z,
-        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    let mut zpravy = Vec::new();
+    let mut posledni = None;
+    for b in &body {
+        let Some(k) = vr
+            .iter()
+            .enumerate()
+            .filter(|(k, _)| !jen_vnitrni || (*k > 0 && *k + 1 < vr.len()))
+            .filter_map(|(k, x)| ph.na_vykres(x.s, x.z).map(|q| (k, (q[0] - b[0]).hypot(q[1] - b[1]))))
+            .min_by(|a, c| a.1.total_cmp(&c.1))
+            .map(|x| x.0)
+        else {
+            continue;
+        };
+        match uprav(&mut vr, k, &ph, &doc) {
+            Ok(z) => {
+                zpravy.push(z);
+                posledni = Some(k);
+            }
+            Err(e) => zpravy.push(trf!("Trasy: {}", e)),
+        }
+    }
+    let Some(i) = posledni else {
+        for z in zpravy {
+            host.push_error(&z);
+        }
+        return;
     };
     editor_nivelety::nastav_aktivni(&t.def.id);
     let mut v = PresHost(host);
     match uloz_niveletu_cmd(&mut v, &doc, &t, vr, krok) {
         Ok(_) => {
             editor_nivelety::nastav_vybrany(i);
-            v.info(&zprava)
+            for z in zpravy {
+                v.info(&z);
+            }
         }
         Err(e) => v.chyba(&trf!("Trasy: změna se nepřijala – {}", e)),
     }
 }
 
 fn vrchol_na_teren_cmd(host: &mut dyn HostApi, arg: &str) {
-    nastroj_na_vrchol(host, arg, "TRA_NIV_NATEREN", "Vrchol na terén: klikněte na vrchol nivelety v pohledu profilu", tr("Vrchol nivelety na terén"), false, |vr, i, ph, doc| {
+    nastroj_na_vrchol(host, arg, "TRA_NIV_NATEREN", "Vrchol na terén: klikejte na vrcholy nivelety", tr("Vrchol nivelety na terén"), false, |vr, i, ph, doc| {
         let pk = pohled::podklady(doc, &ph.def, None, false)?;
         let z = editor_nivelety::vyska_terenu(&pk.useky, vr[i].s).ok_or_else(|| tr("v místě vrcholu není terén pohledu").to_string())?;
         vr[i].z = (z * 1000.0).round() / 1000.0;
@@ -1335,7 +1359,7 @@ fn vrchol_na_teren_cmd(host: &mut dyn HostApi, arg: &str) {
 }
 
 fn vlozit_oblouk_cmd(host: &mut dyn HostApi, arg: &str) {
-    nastroj_na_vrchol(host, arg, "TRA_NIV_VLOZIT_OBLOUK", "Vložit oblouk: klikněte na vrchol nivelety (typ a hodnota podle nastavení v panelu)", tr("Vložení oblouku nivelety"), true, |vr, i, _, _| {
+    nastroj_na_vrchol(host, arg, "TRA_NIV_VLOZIT_OBLOUK", "Vložit oblouk: klikejte na vrcholy nivelety – typ a hodnota podle nastavení v panelu", tr("Vložení oblouku nivelety"), true, |vr, i, _, _| {
         match editor_nivelety::dej_oblouk(vr, i) {
             trasy::niveleta::VlozeniOblouku::Vlozen => Ok(trf!("Trasy: oblouk vložen do vrcholu {} nivelety.", i + 1)),
             trasy::niveleta::VlozeniOblouku::Zmensen(f) => {
@@ -1347,7 +1371,7 @@ fn vlozit_oblouk_cmd(host: &mut dyn HostApi, arg: &str) {
 }
 
 fn odstranit_oblouk_cmd(host: &mut dyn HostApi, arg: &str) {
-    nastroj_na_vrchol(host, arg, "TRA_NIV_ODSTRANIT_OBLOUK", "Odstranit oblouk: klikněte na vrchol nivelety", tr("Odstranění oblouku nivelety"), true, |vr, i, _, _| {
+    nastroj_na_vrchol(host, arg, "TRA_NIV_ODSTRANIT_OBLOUK", "Odstranit oblouk: klikejte na vrcholy nivelety", tr("Odstranění oblouku nivelety"), true, |vr, i, _, _| {
         if trasy::niveleta::Niveleta::nova("N", "", vr.clone()).polomer(i) <= 0.0 {
             return Err(trf!("vrchol {} oblouk nemá", i + 1));
         }
@@ -1508,15 +1532,10 @@ fn niv_prodlouzit_hotovo(host: &mut dyn HostApi, arg: &str) {
     let (Some(id), Some(sklon), Some(delka)) = (c.first(), c.get(1).and_then(|x| cti_cislo(x)), c.get(2).and_then(|x| cti_cislo(x))) else { return };
     uprav_niveletu(host, id, tr("Prodloužení nivelety"), |vr| {
         let p = *vr.last().ok_or_else(|| tr("niveleta nemá vrcholy").to_string())?;
+        // bývalý konec je teď vnitřní vrchol bez oblouku (oblouk = Vložit oblouk)
         vr.push(trasy::niveleta::VrcholNivelety::new(p.s + delka, p.z + sklon * delka, 0.0));
-        // bývalý konec je teď vnitřní vrchol – oblouk podle nastavení, když se vejde
-        let k = vr.len() - 2;
-        let navic = match editor_nivelety::dej_oblouk(vr, k) {
-            trasy::niveleta::VlozeniOblouku::Nevejde => tr(" (oblouk se do vrcholu nevešel)"),
-            _ => "",
-        };
         Ok((
-            trf!("Trasy: niveleta prodloužena o {} m se sklonem {} ‰{}.", cislo(delka, 2, true), cislo(sklon * 1000.0, 2, true), navic),
+            trf!("Trasy: niveleta prodloužena o {} m se sklonem {} ‰{}.", cislo(delka, 2, true), cislo(sklon * 1000.0, 2, true), ""),
             Some(vr.len() - 1),
         ))
     });
@@ -1653,7 +1672,7 @@ fn niveleta_tabulka_hotovo(host: &mut dyn HostApi, arg: &str) {
 
 fn niveleta_smazat_cmd(host: &mut dyn HostApi, arg: &str) {
     let Some(p) = bod_z_argumentu(arg) else {
-        host.start_interactive(vykres::hlidany(Box::new(prikazy::VyberBodu {
+        host.start_interactive(vykres::hlidany(Box::new(prikazy::VyberBoduJeden {
             vyzva: "Trasy: klikněte v pohledu profilu na vrchol nivelety, který smazat",
             prikaz: "TRA_NIVELETA_SMAZAT",
         })));

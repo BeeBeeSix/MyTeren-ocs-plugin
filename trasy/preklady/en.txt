@@ -460,3 +460,20 @@ držet konec	keep the end
 Nastavení oblouku	Curve settings
 Zvednout / snížit: klikněte na vrchol nivelety, nebo do pohledu mimo vrcholy = celá niveleta	Raise / lower: click a design profile vertex, or in the view away from vertices = whole profile
 Celá niveleta: o kolik zvednout [m] – napište číslo a Enter (kurzor nad kliknutím = nahoru, pod = dolů)	Whole profile: raise by [m] – type a number and Enter (cursor above the click = up, below = down)
+Délka [m]	Length [m]
+Vrchol	Vertex
+konec	end
+Při změně úseku zbytek nivelety:	On segment change, the rest of the profile:
+držet na místě	keep in place
+Nastavení oblouku (Vložit oblouk, Do všech vrcholů)	Curve settings (Insert curve, At all vertices)
+Délka L [m]	Length L [m]
+L1 : L2	L1 : L2
+Vložit oblouk: klikněte na vrchol nivelety – typ a hodnota podle nastavení v panelu (Enter = konec)	Insert curve: click a design profile vertex – type and value from the panel settings (Enter = done)
+Odstranit oblouk: klikněte na vrchol nivelety (Enter = konec)	Remove curve: click a design profile vertex (Enter = done)
+Sklon [‰]	Grade [‰]
+Při změně úseku	On segment change
+zbytek nivelety držet na místě	keep the rest of the profile in place
+{} – vybráno {} (Enter = provést, Esc = zrušit)	{} – selected {} (Enter = apply, Esc = cancel)
+Vložit oblouk: klikejte na vrcholy nivelety – typ a hodnota podle nastavení v panelu	Insert curve: click design profile vertices – type and value from the panel settings
+Odstranit oblouk: klikejte na vrcholy nivelety	Remove curve: click design profile vertices
+Vrchol na terén: klikejte na vrcholy nivelety	Vertex to terrain: click design profile vertices

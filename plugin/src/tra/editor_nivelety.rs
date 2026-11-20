@@ -62,6 +62,8 @@ struct Stav {
     n_hod: f64,
     /// Podíl L1 z délky nesouměrného oblouku (40 : 60 = 0,4).
     n_podil: f64,
+    /// Délka nesouměrného oblouku L [m] (zadává se jen délkou).
+    n_l: f64,
     /// Při změně sklonu / délky úseku posunout zbytek nivelety (jinak držet konec).
     posun: bool,
 }
@@ -76,6 +78,7 @@ static STAV: Mutex<Stav> = Mutex::new(Stav {
     n_zad: 0,
     n_hod: 1500.0,
     n_podil: 0.4,
+    n_l: 40.0,
     posun: true,
 });
 static OTEVREN: AtomicBool = AtomicBool::new(false);
@@ -122,24 +125,12 @@ pub fn vyber_a_obnov(i: usize) {
 /// Nastavení oblouku z panelu: typ (0 parabola, 1 nesouměrný, 2 kružnice),
 /// zadání (R / L / K), hodnota a podíl L1.
 pub fn nastaveni_oblouku() -> (usize, &'static str, f64, f64) {
-    stav(|s| (s.n_typ, TYPY[s.n_zad.min(2)], s.n_hod, s.n_podil))
+    stav(|s| if s.n_typ == 1 { (1, "L", s.n_l, s.n_podil) } else { (s.n_typ, TYPY[s.n_zad.min(2)], s.n_hod, s.n_podil) })
 }
 
 /// Posunout zbytek nivelety při změně sklonu / délky úseku?
 pub fn posun_zbytku() -> bool {
     stav(|s| s.posun)
-}
-
-/// Krátké shrnutí nastavení oblouku pro panel („parabola · R 1500“).
-pub fn shrnuti_oblouku() -> String {
-    let (typ, zad, h, podil) = nastaveni_oblouku();
-    let nazev = [tr("parabola"), tr("nesouměrný"), tr("kružnice")][typ.min(2)];
-    let hodnota = format!("{} {}", zad, cislo(h, if h < 10.0 { 2 } else { 0 }, true));
-    if typ == 1 {
-        format!("{nazev} · {hodnota} ({} : {})", cislo(podil * 100.0, 0, true), cislo(100.0 - podil * 100.0, 0, true))
-    } else {
-        format!("{nazev} · {hodnota}")
-    }
 }
 
 /// Vloží oblouk podle nastavení panelu do vrcholu `k`.
@@ -203,7 +194,7 @@ fn sloupec(nazev: &str, c: Vec<DialogControl>) -> DialogControl {
 
 pub fn definice() -> PanelDef {
     OTEVREN.store(true, Ordering::SeqCst);
-    let (n_typ, n_zad, n_hod, n_podil, posun) = stav(|s| (s.n_typ, s.n_zad, s.n_hod, s.n_podil, s.posun));
+    let (n_typ, n_zad, n_hod, n_podil, n_l, posun) = stav(|s| (s.n_typ, s.n_zad, s.n_hod, s.n_podil, s.n_l, s.posun));
     PanelDef::new(ID, tr("Editor nivelety"))
         .with_command(PRIKAZ)
         .with_width(540.0)
@@ -220,19 +211,15 @@ pub fn definice() -> PanelDef {
                 "R".into(),
                 "L".into(),
                 "K".into(),
-                tr("Sklon za").into(),
-                tr("Délka").into(),
+                tr("Sklon [‰]").into(),
+                tr("Délka [m]").into(),
             ],
             rows: Vec::new(),
             allow_add: false,
             allow_delete: false,
         })
-        .with_control(DialogControl::InfoText {
-            text: tr("Typ oblouku: parabola, nesouměrný (L1 a L2 v detailu), kružnice – přepište první písmeno (p / n / k). Oblouk zadáte přepsáním R, L nebo K (* = zadaná hodnota, platí i po změně sklonů; 0 = bez oblouku). Sklon a délku úseku za vrcholem jde přepsat také. Změna se do výkresu zapíše chvíli po dopsání.").into(),
-            align_h: None,
-        })
         .with_control(nadpis(tr("Vybraný vrchol")))
-        .with_control(DialogControl::Number { id: "vrchol".into(), label: tr("Vrchol č.").into(), default: 1.0, min: Some(1.0), max: None, step: Some(1.0) })
+        .with_control(DialogControl::Choice { id: "vrchol".into(), label: tr("Vrchol").into(), options: vec!["1".into()], default_index: 0 })
         .with_control(radek(vec![
             DialogControl::Button { id: "pred".into(), label: tr("◀ Předchozí vrchol").into(), action: None, align_h: None, width: None },
             DialogControl::Button { id: "dalsi".into(), label: tr("Další vrchol ▶").into(), action: None, align_h: None, width: None },
@@ -278,7 +265,6 @@ pub fn definice() -> PanelDef {
                 tlacitko("vlozit", tr("⌒ Vložit oblouk"), "TRA_NIV_VLOZIT_OBLOUK"),
                 tlacitko("odstranit", tr("✕ Odstranit oblouk"), "TRA_NIV_ODSTRANIT_OBLOUK"),
                 tlacitko("vsechny", tr("⌒⌒ Do všech vrcholů"), "TRA_NIV_OBLOUKY_VSE"),
-                DialogControl::Label { id: "n_shrnuti".into(), text: shrnuti_oblouku(), align_h: Some(ocs_plugin_api::dialog::HorizontalAlign::Center) },
             ]),
             sloupec(tr("Úseky"), vec![
                 tlacitko("sklon_u", tr("∠ Změnit sklon"), "TRA_NIV_USEK_SKLON"),
@@ -289,13 +275,13 @@ pub fn definice() -> PanelDef {
         ]))
         .with_control(DialogControl::Choice {
             id: "navaz".into(),
-            label: tr("Zbytek nivelety").into(),
-            options: vec![tr("posunout").into(), tr("držet konec").into()],
+            label: tr("Při změně úseku").into(),
+            options: vec![tr("posunout zbytek nivelety").into(), tr("zbytek nivelety držet na místě").into()],
             default_index: if posun { 0 } else { 1 },
         })
         .with_control(DialogControl::Fields {
             id: "nastaveni".into(),
-            title: Some(tr("Nastavení oblouku").into()),
+            title: Some(tr("Nastavení oblouku (Vložit oblouk, Do všech vrcholů)").into()),
             controls: vec![
                 DialogControl::Choice {
                     id: "n_typ".into(),
@@ -310,9 +296,10 @@ pub fn definice() -> PanelDef {
                     default_index: n_zad,
                 },
                 DialogControl::Text { id: "n_hod".into(), label: tr("Hodnota").into(), default: cislo(n_hod, 2, false) },
+                DialogControl::Text { id: "n_l".into(), label: tr("Délka L [m]").into(), default: cislo(n_l, 2, false) },
                 DialogControl::Text {
                     id: "n_pom".into(),
-                    label: tr("L1 : L2 (nesouměrný)").into(),
+                    label: tr("L1 : L2").into(),
                     default: format!("{} : {}", cislo(n_podil * 100.0, 0, false), cislo(100.0 - n_podil * 100.0, 0, false)),
                 },
             ],
@@ -320,6 +307,14 @@ pub fn definice() -> PanelDef {
         })
         .with_control(nadpis(tr("Kontrola")))
         .with_control(DialogControl::Label { id: "kontrola".into(), text: String::new(), align_h: None })
+}
+
+/// Viditelnost polí nastavení oblouku podle typu (nesouměrný = jen délka a poměr).
+fn viditelnost_nastaveni(m: &mut HashMap<String, DialogValue>) {
+    let nes = stav(|s| s.n_typ == 1);
+    for (id, vid) in [("n_zad", !nes), ("n_hod", !nes), ("n_l", nes), ("n_pom", nes)] {
+        m.insert(format!("{id}:visible"), DialogValue::Visible(vid));
+    }
 }
 
 /// Trasa, jejíž niveletu panel ukazuje: aktivní, jinak první s niveletou.
@@ -485,7 +480,7 @@ pub fn radky(n: &Niveleta) -> Vec<Vec<String>> {
             } else {
                 "–".to_string()
             };
-            let sz = niveleta::sklon_za(&n.vrcholy, k).map_or(String::new(), |i| format!("{} ‰", cislo(i * 1000.0, 2, false)));
+            let sz = niveleta::sklon_za(&n.vrcholy, k).map_or(String::new(), |i| cislo(i * 1000.0, 2, false));
             let dl = n.vrcholy.get(k + 1).map_or(String::new(), |x| cislo(x.s - v.s, 2, false));
             vec![(k + 1).to_string(), cislo(v.s, 3, false), cislo(v.z, 3, false), typ, r, l, kk, sz, dl]
         })
@@ -538,7 +533,22 @@ pub fn hodnoty_trasy(doc: &CadDocument, t: Option<&ObjektTrasy>) -> HashMap<Stri
         )),
     );
     m.insert("vrcholy".into(), DialogValue::Table(radky(n)));
-    m.insert("vrchol".into(), DialogValue::Number((k + 1) as f64));
+    let seznam: Vec<String> = n
+        .vrcholy
+        .iter()
+        .enumerate()
+        .map(|(i, x)| {
+            let typ = if i == 0 || i + 1 == n.vrcholy.len() {
+                tr("konec").to_string()
+            } else if zadan_oblouk(n, i) {
+                nazev_typu(x.typ).to_string()
+            } else {
+                tr("bez oblouku").to_string()
+            };
+            format!("{} – {} m ({})", i + 1, cislo(x.s, 3, true), typ)
+        })
+        .collect();
+    m.insert("vrchol".into(), DialogValue::ChoiceOptions { options: seznam, selected_index: k });
     let v = n.vrcholy[k];
     let vnitrni = k > 0 && k + 1 < n.vrcholy.len();
     let nes = match v.typ {
@@ -591,7 +601,22 @@ pub fn hodnoty_trasy(doc: &CadDocument, t: Option<&ObjektTrasy>) -> HashMap<Stri
     };
     m.insert("d_ty".into(), DialogValue::Text(ty));
     m.insert("kontrola".into(), DialogValue::Text(kontrola(n)));
-    m.insert("n_shrnuti".into(), DialogValue::Text(shrnuti_oblouku()));
+    // pole, která pro vybraný vrchol nejdou vyplnit, se skryjí
+    let posledni = n.vrcholy.len() - 1;
+    for (id, vid) in [
+        ("d_ip", k > 0),
+        ("d_dp", k > 0),
+        ("d_iz", k < posledni),
+        ("d_dz", k < posledni),
+        ("d_druh", vnitrni),
+        ("d_typ", vnitrni && ma && nes.is_none()),
+        ("d_hod", vnitrni && ma && nes.is_none()),
+        ("d_l1", vnitrni && nes.is_some()),
+        ("d_l2", vnitrni && nes.is_some()),
+    ] {
+        m.insert(format!("{id}:visible"), DialogValue::Visible(vid));
+    }
+    viditelnost_nastaveni(&mut m);
     m
 }
 
@@ -614,6 +639,7 @@ pub fn akce(control_id: &str, _action: &str, value: Option<DialogValue>) {
         }),
         ("vrchol", Some(v)) => {
             let x = match v {
+                DialogValue::Choice { index, .. } => Some(index as f64 + 1.0),
                 DialogValue::Number(x) => Some(x),
                 DialogValue::Text(t) => cti(&t),
                 _ => None,
@@ -636,25 +662,21 @@ pub fn akce(control_id: &str, _action: &str, value: Option<DialogValue>) {
             s.n_typ = index.min(2);
             s.obnovit = true;
         }),
-        ("n_zad", Some(DialogValue::Choice { index, .. })) => stav(|s| {
-            s.n_zad = index.min(2);
-            s.obnovit = true;
-        }),
+        ("n_zad", Some(DialogValue::Choice { index, .. })) => stav(|s| s.n_zad = index.min(2)),
         ("navaz", Some(DialogValue::Choice { index, .. })) => stav(|s| s.posun = index == 0),
         ("n_hod", Some(DialogValue::Text(t))) => {
             if let Some(x) = cti(&t).filter(|x| *x > 0.0) {
-                stav(|s| {
-                    s.n_hod = x;
-                    s.obnovit = true;
-                });
+                stav(|s| s.n_hod = x);
+            }
+        }
+        ("n_l", Some(DialogValue::Text(t))) => {
+            if let Some(x) = cti(&t).filter(|x| *x > 0.0) {
+                stav(|s| s.n_l = x);
             }
         }
         ("n_pom", Some(DialogValue::Text(t))) => {
             if let Some(x) = cti_podil(&t) {
-                stav(|s| {
-                    s.n_podil = x;
-                    s.obnovit = true;
-                });
+                stav(|s| s.n_podil = x);
             }
         }
 
@@ -854,7 +876,7 @@ mod testy {
         assert_eq!(r[1][4..7], ["2000.0 *".to_string(), "60.00".into(), "20.00".into()]);
         assert_eq!(r[1][3], "parabola");
         assert_eq!(r[0][4], "");
-        assert_eq!(r[0][7], "20.00 ‰");
+        assert_eq!(r[0][7], "20.00");
         // přepsaná délka L platí, hvězdička se při čtení ignoruje
         let mut rows = r.clone();
         rows[1][5] = "90".into();
