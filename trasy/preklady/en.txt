@@ -477,3 +477,4 @@ zbytek nivelety držet na místě	keep the rest of the profile in place
 Vložit oblouk: klikejte na vrcholy nivelety – typ a hodnota podle nastavení v panelu	Insert curve: click design profile vertices – type and value from the panel settings
 Odstranit oblouk: klikejte na vrcholy nivelety	Remove curve: click design profile vertices
 Vrchol na terén: klikejte na vrcholy nivelety	Vertex to terrain: click design profile vertices
+Nastavení oblouku při vložení	Curve settings for inserting

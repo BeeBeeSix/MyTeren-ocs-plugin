@@ -173,8 +173,16 @@ fn radek(c: Vec<DialogControl>) -> DialogControl {
     DialogControl::Row { controls: c, align_h: None, align_v: None }
 }
 
+/// Nadpis části panelu s mezerou nad ním (prázdný řádek – panel jiný odstup nemá).
 fn nadpis(t: &str) -> DialogControl {
-    DialogControl::StyledText { text: t.into(), style: TextStyle::Heading, align_h: None }
+    DialogControl::Column {
+        controls: vec![
+            DialogControl::StyledText { text: " ".into(), style: TextStyle::Normal, align_h: None },
+            DialogControl::StyledText { text: t.into(), style: TextStyle::Heading, align_h: None },
+        ],
+        align_h: None,
+        align_v: None,
+    }
 }
 
 fn text(id: &str, label: &str) -> DialogControl {
@@ -279,9 +287,10 @@ pub fn definice() -> PanelDef {
             options: vec![tr("posunout zbytek nivelety").into(), tr("zbytek nivelety držet na místě").into()],
             default_index: if posun { 0 } else { 1 },
         })
+        .with_control(nadpis(tr("Nastavení oblouku při vložení")))
         .with_control(DialogControl::Fields {
             id: "nastaveni".into(),
-            title: Some(tr("Nastavení oblouku (Vložit oblouk, Do všech vrcholů)").into()),
+            title: None,
             controls: vec![
                 DialogControl::Choice {
                     id: "n_typ".into(),
@@ -303,7 +312,7 @@ pub fn definice() -> PanelDef {
                     default: format!("{} : {}", cislo(n_podil * 100.0, 0, false), cislo(100.0 - n_podil * 100.0, 0, false)),
                 },
             ],
-            collapsed: true,
+            collapsed: false,
         })
         .with_control(nadpis(tr("Kontrola")))
         .with_control(DialogControl::Label { id: "kontrola".into(), text: String::new(), align_h: None })
