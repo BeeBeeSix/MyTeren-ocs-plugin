@@ -549,7 +549,7 @@ pub fn kresli(pk: &Podklady, def: &DefinicePohledu, nast: &Hodnoty) -> (Vec<Enti
             ent.push(pero.polylinie(&b, "niveleta", H_NIVELETA));
         }
         // popis zakružovacích oblouků u vrcholu: nad vypuklým, pod údolnicovým
-        for o in n.oblouky() {
+        for o in n.oblouky().into_iter().filter(|_| nast.ano("popis_oblouku")) {
             let v = n.vrcholy[o.vrchol];
             if v.s < osy.od - 1e-6 || v.s > osy.do_ + 1e-6 {
                 continue;

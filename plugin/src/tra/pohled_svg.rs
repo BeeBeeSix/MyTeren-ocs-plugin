@@ -205,3 +205,23 @@ mod rozbor_dwg {
         std::fs::write(vystup, s).unwrap();
     }
 }
+
+#[cfg(test)]
+mod popis_oblouku {
+    use ocs_plugin_api::host::EntityType;
+    use trasy::pohled::{nastaveni_s, DefinicePohledu};
+
+    fn popisy(d: &DefinicePohledu) -> usize {
+        let pk = crate::okno::ukazkove_podklady();
+        let (ent, _, _) = super::super::pohled::kresli(&pk, d, &nastaveni_s(d, &[]));
+        ent.iter().filter(|e| matches!(e, EntityType::Text(t) if t.value.starts_with("R = ") && t.value.contains(" · K = "))).count()
+    }
+
+    #[test]
+    fn popis_jde_vypnout() {
+        let mut d = DefinicePohledu::novy("P1", "T1", "TEREN");
+        assert_eq!(popisy(&d), 1, "výchozí: oblouk nivelety popsaný");
+        d.vyjimky.insert("popis_oblouku".into(), "0".into());
+        assert_eq!(popisy(&d), 0);
+    }
+}

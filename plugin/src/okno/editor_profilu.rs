@@ -1104,6 +1104,7 @@ impl EditorProfilu {
         });
         self.zaskrt(ui, stav, "ram", tr("Rámeček grafu"));
         self.zaskrt(ui, stav, "svislice", tr("Svislice z lomových bodů do grafu"));
+        self.zaskrt(ui, stav, "popis_oblouku", tr("Popis zakružovacích oblouků nivelety (R · L · K)"));
         pole(ui, tr("Pod terénem"), |ui| {
             let akt = self.hodnota(stav, "vypln_terenu");
             let mut v = None;

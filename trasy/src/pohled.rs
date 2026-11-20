@@ -165,6 +165,7 @@ pub const SCHEMA: &[Klic] = &[
     Klic { klic: "stupnice", vychozi: "skryt", popis: "Výšková stupnice (vlevo / obě strany / skrýt)" },
     Klic { klic: "mrizka", vychozi: "0", popis: "Mřížka v grafu" },
     Klic { klic: "ram", vychozi: "0", popis: "Rámeček grafu" },
+    Klic { klic: "popis_oblouku", vychozi: "1", popis: "Popis zakružovacích oblouků nivelety" },
     Klic { klic: "staniceni", vychozi: "km", popis: "Formát staničení" },
     Klic { klic: "sklon", vychozi: "promile", popis: "Jednotka sklonu (‰ / %)" },
     Klic { klic: "sablona", vychozi: "", popis: "Šablona (obor)" },

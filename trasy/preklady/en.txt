@@ -293,3 +293,4 @@ Netisk (šedá)	No plot (grey)
 Přímé červeně, oblouky modře	Tangents red, arcs blue
 Trasy – netiskne se	Alignments – not plotted
 Čerchovaná (trasa)	Dash-dot (alignment)
+Popis zakružovacích oblouků nivelety	Vertical curve labels

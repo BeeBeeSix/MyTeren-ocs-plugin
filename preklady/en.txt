@@ -1816,3 +1816,4 @@ plná	solid
 čerchovaná	dash-dot
 Oblouky osy	Centreline arcs
 jinou barvou	different colour
+Popis zakružovacích oblouků nivelety (R · L · K)	Vertical curve labels (R · L · K)
