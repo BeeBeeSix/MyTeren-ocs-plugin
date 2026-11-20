@@ -6,6 +6,7 @@
 //! [`uchopy::ZNACKA`].
 
 pub mod editor;
+pub mod editor_nivelety;
 pub mod objekt;
 pub mod pohled;
 #[cfg(test)]
@@ -84,6 +85,7 @@ pub fn skupiny() -> Vec<RibbonGroup> {
             tools: vec![
                 RibbonItem::LargeTool(tool("TRA_POHLED", tr("Podélný profil"), ikona!("tra_profil"))),
                 RibbonItem::LargeTool(tool("TRA_NIVELETA", tr("Niveleta"), ikona!("tra_niveleta"))),
+                RibbonItem::LabeledTool(tool("TRA_EDITOR_NIVELETY", tr("Editor nivelety"), ikona!("tra_editor"))),
                 RibbonItem::LabeledTool(tool("TRA_NIVELETA_TABULKA", tr("Vrcholy nivelety"), ikona!("tra_vlastnosti"))),
                 RibbonItem::LabeledTool(tool("TRA_NIVELETA_SMAZAT", tr("Smazat vrchol nivelety"), ikona!("tra_smazat"))),
                 RibbonItem::LabeledTool(tool("TRA_PREPOCITAT", tr("Překreslit trasy a profily"), ikona!("tra_prepocitat"))),
@@ -583,7 +585,7 @@ fn hodnota_stylu(styl: &str, klic: &str) -> String {
 }
 
 fn cti_cislo(t: &str) -> Option<f64> {
-    t.trim().replace(',', ".").replace(' ', "").parse().ok()
+    editor_nivelety::cti(t)
 }
 
 fn vlastnosti_cmd(host: &mut dyn HostApi, arg: &str) {
@@ -999,8 +1001,8 @@ fn niveleta_hotovo(host: &mut dyn HostApi) {
 }
 
 /// Uloží niveletu trasy a překreslí pohledy (výkres `doc` stažený před krokem Zpět).
-fn uloz_niveletu_cmd(
-    v: &mut PresHost,
+pub(crate) fn uloz_niveletu_cmd(
+    v: &mut dyn Vykres,
     doc: &ocs_plugin_api::host::Document,
     t: &ObjektTrasy,
     vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
@@ -1023,6 +1025,136 @@ fn uloz_niveletu_cmd(
     let n = pohled::prekresli_zastarale(v, doc, Some(&t.def.id), Some(&nova));
     v.hotovo();
     Ok(n)
+}
+
+// ── Editor nivelety (panel a jeho nástroje) ────────────────────────────────
+
+/// Otevře panel Editor nivelety s niveletou vybraného pohledu (nebo trasy).
+fn editor_nivelety_cmd(host: &mut dyn HostApi) {
+    let doc = match PresHost(host).dokument() {
+        Ok(d) => d,
+        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    };
+    if let Some(t) = trasa_s_niveletou(host, &doc) {
+        editor_nivelety::nastav_aktivni(&t.def.id);
+    }
+    if !editor_nivelety::otevren() {
+        host.register_panel(editor_nivelety::definice());
+    }
+    host.toggle_panel(editor_nivelety::ID, Some(true));
+    host.update_panel(editor_nivelety::ID, editor_nivelety::hodnoty(&doc));
+}
+
+/// Trasa pro nástroje nivelety: ta z otevřeného panelu, jinak podle výběru.
+fn trasa_nastroje(host: &mut dyn HostApi, doc: &ocs_plugin_api::host::Document) -> Option<ObjektTrasy> {
+    if editor_nivelety::otevren() {
+        if let Some(t) = editor_nivelety::trasa_panelu(doc) {
+            return Some(t);
+        }
+    }
+    trasa_s_niveletou(host, doc)
+}
+
+/// Konce nivelety na terén: první a poslední vrchol dostanou výšku terénu pohledu.
+fn konce_na_teren_cmd(host: &mut dyn HostApi) {
+    let doc = match PresHost(host).dokument() {
+        Ok(d) => d,
+        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    };
+    let Some(t) = trasa_nastroje(host, &doc) else {
+        return host.push_error(tr("Trasy: nejdřív klikněte na pohled profilu s niveletou (nebo niveletu nakreslete tlačítkem Niveleta)."));
+    };
+    let Some(p) = pohled::pohledy(&doc).into_iter().find(|p| p.def.trasa == t.def.id) else {
+        return host.push_error(tr("Trasy: trasa nemá pohled podélného profilu – terén není odkud vzít."));
+    };
+    let pk = match pohled::podklady(&doc, &p.def, None, false) {
+        Ok(pk) => pk,
+        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    };
+    let mut vr = t.def.nivelety[0].vrcholy.clone();
+    let posledni = vr.len() - 1;
+    let a = editor_nivelety::vyska_terenu(&pk.useky, vr[0].s);
+    let b = editor_nivelety::vyska_terenu(&pk.useky, vr[posledni].s);
+    if a.is_none() && b.is_none() {
+        return host.push_error(tr("Trasy: v místě konců nivelety není terén pohledu – nic se nezměnilo."));
+    }
+    if let Some(z) = a {
+        vr[0].z = (z * 1000.0).round() / 1000.0;
+    }
+    if let Some(z) = b {
+        vr[posledni].z = (z * 1000.0).round() / 1000.0;
+    }
+    let mut v = PresHost(host);
+    match uloz_niveletu_cmd(&mut v, &doc, &t, vr, tr("Konce nivelety na terén")) {
+        Ok(n) => {
+            let chybi = match (a, b) {
+                (Some(_), Some(_)) => String::new(),
+                (None, _) => tr(" (začátek mimo terén – beze změny)").to_string(),
+                (_, None) => tr(" (konec mimo terén – beze změny)").to_string(),
+            };
+            v.info(&trf!("Trasy: konce nivelety trasy {} posazeny na terén{}, překresleno pohledů: {}.", t.def.jmeno, chybi, n))
+        }
+        Err(e) => v.chyba(&trf!("Trasy: změna se nepřijala – {}", e)),
+    }
+}
+
+/// Vrchol sklonem: klik do pohledu a sklon na příkazovém řádku.
+fn vrchol_sklonem_cmd(host: &mut dyn HostApi) {
+    let doc = match PresHost(host).dokument() {
+        Ok(d) => d,
+        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    };
+    let Some(t) = trasa_nastroje(host, &doc) else {
+        return host.push_error(tr("Trasy: nejdřív klikněte na pohled profilu s niveletou (nebo niveletu nakreslete tlačítkem Niveleta)."));
+    };
+    let pohledy: Vec<_> = pohled::pohledy(&doc).into_iter().filter(|p| p.def.trasa == t.def.id && p.def.osy.is_some()).collect();
+    if pohledy.is_empty() {
+        return host.push_error(tr("Trasy: trasa nemá pohled podélného profilu."));
+    }
+    let od = (editor_nivelety::otevren() && editor_nivelety::aktivni().as_deref() == Some(t.def.id.as_str())).then(editor_nivelety::vybrany);
+    host.start_interactive(vykres::hlidany(Box::new(prikazy::VrcholSklonem {
+        trasa: t.def.id.clone(),
+        pohledy,
+        vrcholy: t.def.nivelety[0].vrcholy.clone(),
+        od,
+        klik: None,
+    })));
+}
+
+fn vrchol_sklonem_hotovo(host: &mut dyn HostApi, arg: &str) {
+    let c: Vec<&str> = arg.split_whitespace().collect();
+    let (Some(id), Some(od), Some(s), Some(sklon)) =
+        (c.first(), c.get(1).and_then(|x| x.parse::<usize>().ok()), c.get(2).and_then(|x| cti_cislo(x)), c.get(3).and_then(|x| cti_cislo(x)))
+    else {
+        return;
+    };
+    let mut v = PresHost(host);
+    let doc = match v.dokument() {
+        Ok(d) => d,
+        Err(e) => return v.chyba(&trf!("Trasy: {}", e)),
+    };
+    let Some(t) = objekt::trasy(&doc).into_iter().find(|t| t.def.id == *id) else { return };
+    let mut vr = t.def.nivelety[0].vrcholy.clone();
+    let Some(i) = trasy::niveleta::vloz_sklonem(&mut vr, od, s, sklon, prikazy::R_NIVELETY) else {
+        return v.chyba(tr("Trasy: v tomto staničení už vrchol nivelety je – nic se nezměnilo."));
+    };
+    // oblouk s výchozím R se nemusí vejít – pak vrchol bez oblouku
+    if trasy::niveleta::Niveleta::nova("N", "", vr.clone()).kontrola().is_err() {
+        vr[i].r = 0.0;
+    }
+    let od_novy = if od >= i { od + 1 } else { od };
+    match uloz_niveletu_cmd(&mut v, &doc, &t, vr, tr("Vrchol nivelety sklonem")) {
+        Ok(_) => {
+            editor_nivelety::nastav_vybrany(i);
+            v.info(&trf!(
+                "Trasy: přidán vrchol {} nivelety ({} ‰ od vrcholu {}).",
+                i + 1,
+                cislo(sklon * 1000.0, 2, true),
+                od_novy + 1
+            ))
+        }
+        Err(e) => v.chyba(&trf!("Trasy: změna se nepřijala – {}", e)),
+    }
 }
 
 /// Trasa s niveletou pro příkazy nivelety: z vybraného pohledu nebo trasy,
@@ -1334,6 +1466,9 @@ pub fn on_notification(n: &HostNotification) {
         HostNotification::PanelAction { panel_id, control_id, action, value } if panel_id == editor::ID => {
             editor::akce(&control_id, &action, value)
         }
+        HostNotification::PanelAction { panel_id, control_id, action, value } if panel_id == editor_nivelety::ID => {
+            editor_nivelety::akce(&control_id, &action, value)
+        }
         _ => {}
     }
 }
@@ -1347,6 +1482,10 @@ pub fn grip_event(host: &mut dyn HostApi, ev: ocs_plugin_api::host::CustomGripEv
 pub fn dispatch(host: &mut dyn HostApi, cmd: &str) -> bool {
     if let Some(s) = host.plugin_request_sender() {
         uchopy::registruj_kanal(host.tab_id(), s);
+    }
+    // i správce (zápis změn z panelu Editor nivelety) musí znát kartu výkresu
+    if let Some(s) = host.plugin_request_sender() {
+        crate::spravce::registruj_kanal(host.tab_id(), s);
     }
         let cmd = cmd.trim();
         let (nazev, zbytek) = match cmd.find(char::is_whitespace) {
@@ -1392,6 +1531,22 @@ pub fn dispatch(host: &mut dyn HostApi, cmd: &str) -> bool {
             }
             "TRA_NIVELETA_SMAZAT" => {
                 niveleta_smazat_cmd(host, zbytek);
+                true
+            }
+            "TRA_EDITOR_NIVELETY" => {
+                editor_nivelety_cmd(host);
+                true
+            }
+            "TRA_NIV_TEREN" => {
+                konce_na_teren_cmd(host);
+                true
+            }
+            "TRA_NIV_SKLON" => {
+                vrchol_sklonem_cmd(host);
+                true
+            }
+            "TRA_NIV_SKLON_HOTOVO" => {
+                vrchol_sklonem_hotovo(host, zbytek);
                 true
             }
             "TRA_NIVELETA" => {

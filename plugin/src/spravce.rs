@@ -688,7 +688,24 @@ impl Pracovnik {
             self.vyhodnot_vyber();
             self.vyhodnot_zmeny();
             self.vyhodnot_prepocet();
+            self.vyhodnot_niveletu();
         }
+    }
+
+    /// Změna z panelu Editor nivelety: po pauze v psaní zapsat do výkresu
+    /// (ne během příkazu ani tahu úchopem).
+    fn vyhodnot_niveletu(&mut self) {
+        if !crate::tra::editor_nivelety::je_cas() {
+            return;
+        }
+        let Some(tab) = Self::aktivni_tab() else { return };
+        if self.bezi(tab) || crate::uchopy::TAHNE.load(Ordering::SeqCst) {
+            return;
+        }
+        let Some(mut k) = kanal(tab) else { return };
+        crate::tra::prospektor::PRACUJE.store(true, Ordering::SeqCst);
+        crate::tra::editor_nivelety::proved(&mut k);
+        crate::tra::prospektor::PRACUJE.store(false, Ordering::SeqCst);
     }
 
     /// Odložený přepočet povrchů a pohledů (režim „po dokončení úprav“ po

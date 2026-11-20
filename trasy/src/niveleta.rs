@@ -79,6 +79,52 @@ pub fn nastav_polomer(v: &mut [VrcholNivelety], i: usize, r: f64) {
     }
 }
 
+/// Sklon úseku za vrcholem `k` (poměr; za posledním vrcholem `None`).
+pub fn sklon_za(v: &[VrcholNivelety], k: usize) -> Option<f64> {
+    (k + 1 < v.len()).then(|| (v[k + 1].z - v[k].z) / (v[k + 1].s - v[k].s))
+}
+
+/// Sklon úseku před vrcholem `k` (poměr; před prvním vrcholem `None`).
+pub fn sklon_pred(v: &[VrcholNivelety], k: usize) -> Option<f64> {
+    (k > 0).then(|| (v[k].z - v[k - 1].z) / (v[k].s - v[k - 1].s))
+}
+
+/// Změní sklon úseku před vrcholem `k`: předchozí vrchol drží, vrchol `k` se posune výškově.
+pub fn nastav_sklon_pred(v: &mut [VrcholNivelety], k: usize, sklon: f64) {
+    if k > 0 && k < v.len() {
+        v[k].z = v[k - 1].z + sklon * (v[k].s - v[k - 1].s);
+    }
+}
+
+/// Změní sklon úseku za vrcholem `k`: vrchol `k` drží, následující se posune výškově.
+pub fn nastav_sklon_za(v: &mut [VrcholNivelety], k: usize, sklon: f64) {
+    if k + 1 < v.len() {
+        v[k + 1].z = v[k].z + sklon * (v[k + 1].s - v[k].s);
+    }
+}
+
+/// Vloží vrchol ve staničení `s` se sklonem `sklon` od vrcholu `od` (výška = z_od + sklon·Δs).
+/// Za posledním vrcholem niveletu prodlouží, před prvním ji prodlouží dopředu.
+/// Vrací index nového vrcholu; `None`, když ve staničení `s` už vrchol je.
+pub fn vloz_sklonem(v: &mut Vec<VrcholNivelety>, od: usize, s: f64, sklon: f64, r: f64) -> Option<usize> {
+    if od >= v.len() || v.iter().any(|x| (x.s - s).abs() < 1e-3) {
+        return None;
+    }
+    let z = v[od].z + sklon * (s - v[od].s);
+    let i = v.iter().position(|x| x.s > s).unwrap_or(v.len());
+    v.insert(i, VrcholNivelety::new(s, z, 0.0));
+    // nový vnitřní vrchol dostane oblouk, nový krajní je bez oblouku a bývalý krajní oblouk dostane
+    let n = v.len();
+    if i > 0 && i + 1 < n {
+        v[i].r = r.max(0.0);
+    } else if i == 0 && n > 2 {
+        v[1].r = v[1].r.max(r.max(0.0));
+    } else if i + 1 == n && n > 2 {
+        v[n - 2].r = v[n - 2].r.max(r.max(0.0));
+    }
+    Some(i)
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Niveleta {
     pub id: String,
@@ -418,5 +464,26 @@ mod testy {
         // úchop změní poloměr – délka se přepočte, zadání zůstane délkou
         nastav_polomer(&mut n.vrcholy, 1, 1000.0);
         assert_eq!(n.vrcholy[1].zadani, Zadani::L(40.0));
+    }
+
+    #[test]
+    fn sklony_a_vrchol_sklonem() {
+        let mut v = n().vrcholy;
+        assert!(blizko(sklon_za(&v, 0).unwrap(), 0.02) && blizko(sklon_pred(&v, 2).unwrap(), -0.01));
+        assert!(sklon_pred(&v, 0).is_none() && sklon_za(&v, 2).is_none());
+        nastav_sklon_za(&mut v, 1, -0.03); // vrchol 2 drží, vrchol 3 klesne
+        assert!(blizko(v[2].z, 99.0) && blizko(v[1].z, 102.0));
+        nastav_sklon_pred(&mut v, 1, 0.01); // vrchol 1 drží, vrchol 2 klesne
+        assert!(blizko(v[1].z, 101.0) && blizko(v[0].z, 100.0));
+        // vložení uvnitř: výška ze sklonu od vrcholu 1, dostane oblouk
+        let i = vloz_sklonem(&mut v, 0, 50.0, 0.04, 800.0).unwrap();
+        assert_eq!(i, 1);
+        assert!(blizko(v[1].z, 102.0) && blizko(v[1].r, 800.0));
+        // prodloužení za konec: nový konec bez oblouku, bývalý konec oblouk dostane
+        let i = vloz_sklonem(&mut v, 3, 260.0, 0.005, 800.0).unwrap();
+        assert_eq!(i, 4);
+        assert!(blizko(v[4].z, v[3].z + 0.3) && blizko(v[4].r, 0.0) && blizko(v[3].r, 800.0));
+        // ve stejném staničení vrchol nevznikne
+        assert!(vloz_sklonem(&mut v, 0, 50.0, 0.0, 0.0).is_none());
     }
 }

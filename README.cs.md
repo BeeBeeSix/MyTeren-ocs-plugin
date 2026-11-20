@@ -96,6 +96,10 @@ angličtina), projeví se po novém spuštění.
   (K = L / lom sklonu v %, jak je zvykem např. v 12d) – zbylé hodnoty se
   dopočtou. Zadaná délka L se při změně sklonů drží. Pohled profilu oblouk
   popíše (R · L · K). Námět z hlášení #2.
+- **Editor nivelety (zkušební verze)** – ukotvený panel: tabulka vrcholů
+  s R | L | K, detail vybraného vrcholu (sklon před a za jde přepsat),
+  nástroje Vrchol sklonem a Konce na terén. Změny se do výkresu zapisují
+  chvíli po dopsání.
 
 ## Verze 1.2.0
 

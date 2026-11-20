@@ -294,3 +294,42 @@ Přímé červeně, oblouky modře	Tangents red, arcs blue
 Trasy – netiskne se	Alignments – not plotted
 Čerchovaná (trasa)	Dash-dot (alignment)
 Popis zakružovacích oblouků nivelety	Vertical curve labels
+Editor nivelety	Design profile editor
+Sklon za	Grade ahead
+Oblouk zadáte přepsáním R, L nebo K – ostatní se dopočítají (* = zadaná hodnota, ta platí i po změně sklonů). 0 = bez oblouku. Změna se do výkresu zapíše chvíli po dopsání.	Set a curve by overwriting R, L or K – the others are calculated (* = entered value, kept when grades change). 0 = no curve. The change is written to the drawing shortly after you stop typing.
+Vybraný vrchol	Selected vertex
+Vrchol č.	Vertex no.
+Výška [m n. m.]	Elevation [m a.s.l.]
+Sklon před [‰]	Grade behind [‰]
+Sklon za [‰]	Grade ahead [‰]
+Oblouk zadán	Curve set by
+poloměrem R	radius R
+délkou L	length L
+hodnotou K	K value
+Hodnota (R / L / K)	Value (R / L / K)
+Nástroje	Tools
+Vrchol sklonem	Vertex by grade
+Konce na terén	Ends to terrain
+Kontrola	Check
+✓ V pořádku – oblouky se vejdou.	✓ OK – curves fit.
+Žádná niveleta – klikněte na pohled profilu s niveletou, nebo ji nakreslete tlačítkem Niveleta.	No design profile – click a profile view with a design profile, or draw one with the Design profile button.
+Trasa {} · pohled {} · délka {} m · vrcholů {}	Alignment {} · view {} · length {} m · vertices {}
+Krajní vrchol – bez oblouku.	End vertex – no curve.
+{} oblouk: R = {} m · L = {} m · K = {} · T = {} m · y = {} m	{} curve: R = {} m · L = {} m · K = {} · T = {} m · y = {} m
+Vypuklý	Crest
+Údolnicový	Sag
+Bez oblouku.	No curve.
+řádek {} nemá platné staničení a výšku	row {} has no valid station and elevation
+Úprava nivelety v editoru	Design profile edit
+Trasy: trasa nemá pohled podélného profilu – terén není odkud vzít.	Alignments: the alignment has no profile view – there is no terrain to use.
+Trasy: v místě konců nivelety není terén pohledu – nic se nezměnilo.	Alignments: there is no view terrain at the design profile ends – nothing was changed.
+Konce nivelety na terén	Design profile ends to terrain
+ (začátek mimo terén – beze změny)	 (start outside terrain – unchanged)
+ (konec mimo terén – beze změny)	 (end outside terrain – unchanged)
+Trasy: konce nivelety trasy {} posazeny na terén{}, překresleno pohledů: {}.	Alignments: design profile ends of alignment {} set to terrain{}, views redrawn: {}.
+Trasy: trasa nemá pohled podélného profilu.	Alignments: the alignment has no profile view.
+Trasy: v tomto staničení už vrchol nivelety je – nic se nezměnilo.	Alignments: a design profile vertex already exists at this station – nothing was changed.
+Vrchol nivelety sklonem	Design profile vertex by grade
+Trasy: přidán vrchol {} nivelety ({} ‰ od vrcholu {}).	Alignments: design profile vertex {} added ({} ‰ from vertex {}).
+Vrchol sklonem: klikněte v pohledu profilu staničení nového vrcholu	Vertex by grade: click the station of the new vertex in the profile view
+Sklon od vrcholu {} [‰]: napište číslo a Enter (kurzor nad kliknutím = stoupání, pod = klesání), nebo klikněte výšku; jen Enter = {} ‰ (na niveletě)	Grade from vertex {} [‰]: type a number and Enter (cursor above the click = rising, below = falling), or click the elevation; Enter alone = {} ‰ (on the design profile)

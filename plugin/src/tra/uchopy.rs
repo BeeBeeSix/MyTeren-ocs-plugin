@@ -191,6 +191,10 @@ fn zacatek_nivelety(host: &mut dyn HostApi, h: u64, idx: usize, pt: [f64; 3]) ->
         _ => pt,
     };
     let vrcholy = n.vrcholy.clone();
+    if sub != NIV_VLOZIT {
+        crate::tra::editor_nivelety::nastav_aktivni(&trasa.def.id);
+        crate::tra::editor_nivelety::nastav_vybrany(i);
+    }
     let t = TahNivelety { doc, pohled, trasa, vrcholy, sub, i, start };
     let r = nahled_nivelety(&t, pt);
     *TAH_NIV.lock().unwrap_or_else(|e| e.into_inner()) = Some(t);
@@ -298,7 +302,7 @@ struct Tah {
 /// Napsané číslo při tažení posune úchop přesně o tu vzdálenost od začátku
 /// (OCS jinak neumí). Tažení myší skoro nikdy neskončí na vzdálenosti, která
 /// má nejvýš 3 desetinná místa – podle toho se pozná, že uživatel psal.
-fn napsana_vzdalenost(start: [f64; 3], p: [f64; 3]) -> Option<f64> {
+pub(crate) fn napsana_vzdalenost(start: [f64; 3], p: [f64; 3]) -> Option<f64> {
     let d = (p[0] - start[0]).hypot(p[1] - start[1]);
     let tisiciny = d * 1000.0;
     (d > 1e-6 && (tisiciny - tisiciny.round()).abs() < 1e-5).then_some((tisiciny.round()) / 1000.0)
@@ -597,6 +601,20 @@ fn spust_obnovu(tab: u64) {
                 }
                 if crate::tra::editor::otevren() {
                     k.panel_id(crate::tra::editor::ID, crate::tra::editor::hodnoty(&doc));
+                }
+                // klik na pohled s niveletou: panel Editor nivelety s jeho niveletou
+                let s_niveletou = vybrany_pohled.as_ref().filter(|p| {
+                    objekt::trasy(&doc).iter().any(|t| t.def.id == p.def.trasa && !t.def.nivelety.is_empty())
+                });
+                if let Some(p) = s_niveletou {
+                    crate::tra::editor_nivelety::nastav_aktivni(&p.def.trasa);
+                }
+                if crate::tra::editor_nivelety::otevrit_pro(s_niveletou.map(|p| p.insert.value())) {
+                    let def = (!crate::tra::editor_nivelety::otevren()).then(crate::tra::editor_nivelety::definice);
+                    k.panel_ukaz(crate::tra::editor_nivelety::ID, def);
+                }
+                if crate::tra::editor_nivelety::otevren() {
+                    k.panel_id(crate::tra::editor_nivelety::ID, crate::tra::editor_nivelety::hodnoty(&doc));
                 }
             }
             registruj_kanal(tab, k.0);

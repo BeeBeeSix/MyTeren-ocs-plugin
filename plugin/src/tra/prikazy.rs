@@ -400,3 +400,92 @@ impl InteractiveCommand for KresleniNivelety {
         out
     }
 }
+
+/// Vrchol nivelety sklonem: klik do pohledu = staničení nového vrcholu, pak
+/// sklon od vybraného vrcholu – napsaný do příkazového řádku (OCS ho předá
+/// jako bod v té vzdálenosti od kliknutí; kurzor nad kliknutím = stoupání,
+/// pod ním = klesání), nebo kliknutá výška. Enter = vrchol na stávající
+/// niveletě (tečnovém polygonu).
+pub struct VrcholSklonem {
+    pub trasa: String,
+    pub pohledy: Vec<crate::tra::pohled::ObjektPohledu>,
+    pub vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
+    /// Vrchol, od kterého se sklon měří (vybraný v panelu); `None` = předchozí vrchol.
+    pub od: Option<usize>,
+    /// Po prvním kliknutí: pohled, staničení, vrchol „od“, bod kliknutí.
+    pub klik: Option<(usize, f64, usize, [f64; 3])>,
+}
+
+impl VrcholSklonem {
+    /// Výška tečnového polygonu ve staničení (mimo rozsah prodloužený krajní úsek).
+    fn polygon(&self, s: f64) -> f64 {
+        let v = &self.vrcholy;
+        let k = v.windows(2).position(|w| s <= w[1].s).unwrap_or(v.len().saturating_sub(2));
+        let (a, b) = (v[k], v[(k + 1).min(v.len() - 1)]);
+        if (b.s - a.s).abs() < 1e-9 { a.z } else { a.z + (b.z - a.z) * (s - a.s) / (b.s - a.s) }
+    }
+
+    fn hotovo(&self, sklon: f64) -> CommandStep {
+        let Some((_, s, od, _)) = self.klik else { return CommandStep::Cancel };
+        CommandStep::Dispatch(format!("TRA_NIV_SKLON_HOTOVO {} {} {:.4} {:.7}", self.trasa, od, s, sklon))
+    }
+}
+
+impl InteractiveCommand for VrcholSklonem {
+    fn prompt(&self) -> String {
+        match self.klik {
+            None => tr("Vrchol sklonem: klikněte v pohledu profilu staničení nového vrcholu").to_string(),
+            Some((_, s, od, _)) => {
+                let i = (self.polygon(s) - self.vrcholy[od].z) / (s - self.vrcholy[od].s);
+                trf!(
+                    "Sklon od vrcholu {} [‰]: napište číslo a Enter (kurzor nad kliknutím = stoupání, pod = klesání), nebo klikněte výšku; jen Enter = {} ‰ (na niveletě)",
+                    od + 1,
+                    trasy::stanice::cislo(i * 1000.0, 2, true)
+                )
+            }
+        }
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        match self.klik {
+            None => {
+                let Some(p) = self.pohledy.iter().position(|p| p.obsahuje([pt[0], pt[1]])) else { return CommandStep::NeedPoint };
+                let Some((s, _)) = self.pohledy[p].na_profil(pt) else { return CommandStep::NeedPoint };
+                let od = self
+                    .od
+                    .filter(|&i| i < self.vrcholy.len() && (self.vrcholy[i].s - s).abs() > 1e-3)
+                    .unwrap_or_else(|| self.vrcholy.iter().rposition(|v| v.s < s).unwrap_or(0));
+                if (self.vrcholy[od].s - s).abs() < 1e-3 {
+                    return CommandStep::NeedPoint;
+                }
+                self.klik = Some((p, s, od, pt));
+                CommandStep::NeedPoint
+            }
+            Some((p, s, od, p1)) => {
+                let sklon = match crate::tra::uchopy::napsana_vzdalenost(p1, pt) {
+                    Some(d) => (if pt[1] >= p1[1] { d } else { -d }) / 1000.0,
+                    None => {
+                        let Some((_, z)) = self.pohledy[p].na_profil(pt) else { return CommandStep::NeedPoint };
+                        (z - self.vrcholy[od].z) / (s - self.vrcholy[od].s)
+                    }
+                };
+                self.hotovo(sklon)
+            }
+        }
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        match self.klik {
+            Some((_, s, od, _)) => self.hotovo((self.polygon(s) - self.vrcholy[od].z) / (s - self.vrcholy[od].s)),
+            None => CommandStep::Cancel,
+        }
+    }
+    fn on_cursor_move(&mut self, pt: [f64; 3]) -> Vec<PreviewWire> {
+        let Some((p, s, od, _)) = self.klik else { return Vec::new() };
+        let ph = &self.pohledy[p];
+        let Some((_, z)) = ph.na_profil(pt) else { return Vec::new() };
+        let v = self.vrcholy[od];
+        match (ph.na_vykres(v.s, v.z), ph.na_vykres(s, z)) {
+            (Some(a), Some(b)) => vec![PreviewWire::line(a, b, Some([1.0, 0.8, 0.2, 1.0]))],
+            _ => Vec::new(),
+        }
+    }
+}
