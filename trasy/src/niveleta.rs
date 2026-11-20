@@ -160,7 +160,12 @@ pub enum Upozorneni {
     MalyPolomer { vrchol: usize, r: f64 },
     /// Velký sklon úseku mezi vrcholy `od` a `od + 1`.
     VelkySklon { od: usize, sklon: f64 },
+    /// Krátká mezipřímka `m` metrů mezi oblouky ve vrcholech `a` a `b`.
+    KratkaMeziprimka { a: usize, b: usize, m: f64 },
 }
+
+/// Mez „krátké“ mezipřímky mezi dvěma oblouky pro kontrolu [m].
+pub const MEZIPRIMKA_KRATKA: f64 = 10.0;
 
 /// Sklon úseku za vrcholem `k` (poměr; za posledním vrcholem `None`).
 pub fn sklon_za(v: &[VrcholNivelety], k: usize) -> Option<f64> {
@@ -183,6 +188,103 @@ pub fn nastav_sklon_pred(v: &mut [VrcholNivelety], k: usize, sklon: f64) {
 pub fn nastav_sklon_za(v: &mut [VrcholNivelety], k: usize, sklon: f64) {
     if k + 1 < v.len() {
         v[k + 1].z = v[k].z + sklon * (v[k + 1].s - v[k].s);
+    }
+}
+
+/// Posune vrcholy od indexu `od` do konce o `ds` ve staničení a `dz` ve výšce.
+pub fn posun_od(v: &mut [VrcholNivelety], od: usize, ds: f64, dz: f64) {
+    for x in v.iter_mut().skip(od) {
+        x.s += ds;
+        x.z += dz;
+    }
+}
+
+/// Sklon úseku `k` → `k + 1` (začátek drží). `posun` = zbytek nivelety se
+/// posune spolu s koncem úseku (tvar zůstane), jinak se změní jen konec úseku.
+pub fn nastav_sklon_useku(v: &mut [VrcholNivelety], k: usize, sklon: f64, posun: bool) {
+    if k + 1 >= v.len() {
+        return;
+    }
+    let dz = v[k].z + sklon * (v[k + 1].s - v[k].s) - v[k + 1].z;
+    if posun {
+        posun_od(v, k + 1, 0.0, dz)
+    } else {
+        v[k + 1].z += dz
+    }
+}
+
+/// Délka úseku `k` → `k + 1` se stejným sklonem. `posun` = další vrcholy se
+/// posunou o stejný kus, jinak se posune jen konec úseku (a zkrátí se další
+/// úsek). `false`, když se délka nevejde (konec by přeskočil další vrchol).
+pub fn nastav_delku_useku(v: &mut [VrcholNivelety], k: usize, delka: f64, posun: bool) -> bool {
+    if k + 1 >= v.len() || delka <= 0.01 {
+        return false;
+    }
+    let i = (v[k + 1].z - v[k].z) / (v[k + 1].s - v[k].s);
+    let ds = delka - (v[k + 1].s - v[k].s);
+    if posun {
+        posun_od(v, k + 1, ds, i * ds);
+    } else {
+        if k + 2 < v.len() && v[k + 1].s + ds >= v[k + 2].s - 0.01 {
+            return false;
+        }
+        v[k + 1].s += ds;
+        v[k + 1].z += i * ds;
+    }
+    true
+}
+
+/// Výsledek vložení oblouku podle nastavení.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum VlozeniOblouku {
+    Vlozen,
+    /// Vešel se až zmenšený (poměr k zadané hodnotě).
+    Zmensen(f64),
+    Nevejde,
+}
+
+/// Vloží do vnitřního vrcholu `k` oblouk typu `typ` (0 parabola, 1 nesouměrný,
+/// 2 kružnice) se zadáním `zadani` (R / L / K) a hodnotou; u nesouměrného
+/// rozdělí délku v poměru `podil_l1` : (1 − `podil_l1`). Když se oblouk
+/// nevejde, zmenšuje ho (po 20 %); když se nevejde vůbec, vrchol nechá.
+pub fn dej_oblouk(v: &mut [VrcholNivelety], k: usize, typ: usize, zadani: &str, hodnota: f64, podil_l1: f64) -> VlozeniOblouku {
+    if k == 0 || k + 1 >= v.len() || hodnota <= 0.0 {
+        return VlozeniOblouku::Nevejde;
+    }
+    let puvodni = v[k];
+    let Some((i1, i2)) = sklony_u(v, k) else { return VlozeniOblouku::Nevejde };
+    let podil = if podil_l1 > 0.0 && podil_l1 < 1.0 { podil_l1 } else { 0.4 };
+    let mut f = 1.0;
+    while f > 0.05 {
+        let h = hodnota * f;
+        let zakl = VrcholNivelety::new(puvodni.s, puvodni.z, 0.0);
+        v[k] = match typ {
+            1 => {
+                let l = match zadani {
+                    "L" | "l" => h,
+                    "K" | "k" => delka_z_r(false, h * 100.0, i1, i2),
+                    _ => delka_z_r(false, h, i1, i2),
+                };
+                VrcholNivelety { typ: TypOblouku::Nesoumerny { l1: l * podil, l2: l - l * podil }, ..zakl }
+            }
+            t => VrcholNivelety {
+                typ: if t == 2 { TypOblouku::Kruh } else { TypOblouku::Parabola },
+                ..VrcholNivelety::zadany(zakl.s, zakl.z, zadani, h)
+            },
+        };
+        if Niveleta::nova("N", "", v.to_vec()).kontrola().is_ok() {
+            return if f < 1.0 { VlozeniOblouku::Zmensen(f) } else { VlozeniOblouku::Vlozen };
+        }
+        f *= 0.8;
+    }
+    v[k] = puvodni;
+    VlozeniOblouku::Nevejde
+}
+
+/// Odstraní oblouk ve vrcholu `k` (typ se vrátí na parabolu, R = 0).
+pub fn bez_oblouku(v: &mut [VrcholNivelety], k: usize) {
+    if k < v.len() {
+        v[k] = VrcholNivelety::new(v[k].s, v[k].z, 0.0);
     }
 }
 
@@ -262,6 +364,10 @@ impl Upozorneni {
             Upozorneni::VelkySklon { od, sklon } => (
                 "úsek {}–{}: sklon {} ‰ je velký",
                 vec![(od + 1).to_string(), (od + 2).to_string(), cislo(sklon * 1000.0, 1, true)],
+            ),
+            Upozorneni::KratkaMeziprimka { a, b, m } => (
+                "mezipřímka mezi oblouky {} a {} je jen {} m",
+                vec![(a + 1).to_string(), (b + 1).to_string(), cislo(*m, 2, true)],
             ),
         }
     }
@@ -445,6 +551,8 @@ impl Niveleta {
                 let mezera = self.vrcholy[k + 1].s - self.vrcholy[k].s - a.t2 - b.t1;
                 if mezera.abs() < 0.01 {
                     out.push(Upozorneni::Navazuji { a: k, b: k + 1 });
+                } else if mezera > 0.0 && mezera < MEZIPRIMKA_KRATKA {
+                    out.push(Upozorneni::KratkaMeziprimka { a: k, b: k + 1, m: mezera });
                 }
             }
         }
@@ -797,6 +905,56 @@ mod testy {
         assert!(n.upozorneni().contains(&Upozorneni::Navazuji { a: 1, b: 2 }));
         n.vrcholy[2].r = 110.0 / 0.03;
         assert!(matches!(n.kontrola(), Err(ChybaNivelety::Prekryv { a: 1, b: 2, .. })));
+    }
+
+    #[test]
+    fn useky_sklon_delka_a_posun() {
+        let mut v = n().vrcholy;
+        // délka úseku 1 na 150 m, zbytek se posune (sklony zůstanou)
+        assert!(nastav_delku_useku(&mut v, 0, 150.0, true));
+        assert!(blizko(v[1].s, 150.0) && blizko(v[1].z, 103.0) && blizko(v[2].s, 250.0) && blizko(v[2].z, 102.0));
+        // držet konec: jen konec úseku, další vrchol na místě
+        let mut v = n().vrcholy;
+        assert!(nastav_delku_useku(&mut v, 0, 80.0, false));
+        assert!(blizko(v[1].s, 80.0) && blizko(v[1].z, 101.6) && blizko(v[2].s, 200.0));
+        assert!(!nastav_delku_useku(&mut v, 0, 250.0, false), "přes další vrchol nejde");
+        // sklon úseku: posun zbytku drží tvar
+        let mut v = n().vrcholy;
+        nastav_sklon_useku(&mut v, 0, 0.03, true);
+        assert!(blizko(v[1].z, 103.0) && blizko(v[2].z, 102.0));
+        let mut v = n().vrcholy;
+        nastav_sklon_useku(&mut v, 0, 0.03, false);
+        assert!(blizko(v[1].z, 103.0) && blizko(v[2].z, 101.0));
+    }
+
+    #[test]
+    fn oblouk_z_nastaveni() {
+        let mut v = n().vrcholy;
+        bez_oblouku(&mut v, 1);
+        assert_eq!(dej_oblouk(&mut v, 1, 0, "R", 2000.0, 0.4), VlozeniOblouku::Vlozen);
+        // velký se zmenší, aby se vešel (T = R·0,03/2 ≤ 100)
+        let mut v = n().vrcholy;
+        match dej_oblouk(&mut v, 1, 2, "R", 10_000.0, 0.4) {
+            VlozeniOblouku::Zmensen(f) => assert!(f < 1.0 && v[1].typ == TypOblouku::Kruh),
+            x => panic!("{x:?}"),
+        }
+        // nesouměrný délkou L s poměrem 40 : 60
+        let mut v = n().vrcholy;
+        assert_eq!(dej_oblouk(&mut v, 1, 1, "L", 50.0, 0.4), VlozeniOblouku::Vlozen);
+        assert_eq!(v[1].typ, TypOblouku::Nesoumerny { l1: 20.0, l2: 30.0 });
+        assert_eq!(dej_oblouk(&mut v, 0, 0, "R", 100.0, 0.4), VlozeniOblouku::Nevejde, "krajní vrchol");
+    }
+
+    #[test]
+    fn kratka_meziprimka() {
+        let mut n = Niveleta::nova("N", "", vec![
+            VrcholNivelety::new(0.0, 100.0, 0.0),
+            VrcholNivelety::new(100.0, 102.0, 95.0 / 0.03),
+            VrcholNivelety::new(200.0, 101.0, 0.0),
+            VrcholNivelety::new(300.0, 103.0, 0.0),
+        ]);
+        n.vrcholy[2].r = 100.0 / 0.03; // T 47,5 + 50 → mezipřímka 2,5 m
+        assert!(n.upozorneni().iter().any(|u| matches!(u, Upozorneni::KratkaMeziprimka { a: 1, b: 2, .. })));
     }
 
     #[test]

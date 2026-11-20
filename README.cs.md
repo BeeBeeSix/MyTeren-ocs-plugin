@@ -96,11 +96,15 @@ angličtina), projeví se po novém spuštění.
   (K = L / lom sklonu v %, jak je zvykem např. v 12d) – zbylé hodnoty se
   dopočtou. Zadaná délka L se při změně sklonů drží. Pohled profilu oblouk
   popíše (R · L · K). Námět z hlášení #2.
-- **Editor nivelety** – ukotvený panel: tabulka vrcholů s typem oblouku
-  a R | L | K, detail vybraného vrcholu (sklon před a za jde přepsat),
-  nástroje Přidat vrchol, Vrchol sklonem, Změnit oblouk, Konce na terén,
-  Smazat vrchol, Zpět a kontrola (malé R/K, velký sklon, navazující
-  oblouky). Změny se do výkresu zapisují chvíli po dopsání.
+- **Editor nivelety** – ukotvený panel: tabulka vrcholů s typem oblouku,
+  R | L | K, sklonem a délkou úseku; detail vybraného vrcholu (sklon a délka
+  před a za jde přepsat). Nástroje ve třech skupinách – Vrcholy (přidat,
+  smazat, zvednout / snížit, na terén), Oblouky (vložit, odstranit, do všech
+  vrcholů – podle nastavení oblouku v panelu) a Úseky (změnit sklon, změnit
+  délku, úsek bodem, prodloužit); volba, zda se zbytek nivelety posune, nebo
+  konec drží; Zpět a Znovu. Kontrola hlásí malé R/K, velký sklon, krátkou
+  mezipřímku a navazující oblouky. Změny se do výkresu zapisují chvíli po
+  dopsání.
 - **Typy zakružovacích oblouků**: parabola (výchozí), nesouměrný (L1 a L2)
   a kružnice. Oblouky sousedních vrcholů smí na sebe navazovat bez
   mezipřímky; překryv se hlásí s údajem o kolik metrů.

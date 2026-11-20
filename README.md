@@ -26,10 +26,14 @@ DWG, and every action is a single Undo step. Interface in English or Czech.
   kept when grades change, and the profile view labels each curve
   (R · L · K). Suggested in #2.
 - **Design profile editor** – a docked panel with the vertex table (curve
-  type and R | L | K), selected-vertex details (editable grades behind and
-  ahead), tools Add vertex, Vertex by grade, Change curve, Ends to terrain,
-  Delete vertex, Undo, and a check (small R/K, steep grades, touching
-  curves). Changes are written to the drawing shortly after you stop typing.
+  type, R | L | K, segment grade and length) and selected-vertex details
+  (editable grades and lengths behind and ahead). Tools in three groups –
+  Vertices (add, delete, raise / lower, to terrain), Curves (insert, remove,
+  at all vertices – from the panel's curve settings) and Segments (change
+  grade, change length, through a point, extend); a choice to shift the rest
+  of the profile or keep its end; Undo and Redo. The check reports small
+  R/K, steep grades, short tangents and touching curves. Changes are written
+  to the drawing shortly after you stop typing.
 - **Vertical curve types**: parabola (default), unsymmetrical (L1 and L2)
   and circle. Curves at neighbouring vertices may touch without a tangent
   between them; an overlap is reported with its length in metres.

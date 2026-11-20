@@ -610,3 +610,233 @@ impl InteractiveCommand for ZmenitObloukNivelety {
         }
     }
 }
+
+/// Úsek nivelety v pohledu, kam se kliklo (index úseku k → k+1).
+fn usek_u_bodu(v: &[trasy::niveleta::VrcholNivelety], s: f64) -> Option<usize> {
+    if v.len() < 2 {
+        return None;
+    }
+    Some(v.windows(2).position(|w| s <= w[1].s).unwrap_or(v.len() - 2))
+}
+
+/// Hodnota napsaná na příkazovém řádku (bod ve vzdálenosti od posledního
+/// bodu); znaménko podle polohy kurzoru (nad = plus, pod = minus).
+fn napsane_se_znamenkem(p1: [f64; 3], pt: [f64; 3]) -> Option<f64> {
+    crate::tra::uchopy::napsana_vzdalenost(p1, pt).map(|d| if pt[1] >= p1[1] { d } else { -d })
+}
+
+/// Co nástroj úseku mění.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum DruhUseku {
+    Sklon,
+    Delka,
+    Bodem,
+}
+
+/// Nástroje úseků nivelety: klik na úsek, pak sklon / délka na příkazovém
+/// řádku, nebo bod, kterým má úsek projít.
+pub struct UsekNivelety {
+    pub trasa: String,
+    pub pohledy: Vec<crate::tra::pohled::ObjektPohledu>,
+    pub vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
+    pub druh: DruhUseku,
+    /// Pohled, úsek a bod kliknutí.
+    pub usek: Option<(usize, usize, [f64; 3])>,
+}
+
+impl UsekNivelety {
+    fn hotovo(&self, k: usize, co: &str, x: f64) -> CommandStep {
+        CommandStep::Dispatch(format!("TRA_NIV_USEK_HOTOVO {} {} {} {:.7}", self.trasa, k, co, x))
+    }
+}
+
+impl InteractiveCommand for UsekNivelety {
+    fn prompt(&self) -> String {
+        let v = &self.vrcholy;
+        match (self.usek, self.druh) {
+            (None, DruhUseku::Sklon) => tr("Změnit sklon: klikněte na úsek nivelety v pohledu profilu").to_string(),
+            (None, DruhUseku::Delka) => tr("Změnit délku: klikněte na úsek nivelety v pohledu profilu").to_string(),
+            (None, DruhUseku::Bodem) => tr("Úsek bodem: klikněte na úsek nivelety v pohledu profilu").to_string(),
+            (Some((_, k, _)), DruhUseku::Sklon) => trf!(
+                "Sklon úseku {}–{} [‰] (teď {}): napište číslo a Enter (kurzor nad kliknutím = stoupání, pod = klesání)",
+                k + 1,
+                k + 2,
+                trasy::stanice::cislo((v[k + 1].z - v[k].z) / (v[k + 1].s - v[k].s) * 1000.0, 2, true)
+            ),
+            (Some((_, k, _)), DruhUseku::Delka) => trf!(
+                "Délka úseku {}–{} [m] (teď {}): napište číslo a Enter",
+                k + 1,
+                k + 2,
+                trasy::stanice::cislo(v[k + 1].s - v[k].s, 2, true)
+            ),
+            (Some((_, k, _)), DruhUseku::Bodem) => trf!("Úsek {}–{}: klikněte bod, kterým má projít (začátek úseku drží)", k + 1, k + 2),
+        }
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        match self.usek {
+            None => {
+                let Some(p) = self.pohledy.iter().position(|p| p.obsahuje([pt[0], pt[1]])) else { return CommandStep::NeedPoint };
+                let Some((s, _)) = self.pohledy[p].na_profil(pt) else { return CommandStep::NeedPoint };
+                let Some(k) = usek_u_bodu(&self.vrcholy, s) else { return CommandStep::NeedPoint };
+                self.usek = Some((p, k, pt));
+                CommandStep::NeedPoint
+            }
+            Some((p, k, p1)) => match self.druh {
+                DruhUseku::Sklon => match napsane_se_znamenkem(p1, pt) {
+                    Some(x) => self.hotovo(k, "S", x / 1000.0),
+                    None => CommandStep::NeedPoint,
+                },
+                DruhUseku::Delka => match crate::tra::uchopy::napsana_vzdalenost(p1, pt) {
+                    Some(x) => self.hotovo(k, "D", x),
+                    None => CommandStep::NeedPoint,
+                },
+                DruhUseku::Bodem => {
+                    let Some((s, z)) = self.pohledy[p].na_profil(pt) else { return CommandStep::NeedPoint };
+                    let a = self.vrcholy[k];
+                    if s <= a.s + 1e-3 {
+                        return CommandStep::NeedPoint;
+                    }
+                    self.hotovo(k, "S", (z - a.z) / (s - a.s))
+                }
+            },
+        }
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        CommandStep::Cancel
+    }
+    fn on_cursor_move(&mut self, pt: [f64; 3]) -> Vec<PreviewWire> {
+        let Some((p, k, _)) = self.usek else { return Vec::new() };
+        if self.druh != DruhUseku::Bodem {
+            return Vec::new();
+        }
+        let ph = &self.pohledy[p];
+        let a = self.vrcholy[k];
+        match ph.na_vykres(a.s, a.z) {
+            Some(q) => vec![PreviewWire::line(q, [pt[0], pt[1], 0.0], Some([1.0, 0.8, 0.2, 1.0]))],
+            None => Vec::new(),
+        }
+    }
+}
+
+/// Zvednout / snížit vrchol: klik na vrchol, pak výška na příkazovém řádku
+/// (kurzor nad kliknutím = nahoru, pod = dolů).
+pub struct ZvednoutVrchol {
+    pub trasa: String,
+    pub pohledy: Vec<crate::tra::pohled::ObjektPohledu>,
+    pub vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
+    pub vybrany: Option<(usize, [f64; 3])>,
+}
+
+impl InteractiveCommand for ZvednoutVrchol {
+    fn prompt(&self) -> String {
+        match self.vybrany {
+            None => tr("Zvednout / snížit: klikněte na vrchol nivelety (celou niveletu zvednete tlačítkem v panelu)").to_string(),
+            Some((k, _)) => trf!(
+                "Vrchol {}: o kolik zvednout [m] – napište číslo a Enter (kurzor nad kliknutím = nahoru, pod = dolů)",
+                k + 1
+            ),
+        }
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        match self.vybrany {
+            None => {
+                let Some(p) = self.pohledy.iter().find(|p| p.obsahuje([pt[0], pt[1]])) else { return CommandStep::NeedPoint };
+                let k = (0..self.vrcholy.len())
+                    .filter_map(|k| p.na_vykres(self.vrcholy[k].s, self.vrcholy[k].z).map(|q| (k, (q[0] - pt[0]).hypot(q[1] - pt[1]))))
+                    .min_by(|a, b| a.1.total_cmp(&b.1))
+                    .map(|x| x.0);
+                let Some(k) = k else { return CommandStep::NeedPoint };
+                self.vybrany = Some((k, pt));
+                CommandStep::NeedPoint
+            }
+            Some((k, p1)) => match napsane_se_znamenkem(p1, pt) {
+                Some(dz) => CommandStep::Dispatch(format!("TRA_NIV_ZVEDNOUT_HOTOVO {} {} {:.4}", self.trasa, k, dz)),
+                None => CommandStep::NeedPoint,
+            },
+        }
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        CommandStep::Cancel
+    }
+}
+
+/// Prodloužit niveletu: klik za konec (přibližné místo), pak sklon a délka
+/// nového úseku na příkazovém řádku.
+pub struct ProdlouzitNiveletu {
+    pub trasa: String,
+    pub pohledy: Vec<crate::tra::pohled::ObjektPohledu>,
+    pub vrcholy: Vec<trasy::niveleta::VrcholNivelety>,
+    /// Po kliknutí: staničení kliknutí, bod kliknutí a poslední zadaný bod.
+    pub klik: Option<(f64, [f64; 3], [f64; 3])>,
+    pub sklon: Option<f64>,
+}
+
+impl ProdlouzitNiveletu {
+    fn posledni_sklon(&self) -> f64 {
+        let v = &self.vrcholy;
+        let n = v.len();
+        if n < 2 { 0.0 } else { (v[n - 1].z - v[n - 2].z) / (v[n - 1].s - v[n - 2].s) }
+    }
+    fn hotovo(&self, sklon: f64, delka: f64) -> CommandStep {
+        if delka <= 0.01 {
+            return CommandStep::Cancel;
+        }
+        CommandStep::Dispatch(format!("TRA_NIV_PRODLOUZIT_HOTOVO {} {:.7} {:.4}", self.trasa, sklon, delka))
+    }
+}
+
+impl InteractiveCommand for ProdlouzitNiveletu {
+    fn prompt(&self) -> String {
+        let konec = self.vrcholy.last().map_or(0.0, |v| v.s);
+        match (self.klik, self.sklon) {
+            (None, _) => tr("Prodloužit: klikněte v pohledu profilu za konec nivelety (přibližné místo nového konce)").to_string(),
+            (Some(_), None) => trf!(
+                "Sklon nového úseku [‰]: napište číslo a Enter (kurzor nad kliknutím = stoupání, pod = klesání; jen Enter = {} ‰)",
+                trasy::stanice::cislo(self.posledni_sklon() * 1000.0, 2, true)
+            ),
+            (Some((s, _, _)), Some(_)) => trf!(
+                "Délka nového úseku [m]: napište číslo a Enter (jen Enter = {} m podle kliknutí)",
+                trasy::stanice::cislo((s - konec).max(0.0), 2, true)
+            ),
+        }
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        let konec = self.vrcholy.last().map_or(0.0, |v| v.s);
+        match (self.klik, self.sklon) {
+            (None, _) => {
+                let Some(p) = self.pohledy.iter().find(|p| p.obsahuje([pt[0], pt[1]])) else { return CommandStep::NeedPoint };
+                let Some((s, _)) = p.na_profil(pt) else { return CommandStep::NeedPoint };
+                if s <= konec + 1e-3 {
+                    return CommandStep::NeedPoint;
+                }
+                self.klik = Some((s, pt, pt));
+                CommandStep::NeedPoint
+            }
+            (Some((s, p1, posledni)), None) => match napsane_se_znamenkem(posledni, pt).or_else(|| napsane_se_znamenkem(p1, pt)) {
+                Some(x) => {
+                    self.sklon = Some(x / 1000.0);
+                    self.klik = Some((s, p1, pt));
+                    CommandStep::NeedPoint
+                }
+                None => CommandStep::NeedPoint,
+            },
+            (Some((_, p1, posledni)), Some(sklon)) => {
+                match crate::tra::uchopy::napsana_vzdalenost(posledni, pt).or_else(|| crate::tra::uchopy::napsana_vzdalenost(p1, pt)) {
+                    Some(d) => self.hotovo(sklon, d),
+                    None => CommandStep::NeedPoint,
+                }
+            }
+        }
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        let konec = self.vrcholy.last().map_or(0.0, |v| v.s);
+        match (self.klik, self.sklon) {
+            (None, _) => CommandStep::Cancel,
+            (Some(_), None) => {
+                self.sklon = Some(self.posledni_sklon());
+                CommandStep::NeedPoint
+            }
+            (Some((s, _, _)), Some(sklon)) => self.hotovo(sklon, s - konec),
+        }
+    }
+}

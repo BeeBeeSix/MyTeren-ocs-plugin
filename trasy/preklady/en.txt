@@ -363,3 +363,80 @@ Trasy: niveleta nemá vnitřní vrchol – oblouk není kam dát.	Alignments: th
 Změna oblouku nivelety	Change design profile curve
 Trasy: oblouk ve vrcholu {} nivelety: {} = {}.	Alignments: curve at design profile vertex {}: {} = {}.
 Trasy: vrchol {} nivelety je bez oblouku.	Alignments: design profile vertex {} has no curve.
+Typ oblouku: parabola, nesouměrný (L1 a L2 v detailu), kružnice – přepište první písmeno (p / n / k). Oblouk zadáte přepsáním R, L nebo K (* = zadaná hodnota, platí i po změně sklonů; 0 = bez oblouku). Sklon a délku úseku za vrcholem jde přepsat také. Změna se do výkresu zapíše chvíli po dopsání.	Curve type: parabola, unsymmetrical (L1 and L2 in the details), circle – overwrite the first letter (p / u / c). Set a curve by overwriting R, L or K (* = entered value, kept when grades change; 0 = no curve). The grade and length of the segment after a vertex can be overwritten too. The change is written to the drawing shortly after you stop typing.
+Délka před [m]	Length behind [m]
+Délka za [m]	Length ahead [m]
+Zvednout / snížit	Raise / lower
+Vrchol na terén	Vertex to terrain
+Oblouky	Curves
+Vložit oblouk	Insert curve
+Odstranit oblouk	Remove curve
+Do všech vrcholů	At all vertices
+Úseky	Segments
+Změnit sklon	Change grade
+Změnit délku	Change length
+Úsek bodem	Segment through point
+Nastavení oblouku (pro Vložit, Do všech vrcholů, Přidat vrchol)	Curve settings (for Insert, At all vertices, Add vertex)
+Zadání	Input
+poloměr R	radius R
+délka L	length L
+hodnota K	K value
+Hodnota	Value
+L1 : L2 (nesouměrný)	L1 : L2 (unsymmetrical)
+Při změně sklonu / délky úseku	When a segment grade / length changes
+posunout zbytek nivelety	shift the rest of the profile
+držet konec (změní se další úsek)	keep the end (the next segment changes)
+Celou niveletu o [m]	Whole profile by [m]
+Zvednout celou	Raise whole
+↶ Zpět	↶ Undo
+↷ Znovu	↷ Redo
+délka úseku se nevejde – zkraťte ji, nebo přepněte na „posunout zbytek nivelety“	the segment length does not fit – shorten it, or switch to “shift the rest of the profile”
+Změnit sklon: klikněte na úsek nivelety v pohledu profilu	Change grade: click a design profile segment in the profile view
+Změnit délku: klikněte na úsek nivelety v pohledu profilu	Change length: click a design profile segment in the profile view
+Úsek bodem: klikněte na úsek nivelety v pohledu profilu	Segment through point: click a design profile segment in the profile view
+Sklon úseku {}–{} [‰] (teď {}): napište číslo a Enter (kurzor nad kliknutím = stoupání, pod = klesání)	Grade of segment {}–{} [‰] (now {}): type a number and Enter (cursor above the click = rising, below = falling)
+Délka úseku {}–{} [m] (teď {}): napište číslo a Enter	Length of segment {}–{} [m] (now {}): type a number and Enter
+Úsek {}–{}: klikněte bod, kterým má projít (začátek úseku drží)	Segment {}–{}: click the point it should pass through (the segment start is kept)
+Zvednout / snížit: klikněte na vrchol nivelety (celou niveletu zvednete tlačítkem v panelu)	Raise / lower: click a design profile vertex (raise the whole profile with the panel button)
+Vrchol {}: o kolik zvednout [m] – napište číslo a Enter (kurzor nad kliknutím = nahoru, pod = dolů)	Vertex {}: raise by [m] – type a number and Enter (cursor above the click = up, below = down)
+Prodloužit: klikněte v pohledu profilu za konec nivelety (přibližné místo nového konce)	Extend: click in the profile view beyond the design profile end (approximate place of the new end)
+Sklon nového úseku [‰]: napište číslo a Enter (kurzor nad kliknutím = stoupání, pod = klesání; jen Enter = {} ‰)	Grade of the new segment [‰]: type a number and Enter (cursor above the click = rising, below = falling; Enter alone = {} ‰)
+Délka nového úseku [m]: napište číslo a Enter (jen Enter = {} m podle kliknutí)	Length of the new segment [m]: type a number and Enter (Enter alone = {} m from the click)
+Trasy: niveleta nemá vnitřní vrchol.	Alignments: the design profile has no inner vertex.
+Vrchol na terén: klikněte na vrchol nivelety v pohledu profilu	Vertex to terrain: click a design profile vertex in the profile view
+Vložit oblouk: klikněte na vrchol nivelety (typ a hodnota podle nastavení v panelu)	Insert curve: click a design profile vertex (type and value from the panel settings)
+Odstranit oblouk: klikněte na vrchol nivelety	Remove curve: click a design profile vertex
+Vrchol nivelety na terén	Design profile vertex to terrain
+v místě vrcholu není terén pohledu	there is no view terrain at the vertex
+Trasy: vrchol {} nivelety posazen na terén ({} m n. m.).	Alignments: design profile vertex {} set to terrain ({} m a.s.l.).
+Vložení oblouku nivelety	Insert design profile curve
+Trasy: oblouk vložen do vrcholu {} nivelety.	Alignments: curve inserted at design profile vertex {}.
+Trasy: oblouk vložen do vrcholu {} nivelety – zmenšený na {} % zadané hodnoty, aby se vešel.	Alignments: curve inserted at design profile vertex {} – reduced to {} % of the value to fit.
+oblouk se do vrcholu {} nevejde ani zmenšený	the curve does not fit at vertex {} even reduced
+Odstranění oblouku nivelety	Remove design profile curve
+vrchol {} oblouk nemá	vertex {} has no curve
+Trasy: oblouk ve vrcholu {} nivelety odstraněn.	Alignments: curve at design profile vertex {} removed.
+Trasy: oblouk se nevešel do žádného z {} vrcholů bez oblouku.	Alignments: the curve did not fit at any of {} vertices without a curve.
+Trasy: všechny vnitřní vrcholy už oblouk mají.	Alignments: all inner vertices already have a curve.
+Oblouky do všech vrcholů nivelety	Curves at all design profile vertices
+Trasy: oblouky vloženy do {} vrcholů (zmenšeno {}, nevešlo se {}).	Alignments: curves inserted at {} vertices (reduced {}, did not fit {}).
+Zvednutí vrcholu nivelety	Raise design profile vertex
+vrchol už neexistuje	the vertex no longer exists
+Trasy: vrchol {} nivelety {} o {} m.	Alignments: design profile vertex {} {} by {} m.
+zvednut	raised
+snížen	lowered
+Trasy: v panelu zadejte, o kolik niveletu zvednout (záporně = snížit).	Alignments: enter in the panel how much to raise the profile (negative = lower).
+Zvednutí nivelety	Raise design profile
+Trasy: celá niveleta {} o {} m.	Alignments: whole design profile {} by {} m.
+zvednuta	raised
+snížena	lowered
+Délka úseku nivelety	Design profile segment length
+Sklon úseku nivelety	Design profile segment grade
+úsek už neexistuje	the segment no longer exists
+Trasy: délka úseku {}–{} nivelety = {} m.	Alignments: design profile segment {}–{} length = {} m.
+Trasy: sklon úseku {}–{} nivelety = {} ‰.	Alignments: design profile segment {}–{} grade = {} ‰.
+Prodloužení nivelety	Extend design profile
+niveleta nemá vrcholy	the design profile has no vertices
+ (oblouk se do vrcholu nevešel)	 (the curve did not fit at the vertex)
+Trasy: niveleta prodloužena o {} m se sklonem {} ‰{}.	Alignments: design profile extended by {} m at {} ‰{}.
+mezipřímka mezi oblouky {} a {} je jen {} m	the tangent between curves {} and {} is only {} m
