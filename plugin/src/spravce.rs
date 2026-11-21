@@ -30,7 +30,7 @@ use crate::povrchy::{self, Polozka, SkupinaVPovrchu, StatUlozena, TypObjektu, Up
 use crate::styly::{self, StylBodu, StylPovrchu};
 use crate::vykres::{PresKanal, Vykres};
 
-pub const H_KONTROLA: &str = "TER_KONTROLA";
+pub const H_KONTROLA: &str = "TER-CHECK";
 
 // ── Data pro okno ────────────────────────────────────────────────────────────
 
@@ -906,6 +906,12 @@ impl Pracovnik {
                     }
                 }
             };
+            // hladiny ze starší verze dřív, než je čte přepočet povrchů
+            if crate::hladiny::ma_stare(&doc) {
+                let ids: Vec<String> = povrchy::povrchy(&doc).into_iter().map(|z| z.id).collect();
+                let z = crate::hladiny::prejmenuj_stare(&mut k, &doc, &ids);
+                znovu(&mut k, &mut doc, z);
+            }
             let z = self.hlidej_meritko(tab, &mut k, &doc);
             znovu(&mut k, &mut doc, z);
             let z = self.hlidej_body(tab, &mut k, &doc);
@@ -2061,7 +2067,7 @@ pub fn najdi_ve_strome(doc: &CadDocument, vyber: &[Handle]) -> Option<(Skok, Str
     }
     // povrch sám (blok nebo objekt na jeho hladinách)
     for z in &vse {
-        let pref = format!("{}_", z.hladiny().povrch.to_uppercase());
+        let pref = format!("{}-", z.hladiny().povrch.to_uppercase());
         let patri = vyber.contains(&z.insert)
             || doc
                 .model_space_entities()

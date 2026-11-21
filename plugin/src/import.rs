@@ -356,7 +356,7 @@ pub fn vezmi_z_vykresu() -> Option<Result<ZVykresu, String>> {
 
 /// Je hladina Terénu (vlastní body a grafika se nepřevádějí).
 fn hladina_terenu(h: &str) -> bool {
-    h.to_ascii_uppercase().starts_with("TER_")
+    crate::hladiny::je_pluginu(h)
 }
 
 /// Převede značky a texty z výkresu (celého nebo výběru, jen zvolené hladiny)
@@ -419,6 +419,8 @@ mod testy {
     #[test]
     fn hladiny_terenu_se_neprevadeji() {
         assert!(hladina_terenu("TER_BODY"));
+        assert!(hladina_terenu("TER-PNT-ELEVATION"));
+        assert!(hladina_terenu("TRA_OSA"));
         assert!(hladina_terenu("ter_body_popis"));
         assert!(!hladina_terenu("vytycovaci_body"));
     }

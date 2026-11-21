@@ -28,13 +28,13 @@ pub const APP: &str = "TRASY_TRASA";
 /// XDATA s třídou objektu (název ve Vlastnostech).
 pub const APP_TRIDA: &str = "TRASY_TRIDA";
 
-pub const H_TRASY: &str = "TRA_TRASY";
-pub const H_OSA: &str = "TRA_OSA";
-pub const H_STANICENI: &str = "TRA_STANICENI";
-pub const H_BODY: &str = "TRA_HLAVNI_BODY";
-pub const H_POLYGON: &str = "TRA_POLYGON";
+pub const H_TRASY: &str = "TER-ALN";
+pub const H_OSA: &str = "TER-ALN-CENTERLINE";
+pub const H_STANICENI: &str = "TER-ALN-STATIONING";
+pub const H_BODY: &str = "TER-ALN-KEY-POINTS";
+pub const H_POLYGON: &str = "TER-ALN-TANGENTS";
 /// Hladina stylu Netisk (netiskne se).
-pub const H_NETISK: &str = "TRA_NETISK";
+pub const H_NETISK: &str = "TER-ALN-NOPLOT";
 /// Čerchovaná čára osy (vzor v mm na papíře, měřítko čáry = měřítko / 1000).
 pub const TYP_CERCHOVANA: &str = "TRA_CERCHOVANA";
 
@@ -307,7 +307,7 @@ pub fn objekty(def: &DefiniceTrasy, vrcholy: &[Vrchol], g: &Geometrie) -> Vec<En
 fn zajisti_hladiny(v: &mut dyn Vykres, doc: &CadDocument) {
     for (nazev, barva) in [(H_TRASY, 7), (H_OSA, 1), (H_STANICENI, 7), (H_BODY, 3), (H_POLYGON, 8)] {
         if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(nazev)) {
-            v.hladina(LayerConfig { name: nazev.to_string(), color: Some(Color::from_index(barva)), ..Default::default() });
+            v.hladina(crate::hladiny::konfigurace(nazev, barva));
         }
     }
     if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(H_NETISK)) {
@@ -315,7 +315,7 @@ fn zajisti_hladiny(v: &mut dyn Vykres, doc: &CadDocument) {
             name: H_NETISK.to_string(),
             color: Some(Color::from_index(8)),
             plottable: Some(false),
-            description: Some(tr("Trasy – netiskne se").into()),
+            description: crate::hladiny::popis(H_NETISK),
             ..Default::default()
         });
     }

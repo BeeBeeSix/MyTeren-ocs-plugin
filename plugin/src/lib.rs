@@ -18,6 +18,7 @@ mod sit;
 mod spravce;
 mod styly;
 mod tra;
+mod hladiny;
 mod uchopy;
 #[cfg(feature = "ukazka")]
 pub mod ukazka;
@@ -575,7 +576,7 @@ fn vybrat(host: &mut dyn HostApi) {
     let mut objekty = Vec::new();
     for z in &vse {
         objekty.push((z.insert, z.id.clone(), z.jmeno.clone()));
-        let pref = format!("{}_", z.hladiny().povrch.to_uppercase());
+        let pref = format!("{}-", z.hladiny().povrch.to_uppercase());
         for e in doc.model_space_entities() {
             if e.common().layer.to_uppercase().starts_with(&pref) {
                 objekty.push((e.common().handle, z.id.clone(), z.jmeno.clone()));
@@ -959,6 +960,8 @@ impl BuiltinPlugin for TerenPlugin {
         }
     }
     fn dispatch(&self, host: &mut dyn HostApi, cmd: &str) -> bool {
+        // hladiny ze starších verzí (TER_… / TRA_…) – jednou za výkres
+        hladiny_starsi_verze(host);
         // trasy a profily
         if cmd.trim_start().get(..4).is_some_and(|p| p.eq_ignore_ascii_case("TRA_")) {
             return tra::dispatch(host, cmd);
@@ -987,6 +990,29 @@ impl BuiltinPlugin for TerenPlugin {
         let r = self.proved_prikaz(host, cmd);
         host.end_undo_group();
         r
+    }
+}
+
+/// Karty výkresů, ve kterých už jsou hladiny zkontrolované.
+static HLADINY_HOTOVO: std::sync::Mutex<Vec<u64>> = std::sync::Mutex::new(Vec::new());
+
+/// Přejmenuje hladiny ze starších verzí na anglické (jednou za kartu výkresu).
+fn hladiny_starsi_verze(host: &mut dyn HostApi) {
+    let tab = host.tab_id();
+    {
+        let mut hotovo = HLADINY_HOTOVO.lock().unwrap_or_else(|e| e.into_inner());
+        if hotovo.contains(&tab) {
+            return;
+        }
+        hotovo.push(tab);
+    }
+    let mut v = vykres::PresHost(host);
+    let Ok(doc) = v.dokument() else { return };
+    if hladiny::ma_stare(&doc) {
+        let ids: Vec<String> = povrchy::povrchy(&doc).into_iter().map(|z| z.id).collect();
+        if hladiny::prejmenuj_stare(&mut v, &doc, &ids) {
+            v.info(tr("Terén: hladiny ze starší verze přejmenovány na nové (anglické) názvy."));
+        }
     }
 }
 
@@ -1104,7 +1130,7 @@ impl TerenPlugin {
                     if let Ok(doc) = v.dokument() {
                         let body = cogo::body(&doc);
                         let vse = cogo::grafika_bodu(&doc, &body.iter().map(|b| [b.bod.x, b.bod.y]).collect::<Vec<_>>());
-                        let znacek = doc.model_space_entities().filter(|e| e.common().layer.eq_ignore_ascii_case("TER_BODY_ZNACKA")).count();
+                        let znacek = doc.model_space_entities().filter(|e| e.common().layer.eq_ignore_ascii_case(cogo::H_ZNACKA)).count();
                         v.vystup(&trf!("  značek {}, grafika přiřazená bodům {}", znacek, vse.len()));
                     }
                     return true;

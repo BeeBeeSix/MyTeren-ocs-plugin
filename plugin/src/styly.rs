@@ -21,7 +21,7 @@ use crate::cogo::{self, BodVykresu};
 use crate::povrchy::APP_POVRCH;
 use crate::vykres::Vykres;
 
-pub const H_STYLY: &str = "TER_STYLY";
+pub const H_STYLY: &str = "TER-STYLES";
 const STYL_BODU: &str = "STYL_BODU";
 const STYL_POVRCHU: &str = "STYL_POVRCHU";
 const STYL_PROFILU: &str = "STYL_PROFILU";
@@ -725,7 +725,7 @@ fn zajisti_hladinu(v: &mut dyn Vykres, doc: &CadDocument) {
             color: Some(Color::from_index(8)),
             off: Some(true),
             plottable: Some(false),
-            description: Some(tr("Styly bodů, povrchů a profilů (plugin Terén) – nemazat").into()),
+            description: crate::hladiny::popis(H_STYLY),
             ..Default::default()
         });
     }

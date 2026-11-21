@@ -1817,3 +1817,37 @@ plná	solid
 Oblouky osy	Centreline arcs
 jinou barvou	different colour
 Popis zakružovacích oblouků nivelety (R · L · K)	Vertical curve labels (R · L · K)
+Povrch {} – trojúhelníková síť	Surface {} – triangulated network
+Povrch {} – hlavní vrstevnice	Surface {} – major contours
+Povrch {} – vedlejší vrstevnice	Surface {} – minor contours
+Povrch {} – obrys	Surface {} – outline
+Povrch {} – popis vrstevnic	Surface {} – contour labels
+Povrch {} – spojnice (lomové hrany)	Surface {} – breaklines
+Povrch {} – hranice	Surface {} – boundary
+Povrch {} – díry	Surface {} – holes
+Povrch {} – úpravy sítě	Surface {} – network edits
+Povrch {} – šipky spádu	Surface {} – slope arrows
+Body (plugin Terén)	Points (Terén plugin)
+Čísla bodů	Point numbers
+Výšky bodů	Point elevations
+Popisy (kódy) bodů	Point descriptions (codes)
+Značky bodů	Point symbols
+Značky kontroly zaměření (plugin Terén)	Survey check markers (Terén plugin)
+Trasy (plugin Terén)	Alignments (Terén plugin)
+Trasa – osa	Alignment – centerline
+Trasa – staničení	Alignment – stationing
+Trasa – hlavní body	Alignment – key points
+Trasa – tečnový polygon	Alignment – tangent polygon
+Podélné profily (plugin Terén)	Profile views (Terén plugin)
+Podélný profil – rám	Profile view – frame
+Podélný profil – mřížka	Profile view – grid
+Podélný profil – popisy	Profile view – labels
+Podélný profil – terén	Profile – existing ground
+Podélný profil – pásy	Profile view – bands
+Podélný profil – niveleta	Profile – design grade
+Podélný profil – tečnový polygon nivelety	Profile – grade tangent polygon
+Povrch – trojúhelníková síť	Surface – triangulated network
+Povrch – hlavní vrstevnice	Surface – major contours
+Povrch – vedlejší vrstevnice	Surface – minor contours
+Terén: hladiny ze starší verze přejmenovány na nové (anglické) názvy.	Terén: layers from an older version renamed to the new (English) names.
+Trasy – netiskne se	Alignments – not plotted

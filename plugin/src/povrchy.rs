@@ -40,9 +40,9 @@ pub fn zaznam_tridy(trida: &str) -> ExtendedDataRecord {
     r.add_value(XDataValue::String(format!("{TRIDA}{trida}")));
     r
 }
-pub const H_BODY: &str = "TER_BODY";
+pub const H_BODY: &str = "TER-PNT";
 /// Vypnutá hladina pro povrchy se stylem Nezobrazovat.
-pub const H_SKRYTY_POVRCH: &str = "TER_POVRCH_SKRYTY";
+pub const H_SKRYTY_POVRCH: &str = "TER-SRF-HIDDEN";
 const VERZE1: &str = "TEREN1";
 const VERZE2: &str = "TEREN2";
 /// Tolerance přichycení vrcholu 2D spojnice na bod zaměření [m].
@@ -155,18 +155,18 @@ impl ZaznamPovrchu {
     }
 
     pub fn hladiny(&self) -> Hladiny {
-        let p = format!("TER_{}", self.id);
+        let p = crate::hladiny::povrch(&self.id);
         Hladiny {
-            tin: format!("{p}_TIN"),
-            hlavni: format!("{p}_VRST_HLAVNI"),
-            vedlejsi: format!("{p}_VRST_VEDLEJSI"),
-            obrys: format!("{p}_OBRYS"),
-            popis: format!("{p}_POPIS"),
-            spojnice: format!("{p}_SPOJNICE"),
-            hranice: format!("{p}_HRANICE"),
-            diry: format!("{p}_DIRY"),
-            upravy: format!("{p}_UPRAVY"),
-            spad: format!("{p}_SPAD"),
+            tin: format!("{p}-TIN"),
+            hlavni: format!("{p}-CONTOUR-MAJOR"),
+            vedlejsi: format!("{p}-CONTOUR-MINOR"),
+            obrys: format!("{p}-OUTLINE"),
+            popis: format!("{p}-LABEL"),
+            spojnice: format!("{p}-BREAKLINE"),
+            hranice: format!("{p}-BOUNDARY"),
+            diry: format!("{p}-HOLE"),
+            upravy: format!("{p}-EDIT"),
+            spad: format!("{p}-SLOPE"),
             povrch: p,
         }
     }
@@ -949,7 +949,7 @@ fn popisy_vrstevnic(
 
 pub fn zajisti_hladinu(v: &mut dyn Vykres, doc: &CadDocument, nazev: &str, barva: i16) {
     if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(nazev)) {
-        v.hladina(LayerConfig { name: nazev.to_string(), color: Some(Color::from_index(barva)), ..Default::default() });
+        v.hladina(crate::hladiny::konfigurace(nazev, barva));
     }
 }
 
@@ -961,7 +961,7 @@ fn zajisti_skrytou_hladinu(v: &mut dyn Vykres, doc: &CadDocument) {
             name: H_SKRYTY_POVRCH.into(),
             off: Some(true),
             plottable: Some(false),
-            description: Some(tr("Skryté povrchy (styl Nezobrazovat)").into()),
+            description: crate::hladiny::popis(H_SKRYTY_POVRCH),
             ..Default::default()
         });
     }
@@ -1247,7 +1247,7 @@ pub fn povrchy_z_vyberu(doc: &CadDocument, vyber: &[Handle]) -> Vec<String> {
     povrchy(doc)
         .into_iter()
         .filter(|z| {
-            let pref = format!("{}_", z.hladiny().povrch.to_uppercase());
+            let pref = format!("{}-", z.hladiny().povrch.to_uppercase());
             vyber.contains(&z.insert) || vybrane.iter().any(|e| e.common().layer.to_uppercase().starts_with(&pref))
         })
         .map(|z| z.id)

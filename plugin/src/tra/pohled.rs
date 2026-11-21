@@ -8,7 +8,7 @@
 use ocs_plugin_api::host::codec::entities::text::{TextHorizontalAlignment, TextVerticalAlignment};
 use ocs_plugin_api::host::codec::entities::{BoundaryEdge, BoundaryPath, Hatch, Insert, LwPolyline, PolylineEdge, Text};
 use ocs_plugin_api::host::codec::types::{Color, LineWeight, Transparency, Vector2};
-use ocs_plugin_api::host::{Document as CadDocument, EntityType, ExtendedDataRecord, Handle, LayerConfig, TableOperation, TextStyleConfig, XDataValue};
+use ocs_plugin_api::host::{Document as CadDocument, EntityType, ExtendedDataRecord, Handle, TableOperation, TextStyleConfig, XDataValue};
 
 use trasy::geometrie::{DruhBodu, Geometrie, Prvek};
 use trasy::pasy::{mista_bez_kolizi, vyska_v, DruhPasu, Pas, Poloha, Zdroj};
@@ -121,14 +121,14 @@ pub fn prekresli_zastarale_h(
     out
 }
 
-pub const H_POHLED: &str = "TRA_POHLED";
-pub const H_RAM: &str = "TRA_POHLED_RAM";
-pub const H_MRIZKA: &str = "TRA_POHLED_MRIZKA";
-pub const H_POPIS: &str = "TRA_POHLED_POPIS";
-pub const H_TEREN: &str = "TRA_PROFIL_TEREN";
-pub const H_PASY: &str = "TRA_POHLED_PASY";
-pub const H_NIVELETA: &str = "TRA_PROFIL_NIVELETA";
-pub const H_NIV_POLYGON: &str = "TRA_PROFIL_NIVELETA_POLYGON";
+pub const H_POHLED: &str = "TER-PRF";
+pub const H_RAM: &str = "TER-PRF-FRAME";
+pub const H_MRIZKA: &str = "TER-PRF-GRID";
+pub const H_POPIS: &str = "TER-PRF-LABEL";
+pub const H_TEREN: &str = "TER-PRF-GROUND";
+pub const H_PASY: &str = "TER-PRF-BANDS";
+pub const H_NIVELETA: &str = "TER-PRF-GRADE";
+pub const H_NIV_POLYGON: &str = "TER-PRF-GRADE-TANGENTS";
 
 #[derive(Clone, Debug)]
 pub struct ObjektPohledu {
@@ -683,7 +683,7 @@ fn zajisti_hladiny(v: &mut dyn Vykres, doc: &CadDocument, styly_textu: &[(String
     }
     for (nazev, barva) in [(H_POHLED, 7), (H_RAM, 7), (H_MRIZKA, 8), (H_POPIS, 7), (H_TEREN, 32), (H_PASY, 7), (H_NIVELETA, 1), (H_NIV_POLYGON, 8)] {
         if !doc.layers.iter().any(|l| l.name.eq_ignore_ascii_case(nazev)) {
-            v.hladina(LayerConfig { name: nazev.to_string(), color: Some(Color::from_index(barva)), ..Default::default() });
+            v.hladina(crate::hladiny::konfigurace(nazev, barva));
         }
     }
 }

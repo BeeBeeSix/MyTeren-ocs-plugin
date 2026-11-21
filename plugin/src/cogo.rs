@@ -1,9 +1,9 @@
 //! COGO body a skupiny bodů ve výkrese.
 //!
 //! Bod = POINT s XDATA `TEREN_BOD` (číslo, popis, soubor importu, vlastní
-//! styl), na libovolné hladině (starší výkresy: POINT na hladině `TER_BODY`).
-//! Grafika bodu podle stylu – značka (hladina `TER_BODY_ZNACKA`) a popisy
-//! (`TER_BODY_CISLO`, `TER_BODY_VYSKA`, `TER_BODY_POPIS`) – nese v XDATA odkaz
+//! styl), na libovolné hladině (starší výkresy: POINT na hladině `TER-PNT`, dřív `TER_BODY`).
+//! Grafika bodu podle stylu – značka (hladina `TER-PNT-SYMBOL`) a popisy
+//! (`TER-PNT-NUMBER`, `TER-PNT-ELEVATION`, `TER-PNT-DESCRIPTION`) – nese v XDATA odkaz
 //! na polohu bodu.
 //! Skupina bodů = pomocný POINT na vypnuté hladině `TER_SKUPINY` s definicí
 //! v XDATA `TEREN_POVRCH` (první řetězec `SKUPINA`).
@@ -22,15 +22,15 @@ use teren::skupiny::{self, SkupinaBodu, VSECHNY};
 use crate::povrchy::{APP_BOD, APP_POVRCH, H_BODY};
 
 /// Hladina skrytých bodů (vypnutá).
-pub const H_SKRYTE: &str = "TER_BODY_SKRYTE";
+pub const H_SKRYTE: &str = "TER-PNT-HIDDEN";
 use crate::styly::{self, Rozlisovac, StylBodu, Znacka};
 use crate::vykres::Vykres;
 
-pub const H_CISLO: &str = "TER_BODY_CISLO";
-pub const H_VYSKA: &str = "TER_BODY_VYSKA";
-pub const H_POPIS: &str = "TER_BODY_POPIS";
-pub const H_ZNACKA: &str = "TER_BODY_ZNACKA";
-pub const H_SKUPINY: &str = "TER_SKUPINY";
+pub const H_CISLO: &str = "TER-PNT-NUMBER";
+pub const H_VYSKA: &str = "TER-PNT-ELEVATION";
+pub const H_POPIS: &str = "TER-PNT-DESCRIPTION";
+pub const H_ZNACKA: &str = "TER-PNT-SYMBOL";
+pub const H_SKUPINY: &str = "TER-PNT-GROUPS";
 const POPISEK: &str = "#POPISEK";
 const SKUPINA: &str = "SKUPINA";
 
@@ -1106,9 +1106,7 @@ pub fn priprav_vykres_s(v: &mut dyn Vykres, doc: &CadDocument) -> Result<(), Str
                 color: Some(Color::from_index(barva)),
                 off: vypnuto.then_some(true),
                 plottable: vypnuto.then_some(false),
-                description: vypnuto.then(|| {
-                    if nazev == H_SKRYTE { tr("Skryté body (styl Nezobrazovat)") } else { tr("Definice skupin bodů (plugin Terén) – nemazat") }.into()
-                }),
+                description: crate::hladiny::popis(nazev),
                 ..Default::default()
             });
         }

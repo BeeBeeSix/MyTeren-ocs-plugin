@@ -15,13 +15,13 @@ pub struct Hladina {
     pub barva: i32,
 }
 
-pub const H_BODY: Hladina = Hladina { nazev: "TER_BODY", barva: 30 };
-pub const H_BODY_CISLO: Hladina = Hladina { nazev: "TER_BODY_CISLO", barva: 7 };
-pub const H_BODY_VYSKA: Hladina = Hladina { nazev: "TER_BODY_VYSKA", barva: 7 };
-pub const H_BODY_POPIS: Hladina = Hladina { nazev: "TER_BODY_POPIS", barva: 8 };
-pub const H_TIN: Hladina = Hladina { nazev: "TER_TIN", barva: 8 };
-pub const H_VRST_HLAVNI: Hladina = Hladina { nazev: "TER_VRSTEVNICE_HLAVNI", barva: 22 };
-pub const H_VRST_VEDLEJSI: Hladina = Hladina { nazev: "TER_VRSTEVNICE_VEDLEJSI", barva: 32 };
+pub const H_BODY: Hladina = Hladina { nazev: "TER-PNT", barva: 30 };
+pub const H_BODY_CISLO: Hladina = Hladina { nazev: "TER-PNT-NUMBER", barva: 7 };
+pub const H_BODY_VYSKA: Hladina = Hladina { nazev: "TER-PNT-ELEVATION", barva: 7 };
+pub const H_BODY_POPIS: Hladina = Hladina { nazev: "TER-PNT-DESCRIPTION", barva: 8 };
+pub const H_TIN: Hladina = Hladina { nazev: "TER-SRF-TIN", barva: 8 };
+pub const H_VRST_HLAVNI: Hladina = Hladina { nazev: "TER-SRF-CONTOUR-MAJOR", barva: 22 };
+pub const H_VRST_VEDLEJSI: Hladina = Hladina { nazev: "TER-SRF-CONTOUR-MINOR", barva: 32 };
 
 const HLADINY: [Hladina; 7] = [H_BODY, H_BODY_CISLO, H_BODY_VYSKA, H_BODY_POPIS, H_TIN, H_VRST_HLAVNI, H_VRST_VEDLEJSI];
 

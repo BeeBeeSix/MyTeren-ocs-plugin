@@ -583,14 +583,42 @@ nových bodů) se pamatuje v `%APPDATA%\OpenCADStudio\teren_nastaveni.txt`.
 
 ## Jak je to uloženo ve výkrese
 - bod: POINT s XDATA `TEREN_BOD` (číslo, popis, soubor importu, vlastní styl);
-  značka a popisy bodu jsou na hladinách `TER_BODY_ZNACKA`, `TER_BODY_CISLO`,
-  `TER_BODY_VYSKA`, `TER_BODY_POPIS`
-- styly: pomocné body na vypnuté hladině `TER_STYLY` (nemazat)
-- skupina bodů: pomocný bod na vypnuté hladině `TER_SKUPINY` (nemazat)
+  značka a popisy bodu jsou na hladinách `TER-PNT-SYMBOL`, `TER-PNT-NUMBER`,
+  `TER-PNT-ELEVATION`, `TER-PNT-DESCRIPTION`
+- styly: pomocné body na vypnuté hladině `TER-STYLES` (nemazat)
+- skupina bodů: pomocný bod na vypnuté hladině `TER-PNT-GROUPS` (nemazat)
 - povrch: blok `TER_POVRCH_<ID>`, definice v XDATA `TEREN_POVRCH` na jeho vložení
-  (skupiny, vypnuté položky, úpravy, nastavení); hladiny `TER_<ID>_…`
+  (skupiny, vypnuté položky, úpravy, nastavení); hladiny `TER-SRF-<ID>-…`
 - objekty výkresu v povrchu nesou v XDATA, ke kterým povrchům patří
 - výkresy z verze 0.3 se převedou samy (povrch bere skupinu „Všechny body“)
+
+## Hladiny
+
+Hladiny mají anglické názvy `TER-<druh>-<prvek>`, aby jim rozuměli i uživatelé
+v jiných zemích; popis hladiny je česky (v anglickém Open CAD Studiu anglicky).
+Výkresy ze starších verzí (hladiny `TER_…`, `TRA_…`) se při první práci
+s výkresem přejmenují samy, objekty na nich zůstanou.
+
+| Hladina | Obsah | Dřív |
+|---|---|---|
+| `TER-PNT` | body | `TER_BODY` |
+| `TER-PNT-SYMBOL` / `-NUMBER` / `-ELEVATION` / `-DESCRIPTION` | značka, číslo, výška, popis bodu | `TER_BODY_ZNACKA` / `_CISLO` / `_VYSKA` / `_POPIS` |
+| `TER-PNT-HIDDEN` | skryté body (vypnutá) | `TER_BODY_SKRYTE` |
+| `TER-PNT-GROUPS`, `TER-STYLES` | definice skupin a stylů (vypnuté, nemazat) | `TER_SKUPINY`, `TER_STYLY` |
+| `TER-CHECK` | značky kontroly zaměření | `TER_KONTROLA` |
+| `TER-SRF-<ID>` | povrch | `TER_<ID>` |
+| `TER-SRF-<ID>-TIN` | trojúhelníková síť | `TER_<ID>_TIN` |
+| `TER-SRF-<ID>-CONTOUR-MAJOR` / `-MINOR` | hlavní / vedlejší vrstevnice | `_VRST_HLAVNI` / `_VRST_VEDLEJSI` |
+| `TER-SRF-<ID>-LABEL`, `-OUTLINE`, `-SLOPE` | popis vrstevnic, obrys, šipky spádu | `_POPIS`, `_OBRYS`, `_SPAD` |
+| `TER-SRF-<ID>-BREAKLINE`, `-BOUNDARY`, `-HOLE`, `-EDIT` | spojnice, hranice, díry, úpravy | `_SPOJNICE`, `_HRANICE`, `_DIRY`, `_UPRAVY` |
+| `TER-SRF-HIDDEN` | skryté povrchy (vypnutá) | `TER_POVRCH_SKRYTY` |
+| `TER-ALN` | trasy | `TRA_TRASY` |
+| `TER-ALN-CENTERLINE`, `-STATIONING`, `-KEY-POINTS`, `-TANGENTS` | osa, staničení, hlavní body, tečnový polygon | `TRA_OSA`, `TRA_STANICENI`, `TRA_HLAVNI_BODY`, `TRA_POLYGON` |
+| `TER-ALN-NOPLOT` | netisknutelná část trasy | `TRA_NETISK` |
+| `TER-PRF` | podélné profily | `TRA_POHLED` |
+| `TER-PRF-FRAME`, `-GRID`, `-LABEL`, `-BANDS` | rám, mřížka, popisy, pásy | `TRA_POHLED_RAM`, `_MRIZKA`, `_POPIS`, `_PASY` |
+| `TER-PRF-GROUND` | terén v profilu | `TRA_PROFIL_TEREN` |
+| `TER-PRF-GRADE`, `-GRADE-TANGENTS` | niveleta, její tečnový polygon | `TRA_PROFIL_NIVELETA`, `_POLYGON` |
 
 ## Příkaz TER_AKCE
 Akce Prospektoru jdou spustit i z příkazové řádky (pro skripty), např.
@@ -632,8 +660,8 @@ Další volby: `--format`, `--oddelovac`, `--hlavicka N`, `--kody T,DNO`,
 `--vyska-textu 0.5`, `--bez-popisu`, `--bez-tin`, `-v vystup.dxf`
 (`teren --help` vypíše vše).
 
-Hladiny v DXF: `TER_BODY`, `TER_BODY_CISLO`, `TER_BODY_VYSKA`, `TER_BODY_POPIS`,
-`TER_TIN`, `TER_VRSTEVNICE_HLAVNI`, `TER_VRSTEVNICE_VEDLEJSI`.
+Hladiny v DXF: `TER-PNT`, `TER-PNT-NUMBER`, `TER-PNT-ELEVATION`, `TER-PNT-DESCRIPTION`,
+`TER-SRF-TIN`, `TER-SRF-CONTOUR-MAJOR`, `TER-SRF-CONTOUR-MINOR`.
 
 ## Licence
 

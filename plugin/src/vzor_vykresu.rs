@@ -57,8 +57,9 @@ fn sestav_v(v: &mut PresHost) -> Result<(), String> {
     }
     let mut ys: Vec<f64> = body.iter().map(|b| b.bod.y).collect();
     let h = hranice_oblasti(&mut ys);
-    // oblasti číslované od severu (Oblast 1 = nejvyšší Y)
-    let jmena = ["Oblast 1", "Oblast 2", "Oblast 3"];
+    // oblasti číslované od severu (Area 1 = nejvyšší Y); jména anglicky,
+    // aby byly anglické i hladiny povrchů (TER-SRF-Area1-…)
+    let jmena = ["Area 1", "Area 2", "Area 3"];
     v.zpet("Vzorový výkres");
 
     // 1. skupiny bodů
@@ -70,7 +71,7 @@ fn sestav_v(v: &mut PresHost) -> Result<(), String> {
         let s = SkupinaBodu {
             id: cogo::volne_id_skupiny(&doc, jmeno),
             jmeno: jmeno.to_string(),
-            popis: format!("Body zaměření – {}", jmeno.to_lowercase()),
+            popis: format!("Survey points – {}", jmeno.to_lowercase()),
             cisla: sez.text(),
             ..Default::default()
         };
@@ -88,7 +89,7 @@ fn sestav_v(v: &mut PresHost) -> Result<(), String> {
     let mut id_povrchu = Vec::new();
     for (i, jmeno) in jmena.iter().enumerate() {
         let doc = v.dokument()?;
-        let id = povrchy::volne_id(&doc, &format!("Oblast{}", i + 1));
+        let id = povrchy::volne_id(&doc, &format!("Area{}", i + 1));
         let mut z = ZaznamPovrchu::novy(id.clone(), jmeno.to_string(), true);
         z.skupiny = vec![SkupinaVPovrchu { id: id_skupin[i].clone(), zapnuto: true }];
         let hl = z.hladiny().spojnice;
@@ -105,8 +106,23 @@ fn sestav_v(v: &mut PresHost) -> Result<(), String> {
     }
     // starý společný povrch pryč
     let doc = v.dokument()?;
+    let mut prazdne: Vec<String> = Vec::new();
     for z in stare {
+        let p = crate::hladiny::povrch(&z.id).to_uppercase();
+        prazdne.extend(doc.layers.iter().map(|l| l.name.clone()).filter(|n| {
+            let n = n.to_uppercase();
+            n == p || n.starts_with(&format!("{p}-"))
+        }));
         povrchy::smaz(v, &doc, &z)?;
+    }
+    // prázdné hladiny smazaných povrchů (OCS hladinu s objekty nesmaže)
+    for name in prazdne {
+        let _ = v.tabulka(ocs_plugin_api::host::TableOperation::LayerDelete { name, erase_objects: false });
+    }
+    // osiřelé hladiny starších verzí i se zbytky grafiky: hladiny pluginu se
+    // před prvním příkazem přejmenovaly, takže `TER_…` už k ničemu nepatří
+    for name in doc.layers.iter().map(|l| l.name.clone()).filter(|n| n.to_uppercase().starts_with("TER_")) {
+        let _ = v.tabulka(ocs_plugin_api::host::TableOperation::LayerDelete { name, erase_objects: true });
     }
     v.hotovo();
     v.konec_kroku();
@@ -133,7 +149,7 @@ fn sestav_v(v: &mut PresHost) -> Result<(), String> {
     let p2 = bod(tmax, 0.0);
     use trasy::geometrie::Vrchol;
     let vrcholy = vec![Vrchol::new(p0[0], p0[1], 0.0), Vrchol::new(p1[0], p1[1], 30.0), Vrchol::new(p2[0], p2[1], 0.0)];
-    let mut def = trasy::trasa::DefiniceTrasy::nova("T1", "Trasa 1", vrcholy.clone(), trasy::trasa::STYL_ZAKLAD);
+    let mut def = trasy::trasa::DefiniceTrasy::nova("T1", "Alignment 1", vrcholy.clone(), trasy::trasa::STYL_ZAKLAD);
     let g = trasy::geometrie::geometrie(&vrcholy, 0.0).map_err(|e| format!("{e:?}"))?;
     // niveleta: z výšek bodů u začátku a konce, uprostřed mírně níž
     let vyska_u = |p: [f64; 2]| {
@@ -143,7 +159,7 @@ fn sestav_v(v: &mut PresHost) -> Result<(), String> {
     let l = g.konec();
     def.nivelety = vec![trasy::niveleta::Niveleta::nova(
         "N1",
-        "Niveleta Trasa 1",
+        "Grade 1",
         vec![
             trasy::niveleta::VrcholNivelety::new(0.0, (z0 * 100.0).round() / 100.0, 0.0),
             trasy::niveleta::VrcholNivelety::new((l / 2.0 * 10.0).round() / 10.0, (((z0 + z2) / 2.0 - 0.6) * 100.0).round() / 100.0, 0.0),
