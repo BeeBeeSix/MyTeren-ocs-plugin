@@ -66,6 +66,8 @@ pub fn smaz_vrchol(v: &[Vrchol], i: usize) -> Option<Vec<Vrchol>> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct RadekPrvku {
     pub oblouk: bool,
+    /// Přechodnice (klotoida); `polomer` je pak parametr A se znaménkem.
+    pub prechodnice: bool,
     pub od: f64,
     pub do_: f64,
     pub delka: f64,
@@ -79,9 +81,24 @@ pub fn tabulka_prvku(g: &Geometrie) -> Vec<RadekPrvku> {
     g.prvky
         .iter()
         .map(|(s, p)| match *p {
-            Prvek::Primka { .. } => RadekPrvku { oblouk: false, od: *s, do_: s + p.delka(), delka: p.delka(), polomer: 0.0, vrchol: None },
+            Prvek::Primka { .. } => {
+                RadekPrvku { oblouk: false, prechodnice: false, od: *s, do_: s + p.delka(), delka: p.delka(), polomer: 0.0, vrchol: None }
+            }
+            Prvek::Prechodnice { k0, k1, delka, .. } => {
+                let k = if k0.abs() > k1.abs() { k0 } else { k1 };
+                RadekPrvku {
+                    oblouk: false,
+                    prechodnice: true,
+                    od: *s,
+                    do_: s + delka,
+                    delka,
+                    polomer: (delka / k.abs().max(1e-12)).sqrt() * k.signum(),
+                    vrchol: None,
+                }
+            }
             Prvek::Oblouk { r, sweep, vrchol, .. } => RadekPrvku {
                 oblouk: true,
+                prechodnice: false,
                 od: *s,
                 do_: s + p.delka(),
                 delka: p.delka(),

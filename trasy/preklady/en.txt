@@ -495,3 +495,82 @@ Oblouky do všech vrcholů	Curves at all vertices
 Změnit sklon úseku	Change segment grade
 Změnit délku úseku	Change segment length
 Prodloužit niveletu	Extend design profile
+Popisovat hlavní body (ZÚ, KÚ, TK, KT, TP, PK, KP, PT)	Label key points (start, end, TC, CT, TS, SC, CS, ST)
+Zkratky bodů ZÚ,KÚ,TK,KT,V,TP,PK,KP,PT	Point abbreviations start,end,TC,CT,PI,TS,SC,CS,ST
+s přechodnicemi	with transitions
+Úhel [g]	Angle [gon]
+Přímá za	Tangent after
+* = vybraný vrchol. Typ: b = bez oblouku, k = kružnice, p = s přechodnicemi. Přepsané X, Y, R, L1, L2 se zapíší po chvíli; A = √(R·L) se dopočítá.	* = selected vertex. Type: b = no curve, k = circular arc, p = with transitions. Edited X, Y, R, L1, L2 are applied after a moment; A = √(R·L) is computed.
+Zvýraznit v situaci	Highlight in plan
+Popisy hlavních bodů	Key point labels
+Poloměr R [m]	Radius R [m]
+Přechodnice L1 před vrcholem [m]	Transition L1 before vertex [m]
+Přechodnice L2 za vrcholem [m]	Transition L2 after vertex [m]
+✥ Posunout přesně	✥ Move exactly
+R Změnit poloměr	R Change radius
+Přechodnice	Transitions
+∫ Přidat přechodnice	∫ Add transitions
+✕ Odebrat přechodnice	✕ Remove transitions
+∫∫ Všem obloukům	∫∫ To all curves
+Když se oblouk nevejde, zmenšit ho	If a curve does not fit, shrink it
+Přechodnice zadána	Transition given by
+parametrem A	parameter A
+Hodnota (L nebo A)	Value (L or A)
+L1 : L2 (1 : 1 = souměrné)	L1 : L2 (1 : 1 = symmetric)
+Nejmenší R [m]	Minimum R [m]
+Nejkratší mezipřímka [m]	Shortest tangent between curves [m]
+Vrátit vrchol (při kreslení)	Undo vertex (while drawing)
+před	before
+za	after
+✓ V pořádku – oblouky se vejdou, poloměry, přechodnice i mezipřímky vyhovují.	✓ OK – curves fit, radii, transitions and tangents are fine.
+Žádná trasa – nakreslete Novou trasu, nebo klikněte na trasu ve výkrese.	No alignment – draw a New alignment or click an alignment in the drawing.
+Oblouk se nevejde – viz Kontrola.	The curve does not fit – see Check.
+Bez oblouku (lom).	No curve (angle point).
+vlevo	left
+vpravo	right
+Úprava trasy v editoru	Alignment edit in editor
+Trasy: popisy hlavních bodů zapnuty.	Alignments: key point labels on.
+Trasy: popisy hlavních bodů vypnuty.	Alignments: key point labels off.
+Posunout vrchol: klikněte na vrchol trasy	Move vertex: click an alignment vertex
+Posun vrcholu	Vertex move
+ (zmenšeno, aby se vešlo)	 (shrunk to fit)
+Trasy: klikněte na vrchol, do kterého přidat přechodnice	Alignments: click the vertex to add transitions to
+Trasy: klikněte na vrchol, do kterého vložit oblouk	Alignments: click the vertex to insert a curve into
+Trasy: krajní vrchol oblouk mít nemůže.	Alignments: an end vertex cannot have a curve.
+Přechodnice ve vrcholu	Transitions at vertex
+Trasy: klikněte na vrchol, ve kterém odebrat přechodnice	Alignments: click the vertex to remove transitions from
+Trasy: v tomto vrcholu přechodnice nejsou.	Alignments: this vertex has no transitions.
+Odebrání přechodnic	Remove transitions
+Trasy: není kam vkládat.	Alignments: nothing to insert into.
+Přechodnice všem obloukům	Transitions to all curves
+Posunout vrchol přesně	Move vertex exactly
+Vložit oblouk podle nastavení	Insert curve by settings
+Přidat přechodnice	Add transitions
+Odebrat přechodnice	Remove transitions
+přechodnice ve vrcholu {} jsou delší, než dovolí úhel – zkraťte je nebo zvětšete poloměr	transitions at vertex {} are longer than the angle allows – shorten them or increase the radius
+Vrchol {}: klikněte nové místo, nebo napište souřadnice X,Y a Enter (Esc = zrušit)	Vertex {}: click the new location, or type X,Y and Enter (Esc = cancel)
+Trasy: vrchol {} trasy {} posunut na {}; {}.	Alignments: vertex {} of alignment {} moved to {}; {}.
+Trasy: přechodnice se do vrcholu {} nevejdou – zkraťte je v nastavení, nebo zapněte zmenšení.	Alignments: transitions do not fit into vertex {} – shorten them in the settings or turn on shrinking.
+Trasy: oblouk se do vrcholu {} nevejde – zmenšete R v nastavení, nebo zapněte zmenšení.	Alignments: the curve does not fit into vertex {} – reduce R in the settings or turn on shrinking.
+Trasy: vrchol {} – R {} m, přechodnice L1 {} m, L2 {} m{}.	Alignments: vertex {} – R {} m, transitions L1 {} m, L2 {} m{}.
+Trasy: vrchol {} – oblouk R {} m{}.	Alignments: vertex {} – curve R {} m{}.
+Trasy: ve vrcholu {} zůstal kruhový oblouk bez přechodnic.	Alignments: vertex {} keeps a circular arc without transitions.
+Trasy: nic se nevešlo ({} vrcholů).	Alignments: nothing fitted ({} vertices).
+Trasy: upraveno vrcholů {}, zmenšeno {}, nevešlo se {}.	Alignments: vertices changed {}, shrunk {}, did not fit {}.
+Trasa {} – {} · délka {} m · vrcholů {} · začátek {}	Alignment {} – {} · length {} m · vertices {} · start {}
+Úhel {} g {} · T1 {} m · T2 {} m · kruhový oblouk {} m · celkem {} m	Angle {} gon {} · T1 {} m · T2 {} m · circular arc {} m · total {} m
+ · A1 {} · A2 {} · p1 {} m · p2 {} m	 · A1 {} · A2 {} · p1 {} m · p2 {} m
+ · staničení {} – {}	 · chainage {} – {}
+! Vrchol {}: R = {} m je menší než {} m.	! Vertex {}: R = {} m is less than {} m.
+! Vrchol {}: přechodnice {} vrcholem má A = {} – doporučeno R/3 až R ({} až {}).	! Vertex {}: transition {} the vertex has A = {} – recommended R/3 to R ({} to {}).
+✓ Vrcholy {} a {}: protisměrné oblouky s inflexním bodem přechodnic (v pořádku).	✓ Vertices {} and {}: reverse curves with transition inflection point (OK).
+! Vrcholy {} a {}: stejnosměrné oblouky bez mezipřímky – zvažte jeden oblouk.	! Vertices {} and {}: same-direction curves without a tangent – consider a single curve.
+! Mezipřímka mezi oblouky {} a {} je jen {} m (méně než {} m).	! Tangent between curves {} and {} is only {} m (less than {} m).
+✕ Oblouky ve vrcholech {} a {} se překrývají o {} m.	✕ Curves at vertices {} and {} overlap by {} m.
+Trasy: trasa {} upravena (vrchol {}).	Alignments: alignment {} changed (vertex {}).
+ (překryv {} m)	 (overlap {} m)
+řádek {} nemá platné X	row {} has no valid X
+řádek {} nemá platné Y	row {} has no valid Y
+řádek {}: typ b, k nebo p	row {}: type b, k or p
+Zmenšit, když se nevejde	Shrink if it does not fit
+Min. mezipřímka [m]	Min. tangent [m]

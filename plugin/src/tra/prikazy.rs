@@ -188,6 +188,7 @@ impl InteractiveCommand for KresleniTrasy {
                         Prvek::Oblouk { stred, r, uhel_a, sweep, .. } => {
                             out.push(crate::tra::uchopy::oblouk_nahledu(stred, r, uhel_a, sweep, None))
                         }
+                        Prvek::Prechodnice { .. } => out.push(crate::tra::uchopy::prechodnice_nahledu(p, None)),
                     }
                 }
             }
@@ -329,6 +330,7 @@ impl InteractiveCommand for ObloukVeVrcholu {
                         Prvek::Oblouk { stred, r, uhel_a, sweep, .. } => {
                             out.push(crate::tra::uchopy::oblouk_nahledu(stred, r, uhel_a, sweep, Some([1.0, 0.8, 0.2, 1.0])))
                         }
+                        Prvek::Prechodnice { .. } => out.push(crate::tra::uchopy::prechodnice_nahledu(p, Some([1.0, 0.8, 0.2, 1.0]))),
                     }
                 }
             }
@@ -887,5 +889,68 @@ impl InteractiveCommand for ProdlouzitNiveletu {
             }
             (Some((s, _, _)), Some(sklon)) => self.hotovo(sklon, s - konec),
         }
+    }
+}
+
+/// Posunout vrchol trasy přesně: klik na vrchol, pak nové místo (klik nebo
+/// napsané X,Y). Hotovo = příkaz TRA_POSUN_HOTOVO trasa vrchol x y.
+pub struct PosunVrcholu {
+    /// Trasy výkresu: vložení, vrcholy (světové), počáteční staničení.
+    pub trasy: Vec<(Handle, Vec<Vrchol>, f64)>,
+    pub vybrany: Option<(usize, usize)>,
+}
+
+impl InteractiveCommand for PosunVrcholu {
+    fn prompt(&self) -> String {
+        match self.vybrany {
+            None => tr("Posunout vrchol: klikněte na vrchol trasy").to_string(),
+            Some((_, i)) => trf!("Vrchol {}: klikněte nové místo, nebo napište souřadnice X,Y a Enter (Esc = zrušit)", i + 1),
+        }
+    }
+    fn on_point(&mut self, pt: [f64; 3]) -> CommandStep {
+        let p = [pt[0], pt[1]];
+        if let Some((t, i)) = self.vybrany {
+            return CommandStep::Dispatch(format!("TRA_POSUN_HOTOVO {:X} {} {:.6} {:.6}", self.trasy[t].0.value(), i, p[0], p[1]));
+        }
+        let mut nej: Option<(f64, usize, usize)> = None;
+        for (t, (_, v, _)) in self.trasy.iter().enumerate() {
+            for (i, x) in v.iter().enumerate() {
+                let d = (x.x - p[0]).hypot(x.y - p[1]);
+                if nej.is_none_or(|n| d < n.0) {
+                    nej = Some((d, t, i));
+                }
+            }
+        }
+        if let Some((_, t, i)) = nej {
+            self.vybrany = Some((t, i));
+            crate::tra::editor::vyber_a_obnov(i);
+        }
+        CommandStep::NeedPoint
+    }
+    fn on_enter(&mut self) -> CommandStep {
+        CommandStep::Cancel
+    }
+    fn on_cursor_move(&mut self, pt: [f64; 3]) -> Vec<PreviewWire> {
+        let Some((t, i)) = self.vybrany else { return Vec::new() };
+        let (_, v, pocatek) = &self.trasy[t];
+        let mut v = v.clone();
+        v[i].x = pt[0];
+        v[i].y = pt[1];
+        let mut out = vec![PreviewWire::with_color(v.iter().map(|x| [x.x, x.y, 0.0]).collect(), [0.6, 0.6, 0.6, 1.0])];
+        match geometrie(&v, *pocatek) {
+            Ok(g) => {
+                for (_, p) in &g.prvky {
+                    out.push(match *p {
+                        Prvek::Primka { a, b } => PreviewWire::line([a[0], a[1], 0.0], [b[0], b[1], 0.0], Some([1.0, 0.8, 0.2, 1.0])),
+                        Prvek::Oblouk { stred, r, uhel_a, sweep, .. } => {
+                            crate::tra::uchopy::oblouk_nahledu(stred, r, uhel_a, sweep, Some([1.0, 0.8, 0.2, 1.0]))
+                        }
+                        Prvek::Prechodnice { .. } => crate::tra::uchopy::prechodnice_nahledu(p, Some([1.0, 0.8, 0.2, 1.0])),
+                    });
+                }
+            }
+            Err(_) => out[0] = PreviewWire::with_color(v.iter().map(|x| [x.x, x.y, 0.0]).collect(), [1.0, 0.2, 0.2, 1.0]),
+        }
+        out
     }
 }

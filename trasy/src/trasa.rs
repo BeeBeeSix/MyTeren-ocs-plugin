@@ -66,7 +66,12 @@ impl DefiniceTrasy {
         r.push(format!("styl={}", self.styl));
         r.push(format!("zaklad={};{}", f(self.zaklad[0]), f(self.zaklad[1])));
         for v in &self.vrcholy {
-            r.push(format!("v={};{};{}", f(v.x), f(v.y), f(v.r)));
+            // přechodnice jen když jsou (starší verze čtou jen x;y;r)
+            if v.l1 > 0.0 || v.l2 > 0.0 {
+                r.push(format!("v={};{};{};{};{}", f(v.x), f(v.y), f(v.r), f(v.l1), f(v.l2)));
+            } else {
+                r.push(format!("v={};{};{}", f(v.x), f(v.y), f(v.r)));
+            }
         }
         for (a, b) in &self.rovnice {
             r.push(format!("rovnice={};{}", f(*a), f(*b)));
@@ -103,7 +108,8 @@ impl DefiniceTrasy {
                 "v" => {
                     let c: Vec<f64> = h.split(';').filter_map(cti).collect();
                     if c.len() >= 2 {
-                        d.vrcholy.push(Vrchol::new(c[0], c[1], c.get(2).copied().unwrap_or(0.0)));
+                        let g = |i: usize| c.get(i).copied().unwrap_or(0.0);
+                        d.vrcholy.push(Vrchol::s_prechodnicemi(c[0], c[1], g(2), g(3), g(4)));
                     }
                 }
                 "rovnice" => {
@@ -134,7 +140,7 @@ impl DefiniceTrasy {
             .iter()
             .map(|v| {
                 let (dx, dy) = (v.x - self.zaklad[0], v.y - self.zaklad[1]);
-                Vrchol::new(vlozeni[0] + dx * c - dy * s, vlozeni[1] + dx * s + dy * c, v.r)
+                Vrchol::s_prechodnicemi(vlozeni[0] + dx * c - dy * s, vlozeni[1] + dx * s + dy * c, v.r, v.l1, v.l2)
             })
             .collect()
     }
@@ -152,9 +158,9 @@ pub const SCHEMA: &[Klic] = &[
     Klic { klic: "desetin_hlavni", vychozi: "0", popis: "Desetinná místa hlavního staničení" },
     Klic { klic: "desetin_body", vychozi: "2", popis: "Desetinná místa u hlavních bodů" },
     Klic { klic: "carka", vychozi: "1", popis: "Desetinná čárka" },
-    Klic { klic: "popis_body", vychozi: "1", popis: "Popisovat hlavní body (ZÚ, KÚ, TK, KT)" },
+    Klic { klic: "popis_body", vychozi: "1", popis: "Popisovat hlavní body (ZÚ, KÚ, TK, KT, TP, PK, KP, PT)" },
     Klic { klic: "popis_vrcholy", vychozi: "0", popis: "Popisovat vrcholy (V) a poloměry" },
-    Klic { klic: "zkratky", vychozi: "ZÚ,KÚ,TK,KT,V", popis: "Zkratky bodů ZÚ,KÚ,TK,KT,V" },
+    Klic { klic: "zkratky", vychozi: "ZÚ,KÚ,TK,KT,V,TP,PK,KP,PT", popis: "Zkratky bodů ZÚ,KÚ,TK,KT,V,TP,PK,KP,PT" },
     Klic { klic: "polygon", vychozi: "1", popis: "Kreslit tečnový polygon" },
     // barva = index ACI 1–255, 256 = podle hladiny; tloušťka v setinách mm, -1 = podle hladiny
     Klic { klic: "barva_osa", vychozi: "256", popis: "Barva osy" },
@@ -278,7 +284,12 @@ mod testy {
         let mut d = DefiniceTrasy::nova(
             "T1",
             "Ulice Nová = hlavní",
-            vec![Vrchol::new(-740123.456, -1045678.9, 0.0), Vrchol::new(-740000.0, -1045600.0, 150.0), Vrchol::new(-739900.0, -1045700.0, 0.0)],
+            vec![
+                Vrchol::new(-740123.456, -1045678.9, 0.0),
+                Vrchol::new(-740000.0, -1045600.0, 150.0),
+                Vrchol::s_prechodnicemi(-739900.0, -1045700.0, 80.0, 20.5, 35.0),
+                Vrchol::new(-739800.0, -1045650.0, 0.0),
+            ],
             STYL_ZAKLAD,
         );
         d.pocatek = 120.5;

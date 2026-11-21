@@ -73,6 +73,12 @@ pub fn skupiny() -> Vec<RibbonGroup> {
                         ("TRA_OBLOUK", tr("Oblouk ve vrcholu"), ikona!("tra_oblouk")),
                         ("TRA_BEZ_OBLOUKU", tr("Smazat oblouk"), ikona!("tra_bez_oblouku")),
                         ("TRA_PRODLOUZIT", tr("Prodloužit trasu"), ikona!("tra_prodlouzit")),
+                        ("TRA_POSUN_VRCHOL", tr("Posunout vrchol přesně"), ikona!("tra_uchopy")),
+                        ("TRA_VLOZIT_OBLOUK", tr("Vložit oblouk podle nastavení"), ikona!("tra_oblouk")),
+                        ("TRA_OBLOUKY_VSE", tr("Oblouky do všech vrcholů"), ikona!("tra_oblouk")),
+                        ("TRA_PRECH", tr("Přidat přechodnice"), ikona!("tra_oblouk")),
+                        ("TRA_BEZ_PRECH", tr("Odebrat přechodnice"), ikona!("tra_bez_oblouku")),
+                        ("TRA_PRECH_VSE", tr("Přechodnice všem obloukům"), ikona!("tra_oblouk")),
                     ],
                     default: "TRA_VLOZIT_VRCHOL",
                 },
@@ -523,6 +529,156 @@ fn bez_oblouku_cmd(host: &mut dyn HostApi, arg: &str) {
     nastav_polomer(host, t.insert, i, 0.0);
 }
 
+/// Posunout vrchol přesně (klik na vrchol, pak místo nebo napsané X,Y).
+fn posun_vrchol_cmd(host: &mut dyn HostApi) {
+    let doc = match PresHost(host).dokument() {
+        Ok(d) => d,
+        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    };
+    let trasy: Vec<(Handle, Vec<Vrchol>, f64)> =
+        objekt::trasy(&doc).into_iter().map(|t| (t.insert, t.vrcholy(), t.def.pocatek)).collect();
+    if trasy.is_empty() {
+        return host.push_error(tr("Trasy: ve výkrese není žádná trasa."));
+    }
+    otevri_editor(host);
+    host.start_interactive(vykres::hlidany(Box::new(prikazy::PosunVrcholu { trasy, vybrany: None })));
+}
+
+fn posun_hotovo_cmd(host: &mut dyn HostApi, arg: &str) {
+    let mut c = arg.split_whitespace();
+    let (Some(h), Some(i), Some(x), Some(y)) = (
+        c.next().and_then(handle_z_textu),
+        c.next().and_then(|x| x.parse::<usize>().ok()),
+        c.next().and_then(cti_cislo),
+        c.next().and_then(cti_cislo),
+    ) else {
+        return;
+    };
+    let doc = match PresHost(host).dokument() {
+        Ok(d) => d,
+        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    };
+    let Some(t) = objekt::trasy(&doc).into_iter().find(|t| t.insert == h) else { return };
+    let mut v = t.vrcholy();
+    if i >= v.len() {
+        return;
+    }
+    v[i].x = x;
+    v[i].y = y;
+    if uloz_vrcholy(host, &doc, &t, v, tr("Posun vrcholu")) {
+        editor::vyber_a_obnov(i);
+        host.push_info(&trf!("Trasy: vrchol {} trasy {} posunut na {}; {}.", i + 1, t.def.jmeno, cislo(x, 3, true), cislo(y, 3, true)));
+    }
+    po_zmene(host);
+}
+
+/// Text výsledku vložení oblouku podle nastavení.
+fn text_vlozeni(r: editor::Vlozeni) -> &'static str {
+    match r {
+        editor::Vlozeni::Zmenseno => tr(" (zmenšeno, aby se vešlo)"),
+        _ => "",
+    }
+}
+
+/// Vložit oblouk (`prechodnice` = jen přidat přechodnice) do kliknutého vrcholu
+/// podle nastavení panelu Editor trasy.
+fn vlozit_oblouk_trasy_cmd(host: &mut dyn HostApi, arg: &str, prikaz: &'static str, prechodnice: bool) {
+    let vyzva = if prechodnice { "Trasy: klikněte na vrchol, do kterého přidat přechodnice" } else { "Trasy: klikněte na vrchol, do kterého vložit oblouk" };
+    let Some((t, doc, p)) = nastroj_vrcholu(host, arg, prikaz, vyzva) else { return };
+    let mut v = t.vrcholy();
+    let Some((i, _)) = nejblizsi_vrchol(&v, p) else { return };
+    if i == 0 || i + 1 >= v.len() {
+        return host.push_info(tr("Trasy: krajní vrchol oblouk mít nemůže."));
+    }
+    editor::vyber_a_obnov(i);
+    let r = editor::dej_oblouk(&mut v, i, prechodnice);
+    if r == editor::Vlozeni::Nevejde {
+        host.push_error(&if prechodnice {
+            trf!("Trasy: přechodnice se do vrcholu {} nevejdou – zkraťte je v nastavení, nebo zapněte zmenšení.", i + 1)
+        } else {
+            trf!("Trasy: oblouk se do vrcholu {} nevejde – zmenšete R v nastavení, nebo zapněte zmenšení.", i + 1)
+        });
+        return po_zmene(host);
+    }
+    let krok = if prechodnice { tr("Přechodnice ve vrcholu") } else { tr("Oblouk ve vrcholu") };
+    if uloz_vrcholy(host, &doc, &t, v.clone(), krok) {
+        let x = v[i];
+        host.push_info(&if x.ma_prechodnice() {
+            trf!(
+                "Trasy: vrchol {} – R {} m, přechodnice L1 {} m, L2 {} m{}.",
+                i + 1,
+                cislo(x.r, 2, true),
+                cislo(x.l1, 2, true),
+                cislo(x.l2, 2, true),
+                text_vlozeni(r)
+            )
+        } else {
+            trf!("Trasy: vrchol {} – oblouk R {} m{}.", i + 1, cislo(x.r, 2, true), text_vlozeni(r))
+        });
+    }
+    po_zmene(host);
+}
+
+fn bez_prechodnic_cmd(host: &mut dyn HostApi, arg: &str) {
+    let Some((t, doc, p)) = nastroj_vrcholu(host, arg, "TRA_BEZ_PRECH", "Trasy: klikněte na vrchol, ve kterém odebrat přechodnice") else {
+        return;
+    };
+    let mut v = t.vrcholy();
+    let Some((i, _)) = nejblizsi_vrchol(&v, p) else { return };
+    if !v[i].ma_prechodnice() {
+        return host.push_info(tr("Trasy: v tomto vrcholu přechodnice nejsou."));
+    }
+    editor::vyber_a_obnov(i);
+    v[i].l1 = 0.0;
+    v[i].l2 = 0.0;
+    if uloz_vrcholy(host, &doc, &t, v, tr("Odebrání přechodnic")) {
+        host.push_info(&trf!("Trasy: ve vrcholu {} zůstal kruhový oblouk bez přechodnic.", i + 1));
+    }
+    po_zmene(host);
+}
+
+/// Oblouky (nebo přechodnice) podle nastavení do všech vrcholů trasy z editoru.
+fn hromadne_cmd(host: &mut dyn HostApi, arg: &str, prikaz: &'static str, prechodnice: bool) {
+    let t = PresHost(host).dokument().ok().and_then(|d| editor::trasa_editoru(&d));
+    let t = match t {
+        Some(t) if arg.is_empty() => t,
+        _ => match vybrana_trasa(host, arg, prikaz) {
+            Some((t, _)) => t,
+            None => return,
+        },
+    };
+    let doc = match PresHost(host).dokument() {
+        Ok(d) => d,
+        Err(e) => return host.push_error(&trf!("Trasy: {}", e)),
+    };
+    let mut v = t.vrcholy();
+    let (mut ok, mut zm, mut ne) = (0, 0, 0);
+    for i in 1..v.len().saturating_sub(1) {
+        // oblouky jen do vrcholů bez oblouku, přechodnice jen k obloukům bez nich
+        let preskocit = if prechodnice { v[i].r <= 0.0 || v[i].ma_prechodnice() } else { v[i].r > 0.0 };
+        if preskocit {
+            continue;
+        }
+        match editor::dej_oblouk(&mut v, i, prechodnice) {
+            editor::Vlozeni::Ano => ok += 1,
+            editor::Vlozeni::Zmenseno => {
+                ok += 1;
+                zm += 1;
+            }
+            editor::Vlozeni::Nevejde => ne += 1,
+        }
+    }
+    if ok == 0 {
+        host.push_info(&if ne > 0 { trf!("Trasy: nic se nevešlo ({} vrcholů).", ne) } else { tr("Trasy: není kam vkládat.").to_string() });
+        return po_zmene(host);
+    }
+    let krok = if prechodnice { tr("Přechodnice všem obloukům") } else { tr("Oblouky do všech vrcholů") };
+    if uloz_vrcholy(host, &doc, &t, v, krok) {
+        host.push_info(&trf!("Trasy: upraveno vrcholů {}, zmenšeno {}, nevešlo se {}.", ok, zm, ne));
+    }
+    po_zmene(host);
+}
+
 fn editor_pouzit_cmd(host: &mut dyn HostApi) {
     let prvky = editor::vezmi_prvky();
     let vrcholy = editor::vezmi_tabulku();
@@ -771,7 +927,11 @@ fn vlastnosti_hotovo(host: &mut dyn HostApi, arg: &str) {
             let y = r.get(1).and_then(|c| cti_cislo(c));
             let rr = r.get(2).and_then(|c| cti_cislo(c)).unwrap_or(0.0);
             match (x, y) {
-                (Some(x), Some(y)) => nove.push(trasy::geometrie::Vrchol::new(x, y, rr)),
+                (Some(x), Some(y)) => {
+                    // přechodnice tabulka nemá – zůstanou u vrcholu na stejném místě
+                    let (l1, l2) = vrcholy.get(i).filter(|_| rr > 0.0).map_or((0.0, 0.0), |o| (o.l1, o.l2));
+                    nove.push(trasy::geometrie::Vrchol::s_prechodnicemi(x, y, rr, l1, l2))
+                }
                 _ => {
                     host.push_error(&trf!("Trasy: řádek {} tabulky vrcholů nemá platná čísla X a Y – nic se nezměnilo.", i + 1));
                     return;
@@ -2003,6 +2163,34 @@ pub fn dispatch(host: &mut dyn HostApi, cmd: &str) -> bool {
             }
             "TRA_BEZ_OBLOUKU" => {
                 bez_oblouku_cmd(host, zbytek);
+                true
+            }
+            "TRA_POSUN_VRCHOL" => {
+                posun_vrchol_cmd(host);
+                true
+            }
+            "TRA_POSUN_HOTOVO" => {
+                posun_hotovo_cmd(host, zbytek);
+                true
+            }
+            "TRA_VLOZIT_OBLOUK" => {
+                vlozit_oblouk_trasy_cmd(host, zbytek, "TRA_VLOZIT_OBLOUK", false);
+                true
+            }
+            "TRA_PRECH" => {
+                vlozit_oblouk_trasy_cmd(host, zbytek, "TRA_PRECH", true);
+                true
+            }
+            "TRA_BEZ_PRECH" => {
+                bez_prechodnic_cmd(host, zbytek);
+                true
+            }
+            "TRA_OBLOUKY_VSE" => {
+                hromadne_cmd(host, zbytek, "TRA_OBLOUKY_VSE", false);
+                true
+            }
+            "TRA_PRECH_VSE" => {
+                hromadne_cmd(host, zbytek, "TRA_PRECH_VSE", true);
                 true
             }
             "TRA_VLASTNOSTI_HOTOVO" => {

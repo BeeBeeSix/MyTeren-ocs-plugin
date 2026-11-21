@@ -9,8 +9,8 @@
 use std::f64::consts::PI;
 
 use ocs_plugin_api::host::codec::entities::text::{TextHorizontalAlignment, TextVerticalAlignment};
-use ocs_plugin_api::host::codec::entities::{Arc, Insert, Line, Text};
-use ocs_plugin_api::host::codec::types::{Color, Vector3};
+use ocs_plugin_api::host::codec::entities::{Arc, Insert, Line, LwPolyline, Text};
+use ocs_plugin_api::host::codec::types::{Color, Vector2, Vector3};
 use ocs_plugin_api::host::{Document as CadDocument, EntityType, ExtendedDataRecord, Handle, LayerConfig, TableOperation, XDataValue};
 
 use trasy::geometrie::{geometrie, DruhBodu, Geometrie, Prvek, Vrchol};
@@ -222,6 +222,11 @@ pub fn objekty(def: &DefiniceTrasy, vrcholy: &[Vrchol], g: &Geometrie) -> Vec<En
                 }
                 out.push(oblouk(stred, r, uhel_a, sweep));
             }
+            Prvek::Prechodnice { .. } => {
+                // klotoida jako lomená čára po 0,5 m (odchylka od křivky pod mm)
+                let body = p.body(0.5).iter().map(|b| Vector2::new(b[0], b[1])).collect();
+                out.push(na(EntityType::LwPolyline(LwPolyline::from_points(body)), H_OSA));
+            }
         }
     }
 
@@ -261,6 +266,10 @@ pub fn objekty(def: &DefiniceTrasy, vrcholy: &[Vrchol], g: &Geometrie) -> Vec<En
                 DruhBodu::Ku => zk(1, "KÚ"),
                 DruhBodu::Tk => zk(2, "TK"),
                 DruhBodu::Kt => zk(3, "KT"),
+                DruhBodu::Tp => zk(5, "TP"),
+                DruhBodu::Pk => zk(6, "PK"),
+                DruhBodu::Kp => zk(7, "KP"),
+                DruhBodu::Pt => zk(8, "PT"),
                 DruhBodu::V => continue,
             };
             out.push(cara(kolmo(b.bod, b.smer, -2.0 * vyska), kolmo(b.bod, b.smer, 2.0 * vyska), H_BODY));
@@ -288,7 +297,7 @@ pub fn objekty(def: &DefiniceTrasy, vrcholy: &[Vrchol], g: &Geometrie) -> Vec<En
     for e in &mut out {
         obarvi(e, &h);
         let osa = e.common().layer == H_OSA;
-        if osa && barva_oblouk > 0 && matches!(e, EntityType::Arc(_)) {
+        if osa && barva_oblouk > 0 && matches!(e, EntityType::Arc(_) | EntityType::LwPolyline(_)) {
             e.common_mut().color = crate::styly::barva(barva_oblouk);
         }
         if osa && cerchovana {

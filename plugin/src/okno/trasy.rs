@@ -930,12 +930,12 @@ impl Okno {
 
         ui.add_space(8.0);
         ui.label(RichText::new(tr("Popisy")).strong());
-        zaskrt_trasy(ui, s, "popis_body", "Popisovat hlavní body (ZÚ, KÚ, TK, KT)");
+        zaskrt_trasy(ui, s, "popis_body", "Popisovat hlavní body (ZÚ, KÚ, TK, KT, TP, PK, KP, PT)");
         zaskrt_trasy(ui, s, "popis_vrcholy", "Popisovat vrcholy (V) a poloměry");
         ui.horizontal(|ui| {
             ui.label(tr("Zkratky bodů"));
             let mut z = hodnota_trasy(s, "zkratky");
-            if ui.add(egui::TextEdit::singleline(&mut z).desired_width(180.0)).on_hover_text(tr("ZÚ,KÚ,TK,KT,V oddělené čárkou")).changed() {
+            if ui.add(egui::TextEdit::singleline(&mut z).desired_width(180.0)).on_hover_text(tr("ZÚ,KÚ,TK,KT,V,TP,PK,KP,PT oddělené čárkou")).changed() {
                 nastav_trasy(s, "zkratky", z);
             }
         });

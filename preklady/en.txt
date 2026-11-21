@@ -1851,3 +1851,5 @@ Povrch – hlavní vrstevnice	Surface – major contours
 Povrch – vedlejší vrstevnice	Surface – minor contours
 Terén: hladiny ze starší verze přejmenovány na nové (anglické) názvy.	Terén: layers from an older version renamed to the new (English) names.
 Trasy – netiskne se	Alignments – not plotted
+Popisovat hlavní body (ZÚ, KÚ, TK, KT, TP, PK, KP, PT)	Label key points (ZÚ, KÚ, TK, KT, TP, PK, KP, PT)
+ZÚ,KÚ,TK,KT,V,TP,PK,KP,PT oddělené čárkou	ZÚ,KÚ,TK,KT,V,TP,PK,KP,PT separated by commas

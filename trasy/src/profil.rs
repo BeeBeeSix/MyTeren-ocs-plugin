@@ -148,6 +148,8 @@ pub fn body_osy(g: &Geometrie, od: f64, do_: f64) -> Vec<(f64, [f64; 2])> {
         let krok = match *p {
             Prvek::Primka { .. } => b - a,
             Prvek::Oblouk { r, .. } => (8.0 * r * 0.01).sqrt().max(0.05),
+            // přechodnice: krok podle nejmenšího poloměru na ní
+            Prvek::Prechodnice { k0, k1, .. } => (8.0 / k0.abs().max(k1.abs()).max(1e-6) * 0.01).sqrt().max(0.05),
         };
         let n = ((b - a) / krok).ceil().max(1.0) as usize;
         for k in 0..=n {

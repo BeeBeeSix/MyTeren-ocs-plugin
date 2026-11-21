@@ -689,7 +689,24 @@ impl Pracovnik {
             self.vyhodnot_zmeny();
             self.vyhodnot_prepocet();
             self.vyhodnot_niveletu();
+            self.vyhodnot_trasu();
         }
+    }
+
+    /// Změna z panelu Editor trasy: po pauze v psaní zapsat do výkresu
+    /// (ne během příkazu ani tahu úchopem).
+    fn vyhodnot_trasu(&mut self) {
+        if !crate::tra::editor::je_cas() {
+            return;
+        }
+        let Some(tab) = Self::aktivni_tab() else { return };
+        if self.bezi(tab) || crate::uchopy::TAHNE.load(Ordering::SeqCst) {
+            return;
+        }
+        let Some(mut k) = kanal(tab) else { return };
+        crate::tra::prospektor::PRACUJE.store(true, Ordering::SeqCst);
+        crate::tra::editor::proved(&mut k);
+        crate::tra::prospektor::PRACUJE.store(false, Ordering::SeqCst);
     }
 
     /// Změna z panelu Editor nivelety: po pauze v psaní zapsat do výkresu

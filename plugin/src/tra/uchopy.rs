@@ -44,6 +44,10 @@ static VYBRANA_TRASA: AtomicBool = AtomicBool::new(false);
 /// Značka úchopů Tras (úchopy Terénu mají id = handle bodu).
 pub const ZNACKA: u64 = 1 << 63;
 
+fn id_trasy(t: &ObjektTrasy, vrchol: usize, druh: u64) -> u64 {
+    id(t, vrchol, druh)
+}
+
 fn id(t: &ObjektTrasy, vrchol: usize, druh: u64) -> u64 {
     ZNACKA | (t.insert.value() << 20) | ((vrchol as u64) << 2) | druh
 }
@@ -66,6 +70,22 @@ pub fn uchopy(doc: &CadDocument) -> Vec<PluginGrip> {
     for p in pohledy.iter().filter(|p| vyber.contains(&p.insert)) {
         if let Some(t) = trasy.iter().find(|t| t.def.id == p.def.trasa) {
             out.extend(uchopy_pohledu(p, t));
+        }
+    }
+    // vrchol vybraný v Editoru trasy: úchop vrcholu i u trasy, která není
+    // vybraná (vybraná má úchopy všech vrcholů)
+    if let Some((id, k)) = crate::tra::editor::zvyrazneny_vrchol() {
+        if let Some(t) = trasy.iter().find(|t| t.def.id == id && !(vse || vyber.contains(&t.insert))) {
+            if let Some(x) = t.vrcholy().get(k) {
+                out.push(PluginGrip {
+                    xy_plane: false,
+                    grip_id: id_trasy(t, k, VRCHOL),
+                    anchor: Some(t.insert),
+                    point: [x.x, x.y, 0.0],
+                    axis: None,
+                    shape: PluginGripShape::Square,
+                });
+            }
         }
     }
     // vrchol vybraný v Editoru nivelety: úchop na niveletě (jen v pohledech,
@@ -359,9 +379,19 @@ fn nove_vrcholy(t: &Tah, p: [f64; 3]) -> Vec<Vrchol> {
     } else if let Ok(g) = geometrie(&t.vrcholy, 0.0) {
         let u = g.vrcholy[i];
         let e = (p[0] - v[i].x) * u.osa[0] + (p[1] - v[i].y) * u.osa[1];
-        let k = 1.0 / (u.odbocka.abs() / 2.0).cos() - 1.0;
-        if k > 1e-12 {
-            v[i].r = (e / k).max(0.01);
+        if v[i].ma_prechodnice() {
+            // s přechodnicemi: poloměr i přechodnice úměrně vnější vzdálenosti
+            if u.vzepeti > 1e-9 && e > 1e-6 {
+                let k = e / u.vzepeti;
+                v[i].r *= k;
+                v[i].l1 *= k;
+                v[i].l2 *= k;
+            }
+        } else {
+            let k = 1.0 / (u.odbocka.abs() / 2.0).cos() - 1.0;
+            if k > 1e-12 {
+                v[i].r = (e / k).max(0.01);
+            }
         }
     }
     v
@@ -373,8 +403,14 @@ fn cary_osy(g: &Geometrie, barva: [f32; 4]) -> Vec<PreviewWire> {
         .map(|(_, p)| match *p {
             Prvek::Primka { a, b } => PreviewWire::line([a[0], a[1], 0.0], [b[0], b[1], 0.0], Some(barva)),
             Prvek::Oblouk { stred, r, uhel_a, sweep, .. } => oblouk_nahledu(stred, r, uhel_a, sweep, Some(barva)),
+            Prvek::Prechodnice { .. } => prechodnice_nahledu(p, Some(barva)),
         })
         .collect()
+}
+
+/// Přechodnice v náhledu jako lomená čára (krok 1 m).
+pub fn prechodnice_nahledu(p: &Prvek, barva: Option<[f32; 4]>) -> PreviewWire {
+    PreviewWire::Polyline { points: p.body(1.0).iter().map(|b| [b[0], b[1], 0.0]).collect(), color: barva }
 }
 
 /// Analytický oblouk náhledu (OCS ho kreslí hladce, přenáší se jen pár čísel).
@@ -421,6 +457,11 @@ pub fn udalost(host: &mut dyn HostApi, ev: CustomGripEvent) -> CustomGripRespons
                 Ok(_) if druh == VRCHOL => [vrcholy[vrchol].x, vrcholy[vrchol].y, 0.0],
                 _ => ev.point,
             };
+            // klik na vrchol nebo poloměr vybere vrchol v Editoru trasy
+            if druh != VLOZIT {
+                crate::tra::editor::nastav_aktivni(&trasa.def.id);
+                crate::tra::editor::vyber_a_obnov(vrchol);
+            }
             let t = Tah { trasa, vrchol, druh, vrcholy, start };
             let r = nahled(&t, ev.point);
             *TAH.lock().unwrap_or_else(|e| e.into_inner()) = Some(t);

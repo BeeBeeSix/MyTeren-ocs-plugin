@@ -1,9 +1,10 @@
-//! Směrové řešení trasy: tečnový polygon (vrcholy + poloměry) → přímé a
-//! kruhové oblouky, staničení, hlavní body.
+//! Směrové řešení trasy: tečnový polygon (vrcholy + poloměry + přechodnice)
+//! → přímé, přechodnice (klotoidy) a kruhové oblouky, staničení, hlavní body.
 //!
 //! Trasa je uložená jen jako vrcholy tečnového polygonu s poloměrem v každém
-//! vnitřním vrcholu (0 = bez oblouku, lom). Oblouky jsou tak vždy tečné na
-//! sousední přímé a změna vrcholu nebo poloměru přirozeně přepočte všechno.
+//! vnitřním vrcholu (0 = bez oblouku, lom) a délkami přechodnic před a za
+//! obloukem (0 = bez přechodnice). Oblouky jsou tak vždy tečné na sousední
+//! přímé a změna vrcholu nebo poloměru přirozeně přepočte všechno.
 
 use std::f64::consts::PI;
 
@@ -21,11 +22,22 @@ pub struct Vrchol {
     /// Poloměr oblouku ve vrcholu [m]; 0 = bez oblouku. U prvního a posledního
     /// vrcholu se nepoužije.
     pub r: f64,
+    /// Délka přechodnice (klotoidy) před obloukem [m]; 0 = bez přechodnice.
+    pub l1: f64,
+    /// Délka přechodnice za obloukem [m].
+    pub l2: f64,
 }
 
 impl Vrchol {
     pub fn new(x: f64, y: f64, r: f64) -> Self {
-        Self { x, y, r }
+        Self { x, y, r, l1: 0.0, l2: 0.0 }
+    }
+    pub fn s_prechodnicemi(x: f64, y: f64, r: f64, l1: f64, l2: f64) -> Self {
+        Self { x, y, r, l1, l2 }
+    }
+    /// Má vrchol přechodnice (a oblouk)?
+    pub fn ma_prechodnice(&self) -> bool {
+        self.r > 0.0 && (self.l1 > 0.0 || self.l2 > 0.0)
     }
     pub fn bod(&self) -> Bod {
         [self.x, self.y]
@@ -39,6 +51,41 @@ pub enum Prvek {
     /// Kruhový oblouk; `uhel_a` = směr ze středu na začátek, `sweep` = středový
     /// úhel se znaménkem (+ proti směru hodin = levotočivý).
     Oblouk { stred: Bod, r: f64, a: Bod, b: Bod, uhel_a: f64, sweep: f64, vrchol: usize },
+    /// Přechodnice (klotoida): křivost se mění lineárně z `k0` na `k1`
+    /// (se znaménkem, + vlevo) po délce `delka`; `smer` = azimut na začátku.
+    Prechodnice { a: Bod, smer: f64, k0: f64, k1: f64, delka: f64, vrchol: usize },
+}
+
+/// Bod a azimut na klotoidě ve vzdálenosti `t` od začátku (Gaussova
+/// kvadratura po úsecích nejvýš 2 m – přesnost pod tisícinu milimetru).
+pub fn bod_klotoidy(a: Bod, smer: f64, k0: f64, k1: f64, delka: f64, t: f64) -> (Bod, f64) {
+    const XI: [f64; 5] = [-0.906_179_845_938_664, -0.538_469_310_105_683, 0.0, 0.538_469_310_105_683, 0.906_179_845_938_664];
+    const WI: [f64; 5] = [0.236_926_885_056_189, 0.478_628_670_499_366, 0.568_888_888_888_889, 0.478_628_670_499_366, 0.236_926_885_056_189];
+    let dk = if delka > EPS { (k1 - k0) / (2.0 * delka) } else { 0.0 };
+    let smer_u = |u: f64| smer + k0 * u + dk * u * u;
+    let n = (t.abs() / 2.0).ceil().max(1.0) as usize;
+    let h = t / n as f64;
+    let (mut x, mut y) = (0.0, 0.0);
+    for j in 0..n {
+        let c = (j as f64 + 0.5) * h;
+        for (xi, wi) in XI.iter().zip(WI) {
+            let f = smer_u(c + xi * h / 2.0);
+            x += wi * f.cos() * h / 2.0;
+            y += wi * f.sin() * h / 2.0;
+        }
+    }
+    ([a[0] + x, a[1] + y], smer_u(t))
+}
+
+/// Parametry přechodnice délky `l` k oblouku `r`: (τ úhel tečny, odsazení
+/// oblouku p, posun k, parametr A). Bez přechodnice samé nuly.
+pub fn parametry_prechodnice(l: f64, r: f64) -> (f64, f64, f64, f64) {
+    if l <= 0.0 || r <= 0.0 {
+        return (0.0, 0.0, 0.0, 0.0);
+    }
+    let tau = l / (2.0 * r);
+    let (q, _) = bod_klotoidy([0.0, 0.0], 0.0, 0.0, 1.0 / r, l, l);
+    (tau, q[1] - r * (1.0 - tau.cos()), q[0] - r * tau.sin(), (r * l).sqrt())
 }
 
 impl Prvek {
@@ -46,6 +93,7 @@ impl Prvek {
         match *self {
             Prvek::Primka { a, b } => vzd(a, b),
             Prvek::Oblouk { r, sweep, .. } => r * sweep.abs(),
+            Prvek::Prechodnice { delka, .. } => delka,
         }
     }
     /// Bod a směr (azimut, radiány proti směru hodin od +x) ve vzdálenosti `t`
@@ -63,10 +111,20 @@ impl Prvek {
                 let f = uhel_a + sweep * u;
                 ([stred[0] + r * f.cos(), stred[1] + r * f.sin()], f + sweep.signum() * PI / 2.0)
             }
+            Prvek::Prechodnice { a, smer, k0, k1, delka, .. } => bod_klotoidy(a, smer, k0, k1, delka, t.clamp(0.0, delka)),
         }
     }
     pub fn je_oblouk(&self) -> bool {
         matches!(self, Prvek::Oblouk { .. })
+    }
+    pub fn je_prechodnice(&self) -> bool {
+        matches!(self, Prvek::Prechodnice { .. })
+    }
+    /// Body po krocích nejvýš `krok` (kreslení přechodnice lomenou čarou).
+    pub fn body(&self, krok: f64) -> Vec<Bod> {
+        let l = self.delka();
+        let n = (l / krok.max(0.01)).ceil().max(1.0) as usize;
+        (0..=n).map(|k| self.bod(l * k as f64 / n as f64).0).collect()
     }
 }
 
@@ -81,6 +139,14 @@ pub enum DruhBodu {
     Tk,
     /// Kružnice – tečna (konec oblouku).
     Kt,
+    /// Tečna – přechodnice (začátek přechodnice před obloukem).
+    Tp,
+    /// Přechodnice – kružnice.
+    Pk,
+    /// Kružnice – přechodnice.
+    Kp,
+    /// Přechodnice – tečna (konec přechodnice za obloukem).
+    Pt,
     /// Vrchol tečnového polygonu.
     V,
 }
@@ -102,10 +168,14 @@ pub struct HlavniBod {
 pub struct UdajeVrcholu {
     /// Úhel odbočení se znaménkem (+ vlevo) [rad].
     pub odbocka: f64,
-    /// Délka tečny T [m].
+    /// Délka tečny T [m] (s přechodnicemi tečna před vrcholem T1).
     pub tecna: f64,
-    /// Délka oblouku [m].
+    /// Délka tečny za vrcholem T2 [m] (bez přechodnic stejná jako T1).
+    pub tecna2: f64,
+    /// Délka kruhového oblouku [m] (bez přechodnic).
     pub delka_oblouku: f64,
+    /// Délka celé křivky: přechodnice + oblouk + přechodnice [m].
+    pub delka_celkem: f64,
     /// Vnější vzdálenost (vrchol – střed oblouku) [m].
     pub vzepeti: f64,
     /// Jednotkový směr osy úhlu dovnitř oblouku.
@@ -123,6 +193,8 @@ pub enum Chyba {
     /// Oblouky ve vrcholech `a` a `b` (nebo oblouk a konec trasy) se na
     /// přímé mezi nimi nevejdou.
     Prekryv { a: usize, b: usize },
+    /// Přechodnice ve vrcholu jsou delší, než dovolí úhel odbočení.
+    DlouhePrechodnice(usize),
 }
 
 impl Chyba {
@@ -136,6 +208,10 @@ impl Chyba {
             Chyba::Prekryv { a, b } => (
                 "oblouky ve vrcholech {} a {} se nevejdou na přímou mezi nimi – zmenšete poloměr nebo vrcholy oddalte",
                 vec![(a + 1).to_string(), (b + 1).to_string()],
+            ),
+            Chyba::DlouhePrechodnice(i) => (
+                "přechodnice ve vrcholu {} jsou delší, než dovolí úhel – zkraťte je nebo zvětšete poloměr",
+                vec![(i + 1).to_string()],
             ),
         }
     }
@@ -168,19 +244,28 @@ fn odbocka(d1: Bod, d2: Bod) -> f64 {
     cross.atan2(dot)
 }
 
-/// Délka tečny ve vrcholu `i` (0 u krajních a bez oblouku).
-fn tecna(v: &[Vrchol], i: usize) -> Result<f64, Chyba> {
+/// Délky tečen T1 (před vrcholem) a T2 (za ním) ve vrcholu `i` (0 u krajních
+/// a bez oblouku); s přechodnicemi podle odsazení p a posunu k.
+pub fn tecny(v: &[Vrchol], i: usize) -> (f64, f64) {
     if i == 0 || i + 1 >= v.len() || v[i].r <= 0.0 {
-        return Ok(0.0);
+        return (0.0, 0.0);
     }
     let d1 = jednotkovy(v[i - 1].bod(), v[i].bod());
     let d2 = jednotkovy(v[i].bod(), v[i + 1].bod());
     let w = odbocka(d1, d2).abs();
     // vrchol skoro na přímce (vložený, zaokrouhlený) = bez oblouku
     if w < TOL_PRIMKY {
-        return Ok(0.0);
+        return (0.0, 0.0);
     }
-    Ok(v[i].r * (w / 2.0).tan())
+    let r = v[i].r;
+    if v[i].l1 <= 0.0 && v[i].l2 <= 0.0 {
+        let t = r * (w / 2.0).tan();
+        return (t, t);
+    }
+    let (_, p1, k1, _) = parametry_prechodnice(v[i].l1, r);
+    let (_, p2, k2, _) = parametry_prechodnice(v[i].l2, r);
+    let (s, c) = w.sin_cos();
+    ((r + p2 - (r + p1) * c) / s + k1, (r + p1 - (r + p2) * c) / s + k2)
 }
 
 /// Zmenší poloměry, které se mezi sousední vrcholy nevejdou, na největší
@@ -194,7 +279,7 @@ pub fn prizpusob_polomery(v: &mut [Vrchol]) -> Vec<usize> {
     for _ in 0..20 {
         let mut hotovo = true;
         for i in 0..n - 1 {
-            let (ta, tb) = (tecna(v, i).unwrap_or(0.0), tecna(v, i + 1).unwrap_or(0.0));
+            let (ta, tb) = (tecny(v, i).1, tecny(v, i + 1).0);
             let d = vzd(v[i].bod(), v[i + 1].bod());
             if ta + tb <= d + 1e-9 || ta + tb <= 0.0 {
                 continue;
@@ -204,6 +289,8 @@ pub fn prizpusob_polomery(v: &mut [Vrchol]) -> Vec<usize> {
             for j in [i, i + 1] {
                 if j > 0 && j + 1 < n && v[j].r > 0.0 {
                     v[j].r = ((v[j].r * k) * 10.0).floor() / 10.0;
+                    v[j].l1 = ((v[j].l1 * k) * 100.0).floor() / 100.0;
+                    v[j].l2 = ((v[j].l2 * k) * 100.0).floor() / 100.0;
                     if !zmenene.contains(&j) {
                         zmenene.push(j);
                     }
@@ -230,12 +317,14 @@ pub fn geometrie(v: &[Vrchol], pocatek: f64) -> Result<Geometrie, Chyba> {
         }
     }
     for (i, x) in v.iter().enumerate() {
-        if x.r < 0.0 {
+        if x.r < 0.0 || x.l1 < 0.0 || x.l2 < 0.0 {
             return Err(Chyba::ZapornyPolomer(i));
         }
     }
-    let mut udaje = vec![UdajeVrcholu { odbocka: 0.0, tecna: 0.0, delka_oblouku: 0.0, vzepeti: 0.0, osa: [0.0, 0.0] }; n];
+    let nula = UdajeVrcholu { odbocka: 0.0, tecna: 0.0, tecna2: 0.0, delka_oblouku: 0.0, delka_celkem: 0.0, vzepeti: 0.0, osa: [0.0, 0.0] };
+    let mut udaje = vec![nula; n];
     let mut t = vec![0.0; n];
+    let mut t2 = vec![0.0; n];
     for i in 1..n - 1 {
         let d1 = jednotkovy(v[i - 1].bod(), v[i].bod());
         let d2 = jednotkovy(v[i].bod(), v[i + 1].bod());
@@ -243,23 +332,32 @@ pub fn geometrie(v: &[Vrchol], pocatek: f64) -> Result<Geometrie, Chyba> {
         if w.abs() > PI - 1e-6 {
             return Err(Chyba::Obrat(i));
         }
-        t[i] = tecna(v, i)?;
+        (t[i], t2[i]) = tecny(v, i);
         let osa = {
             let o = [d2[0] - d1[0], d2[1] - d1[1]];
             let l = o[0].hypot(o[1]);
             if l > EPS { [o[0] / l, o[1] / l] } else { [0.0, 0.0] }
         };
         let r = if t[i] > 0.0 { v[i].r } else { 0.0 };
+        let (l1, l2) = if r > 0.0 { (v[i].l1, v[i].l2) } else { (0.0, 0.0) };
+        let (tau1, _, _, _) = parametry_prechodnice(l1, r);
+        let (tau2, _, _, _) = parametry_prechodnice(l2, r);
+        let lk = r * (w.abs() - tau1 - tau2);
+        if r > 0.0 && lk < -1e-9 {
+            return Err(Chyba::DlouhePrechodnice(i));
+        }
         udaje[i] = UdajeVrcholu {
             odbocka: w,
             tecna: t[i],
-            delka_oblouku: r * w.abs(),
+            tecna2: t2[i],
+            delka_oblouku: lk.max(0.0),
+            delka_celkem: lk.max(0.0) + l1 + l2,
             vzepeti: if r > 0.0 { r * (1.0 / (w.abs() / 2.0).cos() - 1.0) } else { 0.0 },
             osa,
         };
     }
     for i in 0..n - 1 {
-        if t[i] + t[i + 1] > vzd(v[i].bod(), v[i + 1].bod()) + 1e-6 {
+        if t2[i] + t[i + 1] > vzd(v[i].bod(), v[i + 1].bod()) + 1e-6 {
             return Err(Chyba::Prekryv { a: i, b: i + 1 });
         }
     }
@@ -294,20 +392,56 @@ pub fn geometrie(v: &[Vrchol], pocatek: f64) -> Result<Geometrie, Chyba> {
         }
         let w = udaje[i].odbocka;
         let tk = [pi[0] - t[i] * d1[0], pi[1] - t[i] * d1[1]];
-        let kt = [pi[0] + t[i] * d2[0], pi[1] + t[i] * d2[1]];
+        let kt = [pi[0] + t2[i] * d2[0], pi[1] + t2[i] * d2[1]];
         pridej(&mut prvky, &mut s, Prvek::Primka { a: cur, b: tk });
         let strana = w.signum();
         let r = v[i].r;
-        let stred = [tk[0] - strana * r * d1[1], tk[1] + strana * r * d1[0]];
-        let uhel_a = (tk[1] - stred[1]).atan2(tk[0] - stred[0]);
-        body.push(HlavniBod { druh: DruhBodu::Tk, staniceni: s, bod: tk, smer: d1[1].atan2(d1[0]), vrchol: i });
-        let obl = Prvek::Oblouk { stred, r, a: tk, b: kt, uhel_a, sweep: w, vrchol: i };
+        let (l1, l2) = (v[i].l1, v[i].l2);
+        let (tau1, _, _, _) = parametry_prechodnice(l1, r);
+        let (tau2, _, _, _) = parametry_prechodnice(l2, r);
         let s_tk = s;
-        pridej(&mut prvky, &mut s, obl);
-        let (stredni, smer_v) = obl.bod(obl.delka() / 2.0);
-        body.push(HlavniBod { druh: DruhBodu::V, staniceni: s_tk + obl.delka() / 2.0, bod: pi, smer: smer_v, vrchol: i });
-        let _ = stredni;
-        body.push(HlavniBod { druh: DruhBodu::Kt, staniceni: s, bod: kt, smer: d2[1].atan2(d2[0]), vrchol: i });
+        let smer1 = d1[1].atan2(d1[0]);
+        body.push(HlavniBod { druh: if l1 > 0.0 { DruhBodu::Tp } else { DruhBodu::Tk }, staniceni: s, bod: tk, smer: smer1, vrchol: i });
+        // přechodnice před obloukem
+        let mut a = tk;
+        let mut smer = smer1;
+        if l1 > 0.0 {
+            let p = Prvek::Prechodnice { a, smer, k0: 0.0, k1: strana / r, delka: l1, vrchol: i };
+            pridej(&mut prvky, &mut s, p);
+            (a, smer) = p.bod(l1);
+            body.push(HlavniBod { druh: DruhBodu::Pk, staniceni: s, bod: a, smer, vrchol: i });
+        }
+        // kruhový oblouk (bez přechodnic přesně od TK do KT)
+        let sweep = strana * (w.abs() - tau1 - tau2).max(0.0);
+        let stred = [a[0] - strana * r * smer.sin(), a[1] + strana * r * smer.cos()];
+        let uhel_a = (a[1] - stred[1]).atan2(a[0] - stred[0]);
+        let konec = if l2 > 0.0 { [stred[0] + r * (uhel_a + sweep).cos(), stred[1] + r * (uhel_a + sweep).sin()] } else { kt };
+        pridej(&mut prvky, &mut s, Prvek::Oblouk { stred, r, a, b: konec, uhel_a, sweep, vrchol: i });
+        // přechodnice za obloukem
+        if l2 > 0.0 {
+            smer += sweep;
+            body.push(HlavniBod { druh: DruhBodu::Kp, staniceni: s, bod: konec, smer, vrchol: i });
+            pridej(&mut prvky, &mut s, Prvek::Prechodnice { a: konec, smer, k0: strana / r, k1: 0.0, delka: l2, vrchol: i });
+        }
+        // vrchol: střed celé křivky
+        let s_v = (s_tk + s) / 2.0;
+        let (bod_v, smer_v) = prvky
+            .iter()
+            .rev()
+            .find(|(s0, p)| s_v >= *s0 - 1e-9 && s_v <= s0 + p.delka() + 1e-9)
+            .map_or((pi, smer), |(s0, p)| p.bod(s_v - s0));
+        // vnější vzdálenost: vrchol – střed křivky (s přechodnicemi z polohy)
+        if l1 > 0.0 || l2 > 0.0 {
+            udaje[i].vzepeti = vzd(pi, bod_v);
+        }
+        body.push(HlavniBod { druh: DruhBodu::V, staniceni: s_v, bod: pi, smer: smer_v, vrchol: i });
+        body.push(HlavniBod {
+            druh: if l2 > 0.0 { DruhBodu::Pt } else { DruhBodu::Kt },
+            staniceni: s,
+            bod: kt,
+            smer: d2[1].atan2(d2[0]),
+            vrchol: i,
+        });
         cur = kt;
     }
     let konec = v[n - 1].bod();
@@ -381,6 +515,27 @@ impl Geometrie {
                     let l = sweep.abs();
                     let u = if u > l { if u - l < 2.0 * PI - u { l } else { 0.0 } } else { u };
                     let t = r * u;
+                    (t, e.bod(t).0)
+                }
+                Prvek::Prechodnice { delka, .. } => {
+                    // hrubě po krocích, pak zjemnit dělením intervalu
+                    let n = 40;
+                    let d2 = |t: f64| {
+                        let q = e.bod(t).0;
+                        (q[0] - p[0]).powi(2) + (q[1] - p[1]).powi(2)
+                    };
+                    let tk = |k: usize| delka * k as f64 / n as f64;
+                    let k = (0..=n).min_by(|&a, &b| d2(tk(a)).total_cmp(&d2(tk(b)))).unwrap_or(0);
+                    let (mut lo, mut hi) = (tk(k.saturating_sub(1)), tk((k + 1).min(n)));
+                    for _ in 0..40 {
+                        let (m1, m2) = (lo + (hi - lo) / 3.0, hi - (hi - lo) / 3.0);
+                        if d2(m1) < d2(m2) {
+                            hi = m2
+                        } else {
+                            lo = m1
+                        }
+                    }
+                    let t = (lo + hi) / 2.0;
                     (t, e.bod(t).0)
                 }
             };
@@ -652,6 +807,91 @@ mod testy {
         assert_eq!(v.len(), 4);
         let g = geometrie(&v, 0.0).unwrap();
         assert!(blizko(g.delka(), 90.0 + 10.0 * PI + 90.0));
+    }
+
+    /// Konec každé křivky leží přesně na tečně (KT/PT = vrchol + T2 · směr).
+    fn konce_na_tecnach(v: &[Vrchol]) {
+        let g = geometrie(v, 0.0).unwrap();
+        for b in g.hlavni_body.iter().filter(|b| matches!(b.druh, DruhBodu::Kt | DruhBodu::Pt)) {
+            let s0 = b.staniceni - 1e-7;
+            let (p, smer) = g.bod(s0).unwrap();
+            assert!(vzd(p, b.bod) < 1e-5, "konec křivky {:?} mimo tečnu o {}", b.druh, vzd(p, b.bod));
+            assert!((smer - b.smer).sin().abs() < 1e-6, "směr na konci křivky nesedí");
+        }
+        // spojitost: konec každého prvku = začátek dalšího
+        for w in g.prvky.windows(2) {
+            let (s0, p) = &w[0];
+            let (s1, q) = &w[1];
+            assert!((s0 + p.delka() - s1).abs() < 1e-9);
+            let (a, sa) = p.bod(p.delka());
+            let (b, sb) = q.bod(0.0);
+            assert!(vzd(a, b) < 1e-5, "mezera mezi prvky {}", vzd(a, b));
+            assert!((sa - sb).sin().abs() < 1e-6, "zlom směru mezi prvky");
+        }
+    }
+
+    #[test]
+    fn souvisle_prechodnice() {
+        let v = vec![
+            Vrchol::new(0.0, 0.0, 0.0),
+            Vrchol::s_prechodnicemi(95.0, 46.0, 60.0, 22.0, 22.0),
+            Vrchol::new(175.0, 6.0, 45.0),
+            Vrchol::s_prechodnicemi(262.0, 58.0, 80.0, 18.0, 30.0),
+            Vrchol::new(345.0, 40.0, 0.0),
+        ];
+        konce_na_tecnach(&v);
+        let g = geometrie(&v, 0.0).unwrap();
+        let druhy: Vec<_> = g.hlavni_body.iter().filter(|b| b.vrchol == 1).map(|b| b.druh).collect();
+        assert_eq!(druhy, vec![DruhBodu::Tp, DruhBodu::Pk, DruhBodu::Kp, DruhBodu::V, DruhBodu::Pt]);
+        let u = g.vrcholy[1];
+        assert!(blizko(u.delka_celkem, u.delka_oblouku + 44.0));
+        // souměrné přechodnice: T1 = T2
+        assert!(blizko(u.tecna, u.tecna2));
+        assert!(g.vrcholy[3].tecna < g.vrcholy[3].tecna2);
+        assert_eq!(g.prvky.iter().filter(|(_, p)| p.je_prechodnice()).count(), 4);
+    }
+
+    #[test]
+    fn prechodnice_jen_na_jedne_strane() {
+        let v = vec![Vrchol::new(0.0, 0.0, 0.0), Vrchol::s_prechodnicemi(100.0, 0.0, 50.0, 0.0, 30.0), Vrchol::new(100.0, -120.0, 0.0)];
+        konce_na_tecnach(&v);
+        let g = geometrie(&v, 0.0).unwrap();
+        let druhy: Vec<_> = g.hlavni_body.iter().filter(|b| b.vrchol == 1).map(|b| b.druh).collect();
+        assert_eq!(druhy, vec![DruhBodu::Tk, DruhBodu::Kp, DruhBodu::V, DruhBodu::Pt]);
+    }
+
+    #[test]
+    fn parametry_znamych_hodnot() {
+        // R = 100, L = 50: τ = 0,25 rad, p ≈ L²/24R, A = √5000
+        let (tau, p, k, a) = parametry_prechodnice(50.0, 100.0);
+        assert!(blizko(tau, 0.25));
+        // p = L²/24R − L⁴/2688R³ (+ zanedbatelné členy)
+        assert!((p - (50.0f64.powi(2) / 2400.0 - 50.0f64.powi(4) / 2_688_000_000.0)).abs() < 1e-4);
+        // k = L/2 − L³/240R²
+        assert!((k - (25.0 - 125_000.0 / 2_400_000.0)).abs() < 1e-4);
+        assert!(blizko(a, 5000f64.sqrt()));
+        // délka klotoidy = délka po křivce
+        let p = Prvek::Prechodnice { a: [0.0, 0.0], smer: 0.0, k0: 0.0, k1: 0.01, delka: 50.0, vrchol: 1 };
+        let b = p.body(0.1);
+        let l: f64 = b.windows(2).map(|w| vzd(w[0], w[1])).sum();
+        assert!((l - 50.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn prilis_dlouhe_prechodnice() {
+        let v = vec![Vrchol::new(0.0, 0.0, 0.0), Vrchol::s_prechodnicemi(100.0, 0.0, 50.0, 60.0, 60.0), Vrchol::new(150.0, 20.0, 0.0)];
+        assert_eq!(geometrie(&v, 0.0), Err(Chyba::DlouhePrechodnice(1)));
+    }
+
+    #[test]
+    fn prumet_na_prechodnici() {
+        let v = vec![Vrchol::new(0.0, 0.0, 0.0), Vrchol::s_prechodnicemi(100.0, 0.0, 50.0, 30.0, 30.0), Vrchol::new(100.0, 120.0, 0.0)];
+        let g = geometrie(&v, 0.0).unwrap();
+        let (s0, p) = g.prvky.iter().find(|(_, p)| p.je_prechodnice()).unwrap();
+        let (q, smer) = p.bod(12.0);
+        let bod = [q[0] - 2.0 * smer.sin(), q[1] + 2.0 * smer.cos()];
+        let (s, o) = g.prumet(bod).unwrap();
+        assert!((s - (s0 + 12.0)).abs() < 1e-4 && (o - 2.0).abs() < 1e-4);
     }
 
     #[test]
