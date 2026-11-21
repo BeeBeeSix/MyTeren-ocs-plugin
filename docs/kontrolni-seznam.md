@@ -12,6 +12,7 @@ z čistého výkresu a vymyšlených bodů (`python nastroje/body_testovaci.py`)
 - [ ] **Zpět:** po každé úpravě Ctrl+Z vrátí celou úpravu.
 - [ ] **Trasa:** nakreslit (Kreslit vrcholy), tah vrcholu úchopem, Zpět.
 - [ ] **Pohled profilu:** nový pohled (styl Jednoduchý), niveleta, tah vrcholu nivelety – chytá se terénu (uchopování).
+- [ ] **Editor trasy:** tabulka (typ, R, L1, L2), lišta vrcholu, Přidat přechodnice, Posunout přesně, starý výkres → hladiny TER-….
 - [ ] **Editor nivelety:** tabulka (R / L / K, sklon, délka), detail vybraného vrcholu, Vložit oblouk klikáním + Enter, Popisy oblouků bez REGEN.
 - [ ] **Karta pohledu:** změna stylu, měřítka a převýšení překreslí pohled.
 - [ ] **Editor vzhledu profilu:** úprava pásu, Uložit a překreslit.

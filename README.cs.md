@@ -61,7 +61,7 @@ kontroluje, že obě strany používají stejný formát dat výkresu):
 
 | Open CAD Studio | Terén |
 |---|---|
-| 2026.46 | 1.1.0 – 1.3.0 |
+| 2026.46 | 1.1.0 – 1.3.1 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
@@ -89,6 +89,32 @@ angličtina), projeví se po novém spuštění.
   nejvíc pomůže krátký popis a malý vymyšlený soubor zaměření.
 
 # Co je nového
+
+## Verze 1.3.1
+
+- **Editor trasy** – nový ukotvený panel (tlačítko *Editor trasy*):
+  tabulka vrcholů s X, Y, typem oblouku (bez oblouku / kružnice /
+  s přechodnicemi), R, přechodnicemi L1 a L2, parametrem A, úhlem
+  a mezipřímkou – přepsaná hodnota se po chvíli zapíše do výkresu. Vybraný
+  vrchol se přepíná lištou (Předchozí / Další, seznam) nebo klikem na úchop,
+  ve výkrese se zvýrazní a *Ukázat ve výkrese* k němu přiblíží. Detail ukáže
+  tečny T1 / T2, délky oblouku, A, odsazení p a staničení.
+- **Přechodnice (klotoidy)** před i za obloukem, souměrné i nesouměrné,
+  zadané délkou L nebo parametrem A. Hlavní body TP, PK, KP, PT se
+  staničením. Úchop poloměru zvětšuje R i přechodnice úměrně.
+- **Nástroje trasy** ve třech skupinách – Vrcholy (přidat, smazat, posunout
+  přesně zadáním X,Y, prodloužit), Oblouky (vložit podle nastavení, změnit R,
+  odstranit, do všech vrcholů) a Přechodnice (přidat, odebrat, všem
+  obloukům). Když se oblouk nevejde, zkrátí se nejdřív přechodnice, pak
+  i poloměr (dá se vypnout).
+- **Kontrola trasy** v panelu: překryv oblouků s údajem o kolik metrů, malý
+  poloměr, parametr A mimo R/3 až R, krátká mezipřímka; protisměrné oblouky
+  s inflexním bodem přechodnic jsou v pořádku.
+- **Hladiny anglicky** – `TER-PNT-…` (body), `TER-SRF-<povrch>-…` (povrchy),
+  `TER-ALN-…` (trasy), `TER-PRF-…` (podélné profily), s českým popisem.
+  Hladiny ze starších verzí se při otevření výkresu samy přejmenují (viz
+  kapitola Hladiny).
+- **Vzorový výkres** s anglickými jmény (Area 1–3, Alignment 1, Grade 1).
 
 ## Verze 1.3.0
 

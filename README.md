@@ -19,6 +19,33 @@ DWG, and every action is a single Undo step. Interface in English or Czech.
 </tr>
 </table>
 
+## What's new in 1.3.1
+
+- **Alignment editor** – a new docked panel (*Alignment editor* button):
+  a vertex table with X, Y, curve type (no curve / circular arc / with
+  transitions), R, transitions L1 and L2, parameter A, deflection angle and
+  the tangent between curves – an overwritten value is written to the
+  drawing shortly after you stop typing. The selected vertex is switched
+  with a bar (Previous / Next, list) or by clicking its grip, it is
+  highlighted in the drawing and *Show in drawing* zooms to it. Details show
+  tangents T1 / T2, curve lengths, A, shift p and stations.
+- **Transition curves (clothoids)** before and after the arc, symmetric or
+  unsymmetric, given by length L or parameter A. Key points TS, SC, CS, ST
+  with stations. The radius grip scales R and the transitions together.
+- **Alignment tools** in three groups – Vertices (add, delete, move exactly
+  by typed X,Y, extend), Curves (insert from settings, change R, remove, at
+  all vertices) and Transitions (add, remove, to all curves). When a curve
+  does not fit, the transitions are shortened first, then the radius (can be
+  switched off).
+- **Alignment check** in the panel: overlapping curves with the overlap in
+  metres, small radius, parameter A outside R/3 to R, short tangents;
+  reverse curves meeting at the transitions' inflection point are fine.
+- **English layer names** – `TER-PNT-…` (points), `TER-SRF-<surface>-…`
+  (surfaces), `TER-ALN-…` (alignments), `TER-PRF-…` (profile views), with
+  a localized description. Layers from older versions are renamed
+  automatically when the drawing is opened.
+- **Sample drawing** with English names (Area 1–3, Alignment 1, Grade 1).
+
 ## What's new in 1.3.0
 
 - **Design profile editor** – a new docked panel (*Design profile editor*
@@ -174,7 +201,7 @@ Manager offers the right one.
 
 | Open CAD Studio | Terén |
 |---|---|
-| 2026.46 | 1.1.0 – 1.3.0 |
+| 2026.46 | 1.1.0 – 1.3.1 |
 | 2026.45 | 1.0.2 – 1.0.9 |
 | 2026.44 | 1.0.0 – 1.0.1 |
 
