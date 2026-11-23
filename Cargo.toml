@@ -1,6 +1,6 @@
 [package]
 name = "teren"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -8,6 +8,12 @@ calamine = { version = "0.38.0", default-features = false }
 clap = { version = "4", features = ["derive"] }
 encoding_rs = "0.8.42"
 spade = "2"
+
+# Stable host contract, pinned to the Open CAD Studio v2026.47 release tag (API 28).
+# From API 14 the plugin runs its own runner loop: the host no longer compares
+# compiler and opencadcodec commit, only the shape of the types on the wire.
+ocs_plugin_api = { git = "https://github.com/HakanSeven12/OpenCADStudio", rev = "8e5f39f6ee0468a7e29260d57b5390d7d01207e8", features = ["host"] }
+
 
 [workspace]
 members = [".", "plugin", "trasy"]
